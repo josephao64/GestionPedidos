@@ -31,7 +31,7 @@ var firebaseConfig = {
   }
   
   function goToMainMenu() {
-      window.location.href = 'main.html';
+      window.location.href = 'INDEX.html';
   }
   
   async function loadPendingOrdersAdmin() {
