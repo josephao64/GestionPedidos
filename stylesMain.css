@@ -1,37 +1,92 @@
-/* styles.css */
-
+/* Estilos adicionales */
 body {
     font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
-    color: #333;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 h1 {
     text-align: center;
-    margin-top: 50px;
-    color: #4CAF50;
+    font-size: 36px; /* Tamaño de fuente más grande para el título */
+    margin: 20px 0;
 }
 
 .navigation {
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex: 1;
+    padding-left: 20px; /* Añadir espacio a la izquierda para los botones */
+}
+
+.oe_menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.oe_menu li {
+    margin: 10px 0;
+}
+
+.oe_menu a {
+    display: flex;
     justify-content: center;
-    margin-top: 20px;
-}
-
-.navigation a {
-    display: block;
-    padding: 15px 30px;
-    margin: 10px;
-    background-color: #4CAF50;
-    color: white;
+    align-items: center;
+    width: 150px; /* Define el tamaño fijo del botón */
+    height: 150px; /* Define el tamaño fijo del botón */
+    font-size: 18px;
+    text-align: center;
     text-decoration: none;
+    color: white;
+    background-color: #007BFF;
     border-radius: 5px;
-    transition: background-color 0.3s ease;
+    border: none;
+    cursor: pointer;
 }
 
-.navigation a:hover {
-    background-color: #45a049;
+.oe_menu a:hover {
+    background-color: #0056b3;
 }
 
+/* Posicionamiento de los botones */
+.navigation {
+    position: relative;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.oe_menu {
+    position: fixed;
+    bottom: 20px;
+    left: 0; /* Mueve los botones hasta el borde izquierdo */
+    padding-left: 20px; /* Añadir espacio a la izquierda para los botones */
+}
+
+.oe_menu li {
+    margin: 10px 0;
+}
+
+@media (max-width: 768px) {
+    .oe_menu {
+        bottom: 10px;
+        left: 0; /* Mueve los botones hasta el borde izquierdo en dispositivos más pequeños */
+        padding-left: 10px; /* Añadir espacio a la izquierda para los botones en dispositivos más pequeños */
+    }
+
+    .oe_menu a {
+        width: 120px; /* Ajusta el tamaño del botón para dispositivos más pequeños */
+        height: 120px; /* Ajusta el tamaño del botón para dispositivos más pequeños */
+        font-size: 16px;
+    }
+}

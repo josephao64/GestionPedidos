@@ -355,3 +355,10 @@ function showOrders() {
   document.getElementById('orderCreationContainer').style.display = 'none';
   loadProviders();
 }
+
+function closeOrderCreationContainer() {
+  // Oculta el contenedor de creación de pedidos
+  document.getElementById('orderCreationContainer').style.display = 'none';
+  // Muestra nuevamente el contenedor de pedidos
+  document.getElementById('ordersContainer').style.display = 'block';
+}
