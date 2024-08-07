@@ -1,0 +1,252 @@
+/* Estilos para modales */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+  padding-top: 60px;
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 5% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  border-radius: 10px;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Estilos para contenedores y tablas */
+.container {
+  display: none;
+  margin: 20px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  overflow-x: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+table, th, td {
+  border: 1px solid #ddd;
+}
+
+th, td {
+  padding: 15px;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+/* Estilos para botones */
+.buttons {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.buttons button {
+  margin-right: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background-color: #007BFF;
+  color: white;
+}
+
+.buttons button.right {
+  margin-left: auto;
+}
+
+.buttons button:hover {
+  background-color: #0056b3;
+}
+
+/* Estilos para los formularios */
+.form-container {
+  display: none;
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  width: 100%; /* Ajusta el ancho */
+}
+
+.order-form {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  width: 100%; /* Ajusta el ancho */
+}
+
+.product-form-and-table {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.product-form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 250px;
+  border: 1px solid #ddd;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+}
+
+.product-form-group {
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.product-form-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.product-form-group input, .product-form-group button {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.table-wrapper {
+  flex-grow: 1;
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin-left: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+}
+
+.save-order-button {
+  display: block;
+  margin-top: 20px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: #28a745;
+  color: white;
+  cursor: pointer;
+}
+
+.save-order-button:hover {
+  background-color: #218838;
+}
+
+/* Estilos para pestañas */
+.tab-container {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 20px;
+  background-color: #f1f1f1;
+  border-bottom: 1px solid #ccc;
+  border-radius: 10px 10px 0 0;
+}
+
+.tab-button {
+  margin-right: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #f1f1f1;
+  border: 1px solid #ccc;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  position: relative;
+}
+
+.tab-button.active {
+  background-color: #fff;
+  border-bottom: none;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.tab-button .close-tab {
+  position: absolute;
+  right: 5px;
+  top: 3px;
+  font-size: 12px;
+  background-color: #ccc;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 2px 5px;
+}
+
+.tab-button .close-tab:hover {
+  background-color: #999;
+}
+
+/* Estilos adicionales */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  text-align: center;
+  margin-top: 20px;
+}
+
+h2 {
+  margin-bottom: 20px;
+}
+
+input[type="text"], input[type="number"], input[type="date"], select {
+  width: calc(100% - 20px);
+  padding: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #ddd;
+}

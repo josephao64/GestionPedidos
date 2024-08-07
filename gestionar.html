@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Proveedores y Productos</title>
+  <!-- Incluye las bibliotecas de Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="gestionar.js"></script>
+</head>
+<body>
+  <h1>Gestión de Proveedores y Productos</h1>
+
+  <div class="buttons">
+    <button onclick="showAddProviderForm()">Agregar Proveedor</button>
+    <button onclick="showAddProductForm()">Agregar Producto</button>
+    <button onclick="showProviders()">Mostrar Proveedores</button>
+    <button onclick="showProducts()">Mostrar Productos</button>
+    <button onclick="window.location.href='Main.html'">Volver a Principal</button>
+  </div>
+
+  <!-- Formularios -->
+  <div id="addProviderForm" class="form-container">
+    <h2>Agregar Proveedor</h2>
+    <input type="text" id="providerName" placeholder="Nombre del Proveedor">
+    <button onclick="addProvider()">Agregar Proveedor</button>
+  </div>
+
+  <div id="addProductForm" class="form-container">
+    <h2>Agregar Producto</h2>
+    <input type="text" id="productName" placeholder="Nombre del Producto">
+    <input type="text" id="productPresentation" placeholder="Presentación del Producto">
+    <select id="providerSelect"></select>
+    <button onclick="addProduct()">Agregar Producto</button>
+  </div>
+
+  <div id="providersContainer" class="container">
+    <h2>Proveedores</h2>
+    <table id="providersTable">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="productsContainer" class="container">
+    <h2>Productos por Proveedor</h2>
+    <select id="providerProductsSelect" onchange="showProductsByProvider()"></select>
+    <table id="productsTable">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Presentación</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</body>
+</html>

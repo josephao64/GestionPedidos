@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Pedidos</title>
+  <link rel="stylesheet" href="stylesPedidos.css">
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <script defer src="pedidos.js"></script>
+</head>
+<body>
+  <div class="header">
+    <h1>Gestión de Pedidos</h1>
+    <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
+  </div>
+
+  <div class="tab-container" id="tabContainer">
+    <button class="tab-button active" onclick="openTab(event, 'pendingOrdersContainer')">Pedidos Pendientes</button>
+    <button class="tab-button" onclick="openTab(event, 'inProcessOrdersContainer')">Pedidos en Proceso</button>
+    <button class="tab-button" onclick="openTab(event, 'completedOrdersContainer')">Pedidos Completados</button>
+  </div>
+
+  <div id="pendingOrdersContainer" class="container">
+    <h2>Pedidos Pendientes</h2>
+    <div id="pendingOrdersAdminCards" class="order-cards-container"></div>
+  </div>
+
+  <div id="inProcessOrdersContainer" class="container">
+    <h2>Pedidos en Proceso</h2>
+    <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
+  </div>
+
+  <div id="completedOrdersContainer" class="container">
+    <h2>Pedidos Completados</h2>
+    <div id="completedOrdersAdminCards" class="order-cards-container"></div>
+  </div>
+
+  <div id="orderDetailsModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
+      <h2>Detalles del Pedido</h2>
+      <div id="orderDetails"></div>
+      <input type="hidden" id="exportOrderId">
+    </div>
+  </div>
+
+  <div id="exportModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeExportModal()">&times;</span>
+      <h2>Exportar Pedido</h2>
+      <button onclick="exportAs('image')">Descargar como Imagen</button>
+      <button onclick="exportAs('pdf')">Descargar como PDF</button>
+      <button onclick="exportAs('excel')">Descargar como Excel</button>
+    </div>
+  </div>
+
+  <div id="editOrderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeEditOrderModal()">&times;</span>
+      <h2>Editar Pedido</h2>
+      <div id="editOrderDetails"></div>
+      <button onclick="saveEditedOrder()">Guardar Cambios</button>
+    </div>
+  </div>
+
+  <div id="confirmOrderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
+      <h2>Confirmar Recepción de Pedido</h2>
+      <div id="confirmOrderDetails"></div>
+      <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
+    </div>
+  </div>
+
+  <div id="receivedOrderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
+      <h2>Detalles del Pedido Recibido</h2>
+      <div id="receivedOrderDetails"></div>
+    </div>
+  </div>
+</body>
+</html>
