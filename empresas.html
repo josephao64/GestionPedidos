@@ -1,0 +1,65 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Empresas y Sucursales</title>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <link rel="stylesheet" href="stylesgestionar.css">
+    <script defer src="empresas.js"></script>
+</head>
+<body>
+    <h1>Gestión de Empresas y Sucursales</h1>
+    <div class="buttons">
+        <button onclick="showAddEmpresaForm()">Agregar Empresa</button>
+        <button onclick="showAddSucursalForm()">Agregar Sucursal</button>
+        <button onclick="showEmpresas()">Mostrar Empresas</button>
+        <button onclick="showSucursales()">Mostrar Sucursales</button>
+        <button onclick="window.location.href='index.html'">Volver a Principal</button>
+    </div>
+
+    <!-- Formularios -->
+    <div id="addEmpresaForm" class="form-container" style="display: none;">
+        <h2>Agregar Empresa</h2>
+        <input type="text" id="empresaName" placeholder="Nombre de la Empresa">
+        <button onclick="addEmpresa()">Agregar Empresa</button>
+    </div>
+
+    <div id="addSucursalForm" class="form-container" style="display: none;">
+        <h2>Agregar Sucursal</h2>
+        <input type="text" id="sucursalName" placeholder="Nombre de la Sucursal">
+        <select id="empresaSelect"></select>
+        <button onclick="addSucursal()">Agregar Sucursal</button>
+    </div>
+
+    <div id="empresasContainer" class="container" style="display: none;">
+        <h2>Empresas</h2>
+        <table id="empresasTable">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div id="sucursalesContainer" class="container" style="display: none;">
+        <h2>Sucursales</h2>
+        <select id="empresaFilterSelect" onchange="showSucursales()"></select>
+        <table id="sucursalesTable">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Empresa</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</body>
+</html>

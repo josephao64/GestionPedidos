@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Usuarios y Sucursales</title>
+    <link rel="stylesheet" href="stylesUsuarios.css">
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script defer src="usuarios.js"></script>
+</head>
+<body>
+    <h1>Gestión de Usuarios y Sucursales</h1>
+    <div class="buttons">
+        <button onclick="showAddUsuarioForm()">Agregar Usuario</button>
+        <button onclick="showUsuarios()">Mostrar Usuarios</button>
+        <button onclick="showSucursales()">Mostrar Sucursales</button>
+        <button onclick="window.location.href='index.html'">Volver a Principal</button>
+    </div>
+
+    <div id="addUsuarioForm" class="form-container" style="display: none;">
+        <h2>Agregar Usuario</h2>
+        <input type="text" id="usuarioName" placeholder="Nombre del Usuario">
+        <input type="password" id="usuarioPassword" placeholder="Contraseña">
+        <select id="usuarioRole" onchange="toggleSucursalSelect()">
+            <option value="admin">Admin</option>
+            <option value="encargado">Encargado</option>
+            <option value="auxiliar">Auxiliar</option>
+        </select>
+        <select id="sucursalSelect" style="display: none;"></select>
+
+        <h3>Permisos</h3>
+        <div id="permisosContainer">
+            <!-- Permisos -->
+            <div>
+                <label><input type="checkbox" id="permisoCrearProveedores"> Crear Proveedores</label>
+            </div>
+            <!-- Añade los demás permisos aquí -->
+        </div>
+
+        <button onclick="addUsuario()">Agregar Usuario</button>
+    </div>
+
+    <div id="usuariosContainer" class="container" style="display: none;">
+        <h2>Usuarios</h2>
+        <ul id="usuariosList"></ul>
+    </div>
+
+    <div id="sucursalesContainer" class="container" style="display: none;">
+        <h2>Sucursales</h2>
+        <ul id="sucursalesList"></ul>
+    </div>
+</body>
+</html>

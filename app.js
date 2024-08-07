@@ -110,6 +110,7 @@ function showOrderCreationContainer() {
   document.getElementById('ordersContainer').style.display = 'none';
   document.getElementById('orderCreationContainer').style.display = 'block';
   loadNewOrderProviders();
+  loadNewOrderSucursales(); // Cargar sucursales
   setOrderDateToToday();
   createNewOrderTab();
   generateOrderId();
@@ -178,6 +179,25 @@ async function loadNewOrderProviders() {
   } catch (error) {
       console.error('Error al cargar proveedores del pedido:', error);
       alert('Error al cargar proveedores del pedido: ' + error.message);
+  }
+}
+
+async function loadNewOrderSucursales() {
+  try {
+      var sucursalesSnapshot = await db.collection('sucursales').get();
+      var newOrderSucursalSelect = document.getElementById('newOrderSucursalSelect');
+      newOrderSucursalSelect.innerHTML = '';
+
+      sucursalesSnapshot.forEach(function(doc) {
+          var sucursal = doc.data();
+          var option = document.createElement('option');
+          option.value = doc.id;
+          option.textContent = sucursal.name;
+          newOrderSucursalSelect.appendChild(option);
+      });
+  } catch (error) {
+      console.error('Error al cargar sucursales del pedido:', error);
+      alert('Error al cargar sucursales del pedido: ' + error.message);
   }
 }
 
@@ -303,6 +323,8 @@ function deleteNewOrderProduct(button) {
 async function saveNewOrder() {
   var providerId = document.getElementById('newOrderProviderSelect').value;
   var providerName = document.getElementById('newOrderProviderSelect').options[document.getElementById('newOrderProviderSelect').selectedIndex].text;
+  var sucursalId = document.getElementById('newOrderSucursalSelect').value;
+  var sucursalName = document.getElementById('newOrderSucursalSelect').options[document.getElementById('newOrderSucursalSelect').selectedIndex].text;
   var orderDate = document.getElementById('orderDate').value;
   var orderId = document.getElementById('orderId').value;
   var newOrderTableBody = document.getElementById('newOrderTable').getElementsByTagName('tbody')[0];
@@ -325,6 +347,8 @@ async function saveNewOrder() {
           await db.collection('orders').add({
               providerId: providerId,
               providerName: providerName,
+              sucursalId: sucursalId,
+              sucursalName: sucursalName,
               orderDate: orderDate,
               orderId: orderId,
               products: products,

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script defer src="login.js"></script>
+</head>
+<body>
+    <h1>Login</h1>
+    <form id="loginForm">
+        <input type="text" id="usuarioName" placeholder="Nombre de Usuario" required>
+        <input type="password" id="usuarioPassword" placeholder="Contraseña" required>
+        <select id="usuarioRole" onchange="toggleSucursalSelect()" required>
+            <option value="admin">Admin</option>
+            <option value="encargado">Encargado</option>
+            <option value="auxiliar">Auxiliar</option>
+        </select>
+        <select id="sucursalSelect" style="display: none;"></select>
+        <button type="submit">Login</button>
+    </form>
+    <div id="error" style="color: red;"></div>
+</body>
+</html>

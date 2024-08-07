@@ -26,6 +26,7 @@
       <thead>
         <tr>
           <th>Proveedor</th>
+          <th>Sucursal</th>
           <th>Productos</th>
           <th>Acciones</th>
         </tr>
@@ -39,6 +40,10 @@
       <div class="form-group">
         <label for="newOrderProviderSelect">Seleccione Proveedor</label>
         <select id="newOrderProviderSelect" onchange="loadNewOrderProducts()"></select>
+      </div>
+      <div class="form-group">
+        <label for="newOrderSucursalSelect">Seleccione Sucursal</label>
+        <select id="newOrderSucursalSelect"></select>
       </div>
       <div class="form-group">
         <label for="orderDate">Fecha de Pedido</label>
