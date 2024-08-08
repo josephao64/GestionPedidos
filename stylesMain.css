@@ -22,6 +22,7 @@ h1 {
     justify-content: flex-start;
     flex: 1;
     padding-left: 20px; /* Añadir espacio a la izquierda para los botones */
+    position: relative;
 }
 
 .oe_menu {
@@ -58,35 +59,34 @@ h1 {
 }
 
 /* Posicionamiento de los botones */
-.navigation {
-    position: relative;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 20px;
-    box-sizing: border-box;
-}
-
 .oe_menu {
     position: fixed;
-    bottom: 20px;
-    left: 0; /* Mueve los botones hasta el borde izquierdo */
-    padding-left: 20px; /* Añadir espacio a la izquierda para los botones */
+    top: 50%; /* Ajusta los botones al centro vertical de la pantalla */
+    left: 20px; /* Mueve los botones hasta el borde izquierdo */
+    transform: translateY(-50%);
 }
 
-.oe_menu li {
-    margin: 10px 0;
+.right-menu {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
 }
 
 @media (max-width: 768px) {
     .oe_menu {
-        bottom: 10px;
-        left: 0; /* Mueve los botones hasta el borde izquierdo en dispositivos más pequeños */
-        padding-left: 10px; /* Añadir espacio a la izquierda para los botones en dispositivos más pequeños */
+        top: 50%;
+        left: 10px; /* Mueve los botones hasta el borde izquierdo en dispositivos más pequeños */
+        transform: translateY(-50%);
     }
 
     .oe_menu a, .menu-button {
         width: 120px; /* Ajusta el tamaño del botón para dispositivos más pequeños */
         height: 120px; /* Ajusta el tamaño del botón para dispositivos más pequeños */
         font-size: 16px;
+    }
+
+    .right-menu {
+        bottom: 10px;
+        right: 10px;
     }
 }
