@@ -11,33 +11,22 @@
   <script defer src="gestionar.js"></script>
 </head>
 <body>
+  <div class="top-right">
+    <button onclick="location.href='empresaConfig.html'">Regresar</button>
+  </div>
+  
   <h1>Gestión de Proveedores y Productos</h1>
 
   <div class="buttons">
-    <button onclick="showAddProviderForm()">Agregar Proveedor</button>
-    <button onclick="showAddProductForm()">Agregar Producto</button>
-    <button onclick="showProviders()">Mostrar Proveedores</button>
-    <button onclick="showProducts()">Mostrar Productos</button>
-    <button onclick="window.location.href='INDEX.html'">Volver a Principal</button>
+    <button onclick="showProviders()">Proveedores</button>
+    <button onclick="showProducts()">Productos</button>
   </div>
 
-  <!-- Formularios -->
-  <div id="addProviderForm" class="form-container">
-    <h2>Agregar Proveedor</h2>
-    <input type="text" id="providerName" placeholder="Nombre del Proveedor">
-    <button onclick="addProvider()">Agregar Proveedor</button>
-  </div>
-
-  <div id="addProductForm" class="form-container">
-    <h2>Agregar Producto</h2>
-    <input type="text" id="productName" placeholder="Nombre del Producto">
-    <input type="text" id="productPresentation" placeholder="Presentación del Producto">
-    <select id="providerSelect"></select>
-    <button onclick="addProduct()">Agregar Producto</button>
-  </div>
-
+  <!-- Proveedores -->
   <div id="providersContainer" class="container">
     <h2>Proveedores</h2>
+    <button onclick="showAddProviderForm()">Agregar Proveedor</button>
+    <input type="text" id="providerSearchInput" onkeyup="filterProviders()" placeholder="Buscar por nombre de proveedor...">
     <table id="providersTable">
       <thead>
         <tr>
@@ -49,19 +38,115 @@
     </table>
   </div>
 
+  <!-- Productos -->
   <div id="productsContainer" class="container">
-    <h2>Productos por Proveedor</h2>
-    <select id="providerProductsSelect" onchange="showProductsByProvider()"></select>
+    <h2>Productos</h2>
+    <button onclick="showAddProductForm()">Agregar Producto</button>
+    <input type="text" id="productSearchInput" onkeyup="filterProductsByName()" placeholder="Buscar por nombre de producto...">
+    <select id="productProviderFilter" onchange="filterProductsByProvider()">
+      <option value="">Todos los Proveedores</option>
+    </select>
     <table id="productsTable">
       <thead>
         <tr>
           <th>Nombre</th>
           <th>Presentación</th>
+          <th>Proveedor</th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
   </div>
+
+  <!-- Modal para agregar proveedor -->
+  <div id="addProviderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('addProviderModal')">&times;</span>
+      <h2>Agregar Proveedor</h2>
+      <input type="text" id="providerName" placeholder="Nombre del Proveedor">
+      <input type="text" id="providerAddress" placeholder="Dirección">
+      <input type="text" id="providerPhone" placeholder="Teléfono">
+      <input type="email" id="providerEmail" placeholder="Correo Electrónico">
+      <input type="text" id="providerPaymentTerms" placeholder="Términos de Pago">
+      <input type="text" id="sellerName" placeholder="Nombre del Vendedor">
+      <input type="text" id="sellerPhone" placeholder="Teléfono del Vendedor">
+      <input type="text" id="chiefSellerName" placeholder="Nombre del Jefe del Vendedor">
+      <input type="text" id="chiefSellerPhone" placeholder="Teléfono del Jefe del Vendedor">
+      <input type="text" id="creditPersonName" placeholder="Nombre de la Persona de Créditos">
+      <input type="text" id="creditPersonPhone" placeholder="Teléfono de la Persona de Créditos">
+      <input type="text" id="providerType" placeholder="Tipo de Proveedor">
+      <input type="text" id="preferredPaymentMethod" placeholder="Método de Pago Preferido">
+      <textarea id="additionalNotes" placeholder="Notas Adicionales"></textarea>
+      <button onclick="addProvider()">Agregar Proveedor</button>
+    </div>
+  </div>
+
+  <!-- Modal para editar proveedor -->
+  <div id="editProviderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('editProviderModal')">&times;</span>
+      <h2>Editar Proveedor</h2>
+      <input type="hidden" id="editProviderId">
+      <input type="text" id="editProviderName" placeholder="Nombre del Proveedor">
+      <input type="text" id="editProviderAddress" placeholder="Dirección">
+      <input type="text" id="editProviderPhone" placeholder="Teléfono">
+      <input type="email" id="editProviderEmail" placeholder="Correo Electrónico">
+      <input type="text" id="editProviderPaymentTerms" placeholder="Términos de Pago">
+      <input type="text" id="editSellerName" placeholder="Nombre del Vendedor">
+      <input type="text" id="editSellerPhone" placeholder="Teléfono del Vendedor">
+      <input type="text" id="editChiefSellerName" placeholder="Nombre del Jefe del Vendedor">
+      <input type="text" id="editChiefSellerPhone" placeholder="Teléfono del Jefe del Vendedor">
+      <input type="text" id="editCreditPersonName" placeholder="Nombre de la Persona de Créditos">
+      <input type="text" id="editCreditPersonPhone" placeholder="Teléfono de la Persona de Créditos">
+      <input type="text" id="editProviderType" placeholder="Tipo de Proveedor">
+      <input type="text" id="editPreferredPaymentMethod" placeholder="Método de Pago Preferido">
+      <textarea id="editAdditionalNotes" placeholder="Notas Adicionales"></textarea>
+      <button onclick="updateProvider()">Guardar Cambios</button>
+    </div>
+  </div>
+
+  <!-- Modal para ver detalles del proveedor -->
+  <div id="providerDetailsModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('providerDetailsModal')">&times;</span>
+      <h2>Detalles del Proveedor</h2>
+      <p id="providerDetails"></p>
+    </div>
+  </div>
+
+  <!-- Modal para agregar producto -->
+  <div id="addProductModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('addProductModal')">&times;</span>
+      <h2>Agregar Producto</h2>
+      <input type="text" id="productName" placeholder="Nombre del Producto">
+      <input type="text" id="productPresentation" placeholder="Presentación del Producto">
+      <select id="providerSelect"></select>
+      <button onclick="addProduct()">Agregar Producto</button>
+    </div>
+  </div>
+
+  <!-- Modal para editar producto -->
+  <div id="editProductModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('editProductModal')">&times;</span>
+      <h2>Editar Producto</h2>
+      <input type="hidden" id="editProductId">
+      <input type="text" id="editProductName" placeholder="Nombre del Producto">
+      <input type="text" id="editProductPresentation" placeholder="Presentación del Producto">
+      <button onclick="updateProduct()">Guardar Cambios</button>
+    </div>
+  </div>
+
+  <!-- Modal para ver detalles del producto -->
+  <div id="productDetailsModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('productDetailsModal')">&times;</span>
+      <h2>Detalles del Producto</h2>
+      <p id="productDetails"></p>
+    </div>
+  </div>
+
 </body>
 </html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Facturas</title>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <link rel="stylesheet" href="stylesFacturas.css">
+</head>
+<body>
+    <h1>Gestión de Facturas</h1>
+
+    <!-- Filtros de Búsqueda -->
+    <div class="filters">
+        <input type="text" id="searchNumero" placeholder="Buscar por Número de Factura" onkeyup="filterFacturas()">
+        <input type="text" id="searchProveedor" placeholder="Buscar por Proveedor" onkeyup="filterFacturas()">
+        <input type="text" id="searchEmpresa" placeholder="Buscar por Empresa" onkeyup="filterFacturas()">
+        <input type="text" id="searchSucursal" placeholder="Buscar por Sucursal" onkeyup="filterFacturas()">
+    </div>
+
+    <!-- Filtro para ordenar por fecha -->
+    <div class="date-filter">
+        <label for="dateOrder">Ordenar por Fecha:</label>
+        <select id="dateOrder" onchange="sortFacturasByDate()">
+            <option value="oldest">Fecha Más Antigua</option>
+            <option value="newest">Fecha Más Reciente</option>
+            <option value="closestToDue">Próxima a Vencer</option>
+        </select>
+    </div>
+
+    <!-- Contenedor para la lista de facturas -->
+    <div id="facturasContainer" class="container">
+        <h2>Lista de Facturas</h2>
+        <table id="facturasTable">
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Empresa</th>
+                    <th>Sucursal</th>
+                    <th>Proveedor</th>
+                    <th>Fecha de Emisión</th>
+                    <th>Fecha de Vencimiento</th>
+                    <th>Monto Total</th>
+                    <th>Estado de Pago</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Botón para agregar una nueva factura -->
+    <div class="top-right">
+        <button onclick="openAddFacturaModal()">Agregar Factura</button>
+    </div>
+
+    <!-- Modal para agregar factura -->
+    <div id="addFacturaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addFacturaModal')">&times;</span>
+            <h2>Agregar Factura</h2>
+
+            <label for="facturaNumero">Número de Factura:</label>
+            <input type="text" id="facturaNumero" placeholder="Número único de la factura">
+
+            <label for="empresaSelect">Empresa Asociada:</label>
+            <select id="empresaSelect"></select>
+
+            <label for="sucursalSelect">Sucursal Asociada:</label>
+            <select id="sucursalSelect"></select>
+
+            <label for="proveedorSelect">Proveedor Asociado:</label>
+            <select id="proveedorSelect"></select>
+
+            <label for="facturaFechaEmision">Fecha de Emisión:</label>
+            <input type="date" id="facturaFechaEmision">
+
+            <label for="facturaFechaVencimiento">Fecha de Vencimiento:</label>
+            <input type="date" id="facturaFechaVencimiento">
+
+            <label for="facturaMontoTotal">Monto Total:</label>
+            <input type="number" id="facturaMontoTotal" placeholder="Monto total de la factura">
+
+            <label for="facturaEstadoPago">Estado de Pago:</label>
+            <select id="facturaEstadoPago">
+                <option value="Pendiente">Pendiente</option>
+                <option value="Pagado">Pagado</option>
+                <option value="Vencido">Vencido</option>
+            </select>
+
+            <label for="facturaArchivo">Archivo de Factura:</label>
+            <input type="file" id="facturaArchivo" placeholder="Sube el archivo de la factura (PDF/imagen)">
+
+            <label for="facturaDescuentos">Descuentos Aplicables:</label>
+            <input type="number" id="facturaDescuentos" placeholder="Descuentos aplicados a la factura">
+
+            <label for="facturaMontoNeto">Monto Neto:</label>
+            <input type="number" id="facturaMontoNeto" placeholder="Monto neto después de descuentos">
+
+            <label for="facturaMetodoPago">Método de Pago:</label>
+            <select id="facturaMetodoPago">
+                <option value="Transferencia">Transferencia</option>
+                <option value="Cheque">Cheque</option>
+                <option value="Efectivo">Efectivo</option>
+            </select>
+
+            <label for="facturaNotas">Notas Adicionales:</label>
+            <textarea id="facturaNotas" placeholder="Notas adicionales sobre la factura"></textarea>
+
+            <button onclick="addFactura()">Agregar Factura</button>
+        </div>
+    </div>
+
+    <!-- Modal para editar factura -->
+    <div id="editFacturaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('editFacturaModal')">&times;</span>
+            <h2>Editar Factura</h2>
+            
+            <label for="editFacturaNumero">Número de Factura:</label>
+            <input type="hidden" id="editFacturaId">
+            <input type="text" id="editFacturaNumero" placeholder="Número de Factura">
+            
+            <label for="editEmpresaSelect">Empresa Asociada:</label>
+            <select id="editEmpresaSelect"></select>
+            
+            <label for="editSucursalSelect">Sucursal Asociada:</label>
+            <select id="editSucursalSelect"></select>
+            
+            <label for="editProveedorSelect">Proveedor Asociado:</label>
+            <select id="editProveedorSelect"></select>
+            
+            <label for="editFacturaFechaEmision">Fecha de Emisión:</label>
+            <input type="date" id="editFacturaFechaEmision">
+            
+            <label for="editFacturaFechaVencimiento">Fecha de Vencimiento:</label>
+            <input type="date" id="editFacturaFechaVencimiento">
+            
+            <label for="editFacturaMontoTotal">Monto Total:</label>
+            <input type="number" id="editFacturaMontoTotal" placeholder="Monto Total">
+            
+            <label for="editFacturaEstadoPago">Estado de Pago:</label>
+            <select id="editFacturaEstadoPago">
+                <option value="Pendiente">Pendiente</option>
+                <option value="Pagado">Pagado</option>
+                <option value="Vencido">Vencido</option>
+            </select>
+            
+            <label for="editFacturaArchivo">Archivo de Factura:</label>
+            <input type="file" id="editFacturaArchivo">
+            
+            <label for="editFacturaDescuentos">Descuentos Aplicables:</label>
+            <input type="number" id="editFacturaDescuentos" placeholder="Descuentos Aplicables">
+            
+            <label for="editFacturaMontoNeto">Monto Neto:</label>
+            <input type="number" id="editFacturaMontoNeto" placeholder="Monto Neto">
+            
+            <label for="editFacturaMetodoPago">Método de Pago:</label>
+            <select id="editFacturaMetodoPago">
+                <option value="Transferencia">Transferencia</option>
+                <option value="Cheque">Cheque</option>
+                <option value="Efectivo">Efectivo</option>
+            </select>
+            
+            <label for="editFacturaNotas">Notas Adicionales:</label>
+            <textarea id="editFacturaNotas" placeholder="Notas Adicionales"></textarea>
+            
+            <button onclick="updateFactura()">Guardar Cambios</button>
+        </div>
+    </div>
+
+    <script src="gestionfacturas.js"></script>
+</body>
+</html>
