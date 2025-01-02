@@ -18,6 +18,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <!-- Archivo JavaScript (pedidos.js) -->
     <script defer src="pedidos.js"></script>
 </head>
@@ -167,10 +170,6 @@
                 <textarea id="autoReceiptDescription" name="autoReceiptDescription" rows="4" cols="50" required></textarea><br><br>
                 
                 <!-- Se retira el campo de total manual; se calculará automáticamente en el JS -->
-                <!--
-                <label for="autoReceiptTotal">Total (Q):</label>
-                <input type="number" id="autoReceiptTotal" ...>
-                -->
                 
                 <label for="autoReceiptProducts">Selecciona Productos:</label><br>
                 <div id="autoReceiptProductsContainer">
