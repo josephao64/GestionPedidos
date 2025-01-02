@@ -1,5 +1,10 @@
-/* Estilos adicionales */
-body {
+/* stylesMain.css */
+
+/* =====================================
+   Estilos Generales
+   ===================================== */
+
+   body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
     margin: 0;
@@ -15,6 +20,10 @@ h1 {
     margin: 20px 0;
 }
 
+/* =====================================
+   Contenedor de Navegación
+   ===================================== */
+
 .navigation {
     display: flex;
     flex-direction: column;
@@ -25,6 +34,10 @@ h1 {
     position: relative;
 }
 
+/* =====================================
+   Menú de Opciones (oe_menu)
+   ===================================== */
+
 .oe_menu {
     list-style: none;
     padding: 0;
@@ -32,18 +45,23 @@ h1 {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    position: fixed;
+    top: 50%; /* Centra verticalmente el menú */
+    left: 20px; /* Posición fija en el lado izquierdo */
+    transform: translateY(-50%);
 }
 
 .oe_menu li {
     margin: 10px 0;
 }
 
+/* Estilos para enlaces y botones del menú */
 .oe_menu a, .menu-button {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 150px; /* Define el tamaño fijo del botón */
-    height: 150px; /* Define el tamaño fijo del botón */
+    width: 150px; /* Tamaño fijo del botón */
+    height: 150px;
     font-size: 18px;
     text-align: center;
     text-decoration: none;
@@ -52,41 +70,97 @@ h1 {
     border-radius: 5px;
     border: none;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 .oe_menu a:hover, .menu-button:hover {
     background-color: #0056b3;
 }
 
-/* Posicionamiento de los botones */
-.oe_menu {
-    position: fixed;
-    top: 50%; /* Ajusta los botones al centro vertical de la pantalla */
-    left: 20px; /* Mueve los botones hasta el borde izquierdo */
-    transform: translateY(-50%);
-}
+/* =====================================
+   Contenedor del Menú Derecho (right-menu)
+   ===================================== */
 
 .right-menu {
     position: fixed;
     bottom: 20px;
     right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
+
+/* Estilos específicos para el botón "Empresa" */
+.menu-button#empresa-button {
+    /* Puedes añadir estilos específicos aquí si lo deseas */
+}
+
+/* Estilos específicos para el botón "Cerrar Sesión" */
+.menu-button#logout-button {
+    background-color: #f44336; /* Rojo para destacar */
+}
+
+.menu-button#logout-button:hover {
+    background-color: #da190b;
+}
+
+/* =====================================
+   Contenedor del Mensaje de Bienvenida
+   ===================================== */
+
+.welcome-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 18px;
+    color: #333;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 10px 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+/* =====================================
+   Responsividad
+   ===================================== */
 
 @media (max-width: 768px) {
     .oe_menu {
         top: 50%;
-        left: 10px; /* Mueve los botones hasta el borde izquierdo en dispositivos más pequeños */
+        left: 10px; /* Ajuste en dispositivos más pequeños */
         transform: translateY(-50%);
     }
 
     .oe_menu a, .menu-button {
-        width: 120px; /* Ajusta el tamaño del botón para dispositivos más pequeños */
-        height: 120px; /* Ajusta el tamaño del botón para dispositivos más pequeños */
+        width: 120px; /* Tamaño ajustado para dispositivos más pequeños */
+        height: 120px;
         font-size: 16px;
     }
 
     .right-menu {
         bottom: 10px;
         right: 10px;
+        flex-direction: column;
+        gap: 10px;
     }
+}
+
+/* =====================================
+   Estilos Adicionales para Mejorar la UX/UI
+   ===================================== */
+
+/* Ajustes para asegurar que el contenido principal empuje hacia arriba el contenido */
+main {
+    flex: 1;
+}
+
+/* Estilos opcionales para mejorar la apariencia de los botones */
+button {
+    outline: none;
+}
+
+button:focus {
+    outline: none;
 }

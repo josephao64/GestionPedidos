@@ -4,20 +4,284 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Página Principal</title>
-    <link rel="stylesheet" href="stylesMain.css">
+    <!-- Estilos CSS Integrados -->
+    <style>
+        /* =====================================
+           Estilos Generales
+           ===================================== */
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 36px; /* Tamaño de fuente más grande para el título */
+            margin: 20px 0;
+        }
+
+        /* =====================================
+           Contenedor de Navegación
+           ===================================== */
+
+        .navigation {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            flex: 1;
+            padding-left: 20px; /* Añadir espacio a la izquierda para los botones */
+            position: relative;
+        }
+
+        /* =====================================
+           Menú de Opciones (oe_menu)
+           ===================================== */
+
+        .oe_menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            position: fixed;
+            top: 50%; /* Centra verticalmente el menú */
+            left: 20px; /* Posición fija en el lado izquierdo */
+            transform: translateY(-50%);
+        }
+
+        .oe_menu li {
+            margin: 10px 0;
+        }
+
+        /* Estilos para enlaces y botones del menú */
+        .oe_menu a, .menu-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 150px; /* Tamaño fijo del botón */
+            height: 150px;
+            font-size: 18px;
+            text-align: center;
+            text-decoration: none;
+            color: white;
+            background-color: #007BFF;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .oe_menu a:hover, .menu-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* =====================================
+           Contenedor del Menú Derecho (right-menu)
+           ===================================== */
+
+        .right-menu {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Estilos específicos para el botón "Empresa" */
+        .menu-button#empresa-button {
+            /* Puedes añadir estilos específicos aquí si lo deseas */
+        }
+
+        /* Estilos específicos para el botón "Cerrar Sesión" */
+        .menu-button#logout-button {
+            background-color: #f44336; /* Rojo para destacar */
+        }
+
+        .menu-button#logout-button:hover {
+            background-color: #da190b;
+        }
+
+        /* =====================================
+           Contenedor del Mensaje de Bienvenida
+           ===================================== */
+
+        .welcome-container {
+            position: fixed;
+            top: 20px;
+            right: 20px; /* Posiciona el mensaje en el lado derecho */
+            /* Elimina la propiedad 'left' y 'transform' para alinear a la derecha */
+            font-size: 18px;
+            color: #333;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        /* =====================================
+           Responsividad
+           ===================================== */
+
+        @media (max-width: 768px) {
+            .oe_menu {
+                top: 50%;
+                left: 10px; /* Ajuste en dispositivos más pequeños */
+                transform: translateY(-50%);
+            }
+
+            .oe_menu a, .menu-button {
+                width: 120px; /* Tamaño ajustado para dispositivos más pequeños */
+                height: 120px;
+                font-size: 16px;
+            }
+
+            .right-menu {
+                bottom: 10px;
+                right: 10px;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .welcome-container {
+                top: 10px;
+                right: 10px;
+                font-size: 16px;
+                padding: 8px 16px;
+            }
+        }
+
+        /* =====================================
+           Estilos Adicionales para Mejorar la UX/UI
+           ===================================== */
+
+        /* Ajustes para asegurar que el contenido principal empuje hacia arriba el contenido */
+        main {
+            flex: 1;
+        }
+
+        /* Estilos opcionales para mejorar la apariencia de los botones */
+        button {
+            outline: none;
+        }
+
+        button:focus {
+            outline: none;
+        }
+    </style>
 </head>
 <body>
+    <!-- Contenedor para el mensaje de bienvenida -->
+    <div class="welcome-container" id="welcome-message">Bienvenido, Usuario</div>
+
     <h1>Página Principal</h1>
     <div class="navigation">
         <ul class="oe_menu">
             <li><a href="realizadPedido.html">Realizar pedidos</a></li>
             <li><a href="pedidos.html">Gestión de Pedidos</a></li>
-            <li><a href="gestionFacturas.html">Gestión de facturas</a></li>
-         
+            <li id="gestion-facturas"><a href="gestionFacturas.html">Gestión de facturas</a></li>
         </ul>
         <div class="right-menu">
-            <button class="menu-button" onclick="window.location.href='empresaConfig.html'">Empresa Config</button>
+            <button class="menu-button" id="empresa-button" onclick="window.location.href='empresaMenu.html'">Empresa</button>
+            <button class="menu-button" id="logout-button">Cerrar Sesión</button>
         </div>
     </div>
+
+    <!-- Scripts JavaScript Integrados -->
+    <!-- Firebase SDK v8.6.8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <!-- Biblioteca CryptoJS para Hashing de Contraseñas (opcional pero recomendado) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <script>
+        // Configuración de Firebase
+        var firebaseConfig = {
+            apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
+            authDomain: "logisticdb-2e63c.firebaseapp.com",
+            projectId: "logisticdb-2e63c",
+            storageBucket: "logisticdb-2e63c.appspot.com",
+            messagingSenderId: "917523682093",
+            appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
+        };
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+
+        // Referencias a elementos del DOM
+        const welcomeMessage = document.getElementById('welcome-message');
+        const gestionFacturas = document.getElementById('gestion-facturas');
+        const empresaButton = document.getElementById('empresa-button');
+        const logoutButton = document.getElementById('logout-button');
+
+        // Función para mostrar u ocultar elementos según el rol
+        function ajustarMenuSegunRol(rol) {
+            if (rol === 'administrador') {
+                // Mostrar "Gestión de Facturas" y el botón "Empresa"
+                gestionFacturas.style.display = 'block';
+                empresaButton.style.display = 'inline-block';
+            } else if (rol === 'usuario') {
+                // Ocultar "Gestión de Facturas" y el botón "Empresa"
+                gestionFacturas.style.display = 'none';
+                empresaButton.style.display = 'none';
+            }
+        }
+
+        // Función para verificar el usuario logueado y su rol
+        function verificarUsuario() {
+            const usuarioLogueado = localStorage.getItem('usuarioLogueado');
+
+            if (usuarioLogueado) {
+                // Buscar el usuario en Firestore
+                db.collection('usuarios').where('username', '==', usuarioLogueado).limit(1).get()
+                    .then((querySnapshot) => {
+                        if (!querySnapshot.empty) {
+                            const userDoc = querySnapshot.docs[0];
+                            const userData = userDoc.data();
+                            ajustarMenuSegunRol(userData.rol);
+                            welcomeMessage.textContent = `Bienvenido, ${userData.username}!`;
+                        } else {
+                            // Usuario no encontrado, redirigir a login
+                            alert('Usuario no encontrado. Por favor, inicia sesión nuevamente.');
+                            window.location.href = 'login.html';
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error al verificar el usuario: ", error);
+                        alert('Error al verificar el usuario. Por favor, intenta nuevamente.');
+                        window.location.href = 'login.html';
+                    });
+            } else {
+                // Si no hay usuario logueado, redirigir a login.html
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Función para manejar el cierre de sesión
+        function cerrarSesion() {
+            localStorage.removeItem('usuarioLogueado');
+            window.location.href = 'login.html';
+        }
+
+        // Asignar evento al botón de cerrar sesión
+        logoutButton.addEventListener('click', cerrarSesion);
+
+        // Asignar evento al botón de "Empresa" (si es visible)
+        empresaButton.addEventListener('click', function() {
+            window.location.href = 'empresaMenu.html';
+        });
+
+        // Ejecutar la verificación al cargar la página
+        window.onload = verificarUsuario;
+    </script>
 </body>
 </html>

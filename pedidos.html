@@ -1,88 +1,185 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión de Pedidos</title>
-  <link rel="stylesheet" href="stylesPedidos.css">
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-  <script defer src="pedidos.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Pedidos</title>
+    
+    <!-- Archivo de estilos CSS -->
+    <link rel="stylesheet" href="stylesPedidos.css">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+    <!-- Librerías para exportar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- Archivo JavaScript (pedidos.js) -->
+    <script defer src="pedidos.js"></script>
 </head>
 <body>
-  <div class="header">
-    <h1>Gestión de Pedidos</h1>
-    <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
-  </div>
+    <!-- Encabezado -->
+    <div class="header">
+        <h1>Gestión de Pedidos</h1>
 
-  <div class="tab-container" id="tabContainer">
-    <button class="tab-button active" onclick="openTab(event, 'pendingOrdersContainer')">Pedidos Pendientes</button>
-    <button class="tab-button" onclick="openTab(event, 'inProcessOrdersContainer')">Pedidos en Proceso</button>
-    <button class="tab-button" onclick="openTab(event, 'completedOrdersContainer')">Pedidos Completados</button>
-  </div>
+        <!-- Aquí se mostrará el usuario que inició sesión -->
+        <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
 
-  <div id="pendingOrdersContainer" class="container">
-    <h2>Pedidos Pendientes</h2>
-    <div id="pendingOrdersAdminCards" class="order-cards-container"></div>
-  </div>
-
-  <div id="inProcessOrdersContainer" class="container">
-    <h2>Pedidos en Proceso</h2>
-    <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
-  </div>
-
-  <div id="completedOrdersContainer" class="container">
-    <h2>Pedidos Completados</h2>
-    <div id="completedOrdersAdminCards" class="order-cards-container"></div>
-  </div>
-
-  <div id="orderDetailsModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
-      <h2>Detalles del Pedido</h2>
-      <div id="orderDetails"></div>
-      <input type="hidden" id="exportOrderId">
+        <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
     </div>
-  </div>
 
-  <div id="exportModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeExportModal()">&times;</span>
-      <h2>Exportar Pedido</h2>
-      <button onclick="exportAs('image')">Descargar como Imagen</button>
-      <button onclick="exportAs('pdf')">Descargar como PDF</button>
-      <button onclick="exportAs('excel')">Descargar como Excel</button>
+    <!-- Contenedor de Filtro para el ADMIN (se muestra solo si userRole = 'administrador') -->
+    <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
+        <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
+        <select id="sucursalFilter" onchange="reloadOrders()">
+            <!-- Se llenará dinámicamente en pedidos.js -->
+        </select>
     </div>
-  </div>
 
-  <div id="editOrderModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeEditOrderModal()">&times;</span>
-      <h2>Editar Pedido</h2>jC051183
-      <div id="editOrderDetails"></div>
-      <button onclick="saveEditedOrder()">Guardar Cambios</button>
+    <!-- Contenedor de Pestañas -->
+    <div class="tab-container" id="tabContainer">
+        <button class="tab-button active" onclick="openTab(event, 'pendingOrdersContainer')">Pedidos Pendientes</button>
+        <button class="tab-button" onclick="openTab(event, 'inProcessOrdersContainer')">Pedidos en Proceso</button>
+        <button class="tab-button" onclick="openTab(event, 'completedOrdersContainer')">Pedidos Completados</button>
     </div>
-  </div>
 
-  <div id="confirmOrderModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
-      <h2>Confirmar Recepción de Pedido</h2>
-      <div id="confirmOrderDetails"></div>
-      <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
+    <!-- Contenedor de Pedidos Pendientes -->
+    <div id="pendingOrdersContainer" class="container">
+        <h2>Pedidos Pendientes</h2>
+        <div id="pendingOrdersAdminCards" class="order-cards-container"></div>
     </div>
-  </div>
 
-  <div id="receivedOrderModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
-      <h2>Detalles del Pedido Recibido</h2>
-      <div id="receivedOrderDetails"></div>
+    <!-- Contenedor de Pedidos en Proceso -->
+    <div id="inProcessOrdersContainer" class="container" style="display: none;">
+        <h2>Pedidos en Proceso</h2>
+        <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
     </div>
-  </div>
+
+    <!-- Contenedor de Pedidos Completados -->
+    <div id="completedOrdersContainer" class="container" style="display: none;">
+        <h2>Pedidos Completados</h2>
+        <div id="completedOrdersAdminCards" class="order-cards-container"></div>
+    </div>
+
+    <!-- Modal para Detalles del Pedido -->
+    <div id="orderDetailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
+            <h2>Detalles del Pedido</h2>
+            <div id="orderDetails"></div>
+            <input type="hidden" id="exportOrderId">
+        </div>
+    </div>
+
+    <!-- Modal para Exportar Pedido -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeExportModal()">&times;</span>
+            <h2>Exportar Pedido</h2>
+            <button onclick="exportAs('image')">Descargar como Imagen</button>
+            <button onclick="exportAs('pdf')">Descargar como PDF</button>
+            <button onclick="exportAs('excel')">Descargar como Excel</button>
+        </div>
+    </div>
+
+    <!-- Modal para Editar Pedido -->
+    <div id="editOrderModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditOrderModal()">&times;</span>
+            <h2>Editar Pedido</h2>
+            <div id="editOrderDetails"></div>
+            <button onclick="saveEditedOrder()">Guardar Cambios</button>
+        </div>
+    </div>
+
+    <!-- Modal para Confirmar Recepción de Pedido -->
+    <div id="confirmOrderModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
+            <h2>Ingresar Cantidades Recibidas</h2>
+            <div id="confirmOrderDetails"></div>
+            <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
+        </div>
+    </div>
+
+    <!-- Modal para Mostrar Pedido Recibido -->
+    <div id="receivedOrderModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
+            <h2>Detalles del Pedido Recibido</h2>
+            <div id="receivedOrderDetails"></div>
+        </div>
+    </div>
+
+    <!-- Modal para Cambiar Estado del Pedido -->
+    <div id="changeStatusModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeChangeStatusModal()">&times;</span>
+            <h2>Cambiar Estado del Pedido</h2>
+            <p>Selecciona el nuevo estado para este pedido:</p>
+            <button onclick="changeOrderStatusManually('pending')">Pedidos Pendientes</button>
+            <button onclick="changeOrderStatusManually('inProcess')">Pedidos en Proceso</button>
+            <button onclick="changeOrderStatusManually('completed')">Pedidos Completados</button>
+        </div>
+    </div>
+
+    <!-- Modal para Generar Recibo Manual -->
+    <div id="generateReceiptModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGenerateReceiptModal()">&times;</span>
+            <h2>Generar Recibo Manual</h2>
+            <form id="receiptForm">
+                <input type="hidden" id="receiptOrderId" name="receiptOrderId">
+                <p>Sucursal: <span id="receiptSucursalName"></span></p>
+                
+                <label for="receiptDate">Fecha:</label>
+                <input type="date" id="receiptDate" name="receiptDate" required><br><br>
+                
+                <label for="receiptDescription">Descripción:</label>
+                <textarea id="receiptDescription" name="receiptDescription" rows="4" cols="50" required></textarea><br><br>
+                
+                <label for="receiptTotal">Total (Q):</label>
+                <input type="number" id="receiptTotal" name="receiptTotal" step="0.01" min="0" required><br><br>
+                
+                <button type="button" onclick="saveReceipt()">Guardar Recibo Manual</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Generar Recibo Automático (sin campo total) -->
+    <div id="generateAutomaticReceiptModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeGenerateAutomaticReceiptModal()">&times;</span>
+            <h2>Generar Recibo Automático</h2>
+            <form id="automaticReceiptForm">
+                <input type="hidden" id="autoReceiptOrderId" name="autoReceiptOrderId">
+                
+                <p>Sucursal: <span id="autoReceiptSucursalName"></span></p>
+                
+                <label for="autoReceiptDate">Fecha:</label>
+                <input type="date" id="autoReceiptDate" name="autoReceiptDate" required><br><br>
+                
+                <label for="autoReceiptDescription">Descripción:</label>
+                <textarea id="autoReceiptDescription" name="autoReceiptDescription" rows="4" cols="50" required></textarea><br><br>
+                
+                <!-- Se retira el campo de total manual; se calculará automáticamente en el JS -->
+                <!--
+                <label for="autoReceiptTotal">Total (Q):</label>
+                <input type="number" id="autoReceiptTotal" ...>
+                -->
+                
+                <label for="autoReceiptProducts">Selecciona Productos:</label><br>
+                <div id="autoReceiptProductsContainer">
+                  <!-- Aquí se listarán los productos filtrados del pedido (con su precio y cantidad) -->
+                </div><br>
+                
+                <button type="button" onclick="saveAutomaticReceipt()">Guardar Recibo Automático</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

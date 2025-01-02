@@ -1,8 +1,49 @@
-/* Estilos para modales */
+/* Estilos Generales */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  text-align: center;
+  margin-top: 20px;
+}
+
+h2 {
+  margin-bottom: 20px;
+}
+
+h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+  width: calc(100% - 20px);
+  padding: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #ddd;
+}
+
+/* Estilos para Modales */
 .modal {
   display: none;
   position: fixed;
-  z-index: 1;
+  z-index: 1000;
   left: 0;
   top: 0;
   width: 100%;
@@ -35,7 +76,7 @@
   cursor: pointer;
 }
 
-/* Estilos para contenedores y tablas */
+/* Estilos para Contenedores y Tablas */
 .container {
   display: none;
   margin: 20px;
@@ -58,14 +99,14 @@ table, th, td {
 
 th, td {
   padding: 15px;
-  text-align: left;
+  text-align: left; /* Mantener alineación predeterminada para datos */
 }
 
 th {
   background-color: #f2f2f2;
 }
 
-/* Estilos para botones */
+/* Estilos para Botones */
 .buttons {
   margin-bottom: 20px;
   display: flex;
@@ -92,7 +133,7 @@ th {
   background-color: #0056b3;
 }
 
-/* Estilos para los formularios */
+/* Estilos para Formularios */
 .form-container {
   display: none;
   margin-bottom: 20px;
@@ -141,7 +182,9 @@ th {
   margin-bottom: 5px;
 }
 
-.product-form-group input, .product-form-group button {
+.product-form-group input,
+.product-form-group select,
+.product-form-group button {
   width: 100%;
   padding: 10px;
   box-sizing: border-box;
@@ -173,7 +216,7 @@ th {
   background-color: #218838;
 }
 
-/* Estilos para pestañas */
+/* Estilos para Pestañas */
 .tab-container {
   display: flex;
   flex-direction: row;
@@ -218,35 +261,138 @@ th {
   background-color: #999;
 }
 
-/* Estilos adicionales */
-body {
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
-  margin: 0;
-  padding: 0;
-}
-
-h1 {
-  text-align: center;
-  margin-top: 20px;
-}
-
-h2 {
-  margin-bottom: 20px;
-}
-
-input[type="text"], input[type="number"], input[type="date"], select {
-  width: calc(100% - 20px);
-  padding: 10px;
-  margin-bottom: 20px;
+/* Estilos para el Ticket del Pedido */
+.ticket {
+  width: 450px; /* Aumenta el ancho del ticket de 400px a 450px */
+  padding: 15px 10px; /* Mantiene el padding lateral reducido */
   border: 1px solid #ddd;
-  border-radius: 5px;
+  background-color: #ffffff;
+  font-family: 'Courier New', Courier, monospace;
+  color: #333333;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  margin: 20px auto; /* Centra el ticket horizontalmente */
 }
 
-button {
-  cursor: pointer;
+.ticket-header {
+  text-align: center;
+  margin-bottom: 10px;
 }
 
-button:hover {
-  background-color: #ddd;
+.ticket-header h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #333333;
+}
+
+.ticket-header h2 {
+  margin: 5px 0 0 0;
+  font-size: 16px;
+  color: #666666;
+}
+
+.order-id {
+  font-size: 18px;
+  font-weight: bold;
+  color: #FF5733; /* Color llamativo para destacar el ID */
+}
+
+.ticket-body {
+  margin-bottom: 10px;
+}
+
+.ticket-body p {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  table-layout: fixed; /* Asegura que la tabla ocupe el 100% del espacio disponible */
+}
+
+/* Ajustes para las Columnas "Producto", "Presentación", "Cantidad" y "Stock" */
+.ticket .products-table th:nth-child(1),
+.ticket .products-table td:nth-child(1) {
+  width: 30%; /* Ancho del 30% para la columna "Producto" */
+}
+
+.ticket .products-table th:nth-child(2),
+.ticket .products-table td:nth-child(2) {
+  width: 30%; /* Ancho del 30% para la columna "Presentación" */
+}
+
+.ticket .products-table th:nth-child(3),
+.ticket .products-table td:nth-child(3) {
+  width: 20%; /* Ancho del 20% para la columna "Cantidad" */
+  text-align: center; /* Centrar contenido */
+}
+
+.ticket .products-table th:nth-child(4),
+.ticket .products-table td:nth-child(4) {
+  width: 20%; /* Ancho del 20% para la columna "Stock" */
+  text-align: center; /* Centrar contenido */
+}
+
+/* Centrar los títulos de las columnas en la primera fila */
+.ticket .products-table th {
+  text-align: center; /* Centra el texto de los encabezados */
+  white-space: nowrap; /* Evita que el texto se divida en múltiples líneas */
+}
+
+/* Permitir que las celdas de datos se ajusten normalmente */
+.ticket .products-table td {
+  text-align: left; /* Mantiene alineación a la izquierda para datos */
+  word-wrap: break-word;
+}
+
+/* Estilos Comunes para todas las tablas de productos */
+.products-table th, .products-table td {
+  border: 1px solid #ddd;
+  padding: 6px;
+  font-size: 14px;
+}
+
+.products-table th {
+  background-color: #f9f9f9;
+  text-align: left; /* Alineación predeterminada, ajustada previamente */
+}
+
+.ticket-footer {
+  text-align: center;
+  font-size: 12px;
+  color: #777777;
+  margin-top: 10px;
+}
+
+/* Responsividad para el Ticket */
+@media (max-width: 400px) {
+  .ticket {
+    width: 90%;
+    padding: 10px 15px;
+  }
+
+  .ticket-header h1 {
+    font-size: 18px;
+  }
+
+  .ticket-header h2 {
+    font-size: 14px;
+  }
+
+  .order-id {
+    font-size: 16px;
+  }
+
+  .products-table th, .products-table td {
+    padding: 4px;
+    font-size: 12px;
+  }
+
+  /* Asegurar que los títulos en pantallas pequeñas no se dividan */
+  .ticket .products-table th {
+    white-space: nowrap;
+  }
 }
