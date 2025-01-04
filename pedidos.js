@@ -87,7 +87,7 @@ const firebaseConfig = {
   
       const userDoc = userSnapshot.docs[0].data();
       userSucursalId = userDoc.sucursalId;
-      userRole = userDoc.rol;  
+      userRole = userDoc.rol;
       userPermissions = userDoc.permisos || {};
     } catch (error) {
       Swal.fire({
@@ -139,7 +139,7 @@ const firebaseConfig = {
   // ========================================================================
   function loadLogo() {
     const img = new Image();
-    img.src = "logo.png"; 
+    img.src = "logo.png";
     img.crossOrigin = "Anonymous";
     img.onload = function () {
       const canvas = document.createElement("canvas");
@@ -680,7 +680,7 @@ const firebaseConfig = {
         text: "Los cambios se han guardado exitosamente."
       });
       closeEditOrderModal();
-      reloadOrders(); 
+      reloadOrders();
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -948,12 +948,12 @@ const firebaseConfig = {
         text: "Cantidades recibidas y comentarios guardados exitosamente."
       });
   
-      // Preguntar si desea generar/compartir la imagen de la recepción
+      // Preguntar si desea generar imagen de la recepción
       Swal.fire({
-        title: "¿Deseas compartir o descargar la recepción en imagen?",
+        title: "¿Deseas generar la imagen de la recepción?",
         icon: "question",
         showCancelButton: true,
-        confirmButtonText: "Sí, compartir/descargar",
+        confirmButtonText: "Sí, generar",
         cancelButtonText: "No, gracias"
       }).then(async (result) => {
         if (result.isConfirmed) {
@@ -962,7 +962,7 @@ const firebaseConfig = {
       });
   
       closeConfirmOrderModal();
-      reloadOrders(); 
+      reloadOrders();
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -1549,7 +1549,7 @@ const firebaseConfig = {
   }
   
   // ========================================================================
-  //           NUEVO: GENERAR / COMPARTIR IMAGEN DE LA RECEPCIÓN
+  //   NUEVO: GENERAR IMAGEN DE LA RECEPCIÓN CON OPCIÓN COMPARTIR / DESCARGAR
   // ========================================================================
   async function shareReceptionImage(orderId) {
     try {
@@ -1611,32 +1611,60 @@ const firebaseConfig = {
       // 4) Eliminamos el DIV temporal
       document.body.removeChild(tempDiv);
   
-      // 5) Ofrecemos compartir o descargar la imagen
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: "Recepción de Pedido",
-            text: "Mira la recepción de este pedido.",
-            files: [dataURLtoFile(imageData, `Recepcion_${order.orderId}.png`)]
-          });
-        } catch (err) {
-          // Fallback: descargamos la imagen
+      // 5) Ofrecemos dos opciones: Compartir o Descargar
+      Swal.fire({
+        title: "Recepción generada",
+        text: "Selecciona una opción",
+        icon: "question",
+        showDenyButton: true,
+        confirmButtonText: "Compartir",
+        denyButtonText: "Descargar"
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          // Intentar compartir (Web Share API)
+          if (navigator.share) {
+            try {
+              // Convertimos la dataURL en un File para compartir
+              const fileToShare = dataURLtoFile(imageData, `Recepcion_${order.orderId}.png`);
+              await navigator.share({
+                title: "Recepción de Pedido",
+                text: "Detalle de la recepción",
+                files: [fileToShare]
+              });
+            } catch (err) {
+              // Si falla la compartición, realizamos descarga como fallback
+              Swal.fire({
+                icon: "info",
+                title: "No se pudo compartir",
+                text: "Descargando la imagen en su lugar."
+              });
+              downloadImage(imageData, `Recepcion_${order.orderId}.png`);
+            }
+          } else {
+            // Si no está disponible navigator.share, forzamos descarga
+            Swal.fire({
+              icon: "info",
+              title: "Compartir no soportado",
+              text: "Descargando la imagen en su lugar."
+            });
+            downloadImage(imageData, `Recepcion_${order.orderId}.png`);
+          }
+        } else if (result.isDenied) {
+          // Descargar la imagen
           downloadImage(imageData, `Recepcion_${order.orderId}.png`);
         }
-      } else {
-        // Si no soporta share, descargamos la imagen
-        downloadImage(imageData, `Recepcion_${order.orderId}.png`);
-      }
+      });
+  
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: "Error al generar/compartir imagen",
+        title: "Error al generar imagen",
         text: error.message
       });
     }
   }
   
-  // Función auxiliar para convertir base64 a File
+  // Función auxiliar para convertir base64 a File (usado en navigator.share)
   function dataURLtoFile(dataUrl, fileName) {
     const arr = dataUrl.split(",");
     const mime = arr[0].match(/:(.*?);/)[1];
