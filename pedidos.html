@@ -1,184 +1,225 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Pedidos</title>
-    
-    <!-- Archivo de estilos CSS -->
-    <link rel="stylesheet" href="stylesPedidos.css">
-
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-
-    <!-- Librerías para exportar -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
-    <!-- Archivo JavaScript (pedidos.js) -->
-    <script defer src="pedidos.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Realizar Pedido</title>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <!-- Tus estilos -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Tu archivo JS con la lógica -->
+  <script defer src="app.js"></script>
 </head>
 <body>
-    <!-- Encabezado -->
-    <div class="header">
-        <h1>Gestión de Pedidos</h1>
 
-        <!-- Aquí se mostrará el usuario que inició sesión -->
-        <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
+  <!-- Barra de botones principales -->
+  <div class="buttons">
+    <button onclick="showOrders()">Gestión de Pedidos</button>
+    <button onclick="showPreSavedOrders()">Pedidos Preguardados</button> <!-- Nuevo Botón -->
+    <button class="right" onclick="window.location.href='index.html'">Volver a Principal</button>
+  </div>
 
-        <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
+  <!-- Contenedor de pestañas (si lo necesitas para organizar tu contenido) -->
+  <div class="tab-container" id="tabContainer">
+    <!-- Botón para mostrar la sección de pedidos -->
+    <button class="tab-button active" onclick="openTab(event, 'ordersContainer')">Pedidos</button>
+    <button class="tab-button" onclick="openTab(event, 'preSavedOrdersContainer')">Pedidos Preguardados</button> <!-- Nueva Pestaña -->
+  </div>
+
+  <!-- Contenedor principal de pedidos -->
+  <div id="ordersContainer" class="container">
+    <!-- Botón para crear un nuevo pedido -->
+    <button onclick="showOrderCreationContainer()">Nuevo Pedido</button>
+
+    <!-- Tabla para listar todos los pedidos -->
+    <table id="ordersTable">
+      <thead>
+        <tr>
+          <th>Proveedor</th>
+          <th>Sucursal</th>
+          <th>Productos</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Contenedor para Pedidos Preguardados -->
+  <div id="preSavedOrdersContainer" class="container" style="display:none;">
+    <h2>Pedidos Preguardados</h2>
+    <table id="preSavedOrdersTable">
+      <thead>
+        <tr>
+          <th>ID Pedido</th>
+          <th>Proveedor</th>
+          <th>Sucursal</th>
+          <th>Fecha de Pedido</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Contenedor para mostrar tarjetas de pedidos pendientes (solo admin) -->
+  <div id="pendingOrdersAdminCards" class="container">
+    <!-- Aquí el JS insertará las tarjetas de pedidos pendientes -->
+  </div>
+  
+  <!-- Contenedor para mostrar tarjetas de pedidos en proceso (solo admin) -->
+  <div id="inProcessOrdersAdminCards" class="container">
+    <!-- Aquí el JS insertará las tarjetas de pedidos en proceso -->
+  </div>
+
+  <!-- Contenedor del formulario de creación de pedido (inicialmente oculto) -->
+  <div id="orderCreationContainer" class="container" style="display:none;">
+    
+    <!-- Formulario de datos generales del pedido -->
+    <div class="order-form">
+      <div class="form-group">
+        <label for="newOrderProviderSelect">Seleccione Proveedor</label>
+        <select id="newOrderProviderSelect" onchange="loadNewOrderProducts()"></select>
+      </div>
+      <div class="form-group">
+        <label for="newOrderSucursalSelect">Seleccione Sucursal</label>
+        <!-- Este select se llena dinámicamente: 
+             - Si es admin: todas las sucursales
+             - Si es usuario normal: su sucursal fija -->
+        <select id="newOrderSucursalSelect"></select>
+      </div>
+      <div class="form-group">
+        <label for="orderDate">Fecha de Pedido</label>
+        <input type="date" id="orderDate">
+      </div>
+      <div class="form-group">
+        <label for="orderId">ID Pedido</label>
+        <input type="text" id="orderId" placeholder="ID Pedido" readonly>
+      </div>
     </div>
 
-    <!-- Contenedor de Filtro para el ADMIN (se muestra solo si userRole = 'administrador') -->
-    <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
-        <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
-        <select id="sucursalFilter" onchange="reloadOrders()">
-            <!-- Se llenará dinámicamente en pedidos.js -->
-        </select>
-    </div>
-
-    <!-- Contenedor de Pestañas -->
-    <div class="tab-container" id="tabContainer">
-        <button class="tab-button active" onclick="openTab(event, 'pendingOrdersContainer')">Pedidos Pendientes</button>
-        <button class="tab-button" onclick="openTab(event, 'inProcessOrdersContainer')">Pedidos en Proceso</button>
-        <button class="tab-button" onclick="openTab(event, 'completedOrdersContainer')">Pedidos Completados</button>
-    </div>
-
-    <!-- Contenedor de Pedidos Pendientes -->
-    <div id="pendingOrdersContainer" class="container">
-        <h2>Pedidos Pendientes</h2>
-        <div id="pendingOrdersAdminCards" class="order-cards-container"></div>
-    </div>
-
-    <!-- Contenedor de Pedidos en Proceso -->
-    <div id="inProcessOrdersContainer" class="container" style="display: none;">
-        <h2>Pedidos en Proceso</h2>
-        <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
-    </div>
-
-    <!-- Contenedor de Pedidos Completados -->
-    <div id="completedOrdersContainer" class="container" style="display: none;">
-        <h2>Pedidos Completados</h2>
-        <div id="completedOrdersAdminCards" class="order-cards-container"></div>
-    </div>
-
-    <!-- Modal para Detalles del Pedido -->
-    <div id="orderDetailsModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
-            <h2>Detalles del Pedido</h2>
-            <div id="orderDetails"></div>
-            <input type="hidden" id="exportOrderId">
+    <!-- Sección para añadir productos al pedido -->
+    <div class="product-form-and-table">
+      <div class="product-form-container">
+        <div class="product-form-group">
+          <!-- Botón para abrir el modal de selección de producto -->
+          <button onclick="showProductSelectionModal()">Seleccionar Producto</button>
         </div>
+        <div class="product-form-group">
+          <label for="productNameSelected">Producto</label>
+          <input type="text" id="productNameSelected" placeholder="Producto" readonly>
+        </div>
+        <div class="product-form-group">
+          <label for="productPresentationSelected">Presentación</label>
+          <input type="text" id="productPresentationSelected" placeholder="Presentación" readonly>
+        </div>
+        <div class="product-form-group">
+          <label for="productQuantity">Cantidad Pedido</label>
+          <input type="number" id="productQuantity" placeholder="Cantidad Pedido">
+        </div>
+        <div class="product-form-group">
+          <label for="productStock">Stock Actual</label>
+          <input type="number" id="productStock" placeholder="Stock Actual">
+          <label>
+            <input type="checkbox" id="stockNA"> N/A
+          </label>
+        </div>
+        <div class="product-form-group">
+          <!-- Botón para agregar producto a la tabla -->
+          <button onclick="addProductToNewOrder()">Agregar</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="newOrderTable">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Presentación</th>
+              <th>Cantidad Pedido</th>
+              <th>Stock</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- Modal para Exportar Pedido -->
-    <div id="exportModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeExportModal()">&times;</span>
-            <h2>Exportar Pedido</h2>
-            <button onclick="exportAs('image')">Descargar como Imagen</button>
-            <button onclick="exportAs('pdf')">Descargar como PDF</button>
-            <button onclick="exportAs('excel')">Descargar como Excel</button>
-        </div>
-    </div>
+    <!-- Botón para guardar el pedido -->
+    <button class="save-order-button" onclick="saveNewOrder()">Guardar Pedido</button>
+  </div>
 
-    <!-- Modal para Editar Pedido -->
-    <div id="editOrderModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeEditOrderModal()">&times;</span>
-            <h2>Editar Pedido</h2>
-            <div id="editOrderDetails"></div>
-            <button onclick="saveEditedOrder()">Guardar Cambios</button>
-        </div>
+  <!-- Modal para la selección de productos -->
+  <div id="productSelectionModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeProductSelectionModal()">&times;</span>
+      <h2>Seleccionar Productos</h2>
+      <table id="productSelectionTable">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Presentación</th>
+            <th>Acción</th>
+          </tr>
+          <tr>
+            <th>
+              <input 
+                type="text" 
+                id="productSearch" 
+                onkeyup="filterProducts()" 
+                placeholder="Buscar Producto..."
+              >
+            </th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
+  </div>
 
-    <!-- Modal para Confirmar Recepción de Pedido -->
-    <div id="confirmOrderModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
-            <h2>Ingresar Cantidades Recibidas</h2>
-            <div id="confirmOrderDetails"></div>
-            <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
-        </div>
+  <!-- Contenedor oculto para generar la imagen/ticket del pedido -->
+  <div id="orderDetailsForImage" class="ticket" style="display:none; position: absolute; left: -9999px;">
+    <div class="ticket-header">
+      <h1>Pedido</h1>
+      <h2>ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
     </div>
+    <div class="ticket-body">
+      <p><strong>Proveedor:</strong> <span id="imgProviderName"></span></p>
+      <p><strong>Sucursal:</strong> <span id="imgSucursalName"></span></p>
+      <p><strong>Fecha de Pedido:</strong> <span id="imgOrderDate"></span></p>
+      <h3>Productos:</h3>
+      <table class="products-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Presentación</th>
+            <th>Cantidad</th>
+            <th>Stock</th>
+          </tr>
+        </thead>
+        <tbody id="imgProductsTableBody"></tbody>
+      </table>
+    </div>
+    <div class="ticket-footer">
+      <p>Gracias por su pedido.</p>
+    </div>
+  </div>
 
-    <!-- Modal para Mostrar Pedido Recibido -->
-    <div id="receivedOrderModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
-            <h2>Detalles del Pedido Recibido</h2>
-            <div id="receivedOrderDetails"></div>
-        </div>
-    </div>
-
-    <!-- Modal para Cambiar Estado del Pedido -->
-    <div id="changeStatusModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeChangeStatusModal()">&times;</span>
-            <h2>Cambiar Estado del Pedido</h2>
-            <p>Selecciona el nuevo estado para este pedido:</p>
-            <button onclick="changeOrderStatusManually('pending')">Pedidos Pendientes</button>
-            <button onclick="changeOrderStatusManually('inProcess')">Pedidos en Proceso</button>
-            <button onclick="changeOrderStatusManually('completed')">Pedidos Completados</button>
-        </div>
-    </div>
-
-    <!-- Modal para Generar Recibo Manual -->
-    <div id="generateReceiptModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeGenerateReceiptModal()">&times;</span>
-            <h2>Generar Recibo Manual</h2>
-            <form id="receiptForm">
-                <input type="hidden" id="receiptOrderId" name="receiptOrderId">
-                <p>Sucursal: <span id="receiptSucursalName"></span></p>
-                
-                <label for="receiptDate">Fecha:</label>
-                <input type="date" id="receiptDate" name="receiptDate" required><br><br>
-                
-                <label for="receiptDescription">Descripción:</label>
-                <textarea id="receiptDescription" name="receiptDescription" rows="4" cols="50" required></textarea><br><br>
-                
-                <label for="receiptTotal">Total (Q):</label>
-                <input type="number" id="receiptTotal" name="receiptTotal" step="0.01" min="0" required><br><br>
-                
-                <button type="button" onclick="saveReceipt()">Guardar Recibo Manual</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal para Generar Recibo Automático (sin campo total) -->
-    <div id="generateAutomaticReceiptModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeGenerateAutomaticReceiptModal()">&times;</span>
-            <h2>Generar Recibo Automático</h2>
-            <form id="automaticReceiptForm">
-                <input type="hidden" id="autoReceiptOrderId" name="autoReceiptOrderId">
-                
-                <p>Sucursal: <span id="autoReceiptSucursalName"></span></p>
-                
-                <label for="autoReceiptDate">Fecha:</label>
-                <input type="date" id="autoReceiptDate" name="autoReceiptDate" required><br><br>
-                
-                <label for="autoReceiptDescription">Descripción:</label>
-                <textarea id="autoReceiptDescription" name="autoReceiptDescription" rows="4" cols="50" required></textarea><br><br>
-                
-                <!-- Se retira el campo de total manual; se calculará automáticamente en el JS -->
-                
-                <label for="autoReceiptProducts">Selecciona Productos:</label><br>
-                <div id="autoReceiptProductsContainer">
-                  <!-- Aquí se listarán los productos filtrados del pedido (con su precio y cantidad) -->
-                </div><br>
-                
-                <button type="button" onclick="saveAutomaticReceipt()">Guardar Recibo Automático</button>
-            </form>
-        </div>
-    </div>
 </body>
 </html>
