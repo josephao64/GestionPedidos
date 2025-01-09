@@ -1,9 +1,11 @@
+<!-- realizar_pedidos/realizadPedido.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gestión de Pedidos</title>
+  <title>Realizar Pedido</title>
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
@@ -17,7 +19,7 @@
   <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   
-  <!-- Tus estilos -->
+  <!-- Enlace a estilos específicos -->
   <link rel="stylesheet" href="styles.css">
   
   <!-- Tu archivo JS con la lógica -->
@@ -25,50 +27,15 @@
 </head>
 <body>
 
-  <!-- Barra de botones principales -->
-  <div class="buttons">
-    <button onclick="showOrders()">Gestión de Pedidos</button>
-    <button class="right" onclick="window.location.href='INDEX.html'">Volver a Principal</button>
+  <h1>Realizar Pedido</h1>
+
+  <!-- Botón para regresar al menú principal -->
+  <div style="text-align: center; margin-bottom: 20px;">
+    <button onclick="window.location.href='../index.html'">Regresar al Menú Principal</button>
   </div>
 
-  <!-- Contenedor de pestañas (si lo necesitas para organizar tu contenido) -->
-  <div class="tab-container" id="tabContainer">
-    <!-- Botón para mostrar la sección de pedidos -->
-    <button class="tab-button active" onclick="openTab(event, 'ordersContainer')">Pedidos</button>
-  </div>
-
-  <!-- Contenedor principal de pedidos -->
-  <div id="ordersContainer" class="container">
-    <!-- Botón para crear un nuevo pedido -->
-    <button onclick="showOrderCreationContainer()">Nuevo Pedido</button>
-
-    <!-- Aquí podrías mostrar una tabla si deseas listar todos los pedidos 
-         o una vista específica de pedidos -->
-    <table id="ordersTable">
-      <thead>
-        <tr>
-          <th>Proveedor</th>
-          <th>Sucursal</th>
-          <th>Productos</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <!-- Contenedor para mostrar tarjetas de pedidos pendientes (solo admin) -->
-  <div id="pendingOrdersAdminCards" class="container">
-    <!-- Aquí el JS insertará las tarjetas de pedidos pendientes -->
-  </div>
-  
-  <!-- Contenedor para mostrar tarjetas de pedidos en proceso (solo admin) -->
-  <div id="inProcessOrdersAdminCards" class="container">
-    <!-- Aquí el JS insertará las tarjetas de pedidos en proceso -->
-  </div>
-
-  <!-- Contenedor del formulario de creación de pedido (inicialmente oculto) -->
-  <div id="orderCreationContainer" class="container" style="display:none;">
+  <!-- Contenedor del formulario de creación de pedido (visible por defecto) -->
+  <div id="orderCreationContainer" class="container">
     
     <!-- Formulario de datos generales del pedido -->
     <div class="order-form">

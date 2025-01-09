@@ -1,4 +1,6 @@
-// Importar jsPDF desde el objeto global proporcionado por la biblioteca jsPDF  
+// realizar_pedidos/app.js
+
+// Importar jsPDF desde el objeto global proporcionado por la biblioteca jsPDF   
 const { jsPDF } = window.jspdf;
 
 /**
@@ -20,23 +22,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Inicializar Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
-    authDomain: "logisticdb-2e63c.firebaseapp.com",
-    projectId: "logisticdb-2e63c",
-    storageBucket: "logisticdb-2e63c.appspot.com",
-    messagingSenderId: "917523682093",
-    appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
+  authDomain: "logisticdb-2e63c.firebaseapp.com",
+  projectId: "logisticdb-2e63c",
+  storageBucket: "logisticdb-2e63c.appspot.com",
+  messagingSenderId: "917523682093",
+  appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
   };
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
 
   // Verificar datos del usuario (rol, sucursal)
   await obtenerSucursalDelUsuario();
-
-  // Si el usuario es administrador, cargar pedidos pendientes y en proceso
-  if (userRole === 'administrador') {
-    loadPendingOrdersAdmin();
-    loadInProcessOrdersAdmin();
-  }
 
   // Manejo del checkbox 'N/A' para stock (asumiendo que existe en tu HTML)
   const stockNA = document.getElementById('stockNA');
@@ -52,6 +48,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+
+  // Mostrar el formulario de creación de pedido automáticamente
+  showOrderCreationContainer();
 });
 
 /**
@@ -71,7 +70,7 @@ async function obtenerSucursalDelUsuario() {
       title: 'No Autenticado',
       text: 'No has iniciado sesión. Por favor, inicia sesión para continuar.'
     }).then(() => {
-      window.location.href = 'login.html';
+      window.location.href = '../login.html'; // Asegúrate de que esta ruta sea correcta
     });
     return;
   }
@@ -103,7 +102,7 @@ async function obtenerSucursalDelUsuario() {
         title: 'Usuario No Encontrado',
         text: 'No se encontró información del usuario. Por favor, inicia sesión nuevamente.'
       }).then(() => {
-        window.location.href = 'login.html';
+        window.location.href = '../login.html'; // Asegúrate de que esta ruta sea correcta
       });
     }
   } catch (error) {
@@ -118,112 +117,11 @@ async function obtenerSucursalDelUsuario() {
 
 /**
  * ================================
- * Funciones para cargar Pedidos (Admin)
- * ================================
- */
-
-// Cargar pedidos pendientes
-async function loadPendingOrdersAdmin() {
-  try {
-    const ordersSnapshot = await db
-      .collection('orders')
-      .where('status', '==', 'pending')
-      .get();
-
-    const pendingOrdersAdminCards = document.getElementById('pendingOrdersAdminCards');
-    if (!pendingOrdersAdminCards) return; // Si no existe en tu HTML, salir
-
-    pendingOrdersAdminCards.innerHTML = '';
-
-    ordersSnapshot.forEach(doc => {
-      const order = doc.data();
-      const card = createOrderCard(doc.id, order);
-      pendingOrdersAdminCards.appendChild(card);
-    });
-  } catch (error) {
-    console.error('Error al cargar pedidos pendientes:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al cargar pedidos pendientes: ' + error.message
-    });
-  }
-}
-
-// Cargar pedidos en proceso
-async function loadInProcessOrdersAdmin() {
-  try {
-    const ordersSnapshot = await db
-      .collection('orders')
-      .where('status', '==', 'inProcess')
-      .get();
-
-    const inProcessOrdersAdminCards = document.getElementById('inProcessOrdersAdminCards');
-    if (!inProcessOrdersAdminCards) return; // Si no existe en tu HTML, salir
-
-    inProcessOrdersAdminCards.innerHTML = '';
-
-    ordersSnapshot.forEach(doc => {
-      const order = doc.data();
-      const card = createOrderCard(doc.id, order);
-      inProcessOrdersAdminCards.appendChild(card);
-    });
-  } catch (error) {
-    console.error('Error al cargar pedidos en proceso:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al cargar pedidos en proceso: ' + error.message
-    });
-  }
-}
-
-// Crear tarjeta de pedido (para pendientes o en proceso)
-function createOrderCard(orderId, order) {
-  const card = document.createElement('div');
-  card.className = 'order-card';
-  card.innerHTML = `
-    <h3>Pedido ID: ${order.orderId}</h3>
-    <p>Proveedor: ${order.providerName}</p>
-    <p>Sucursal: ${order.sucursalName}</p>
-    <p>Fecha: ${order.orderDate}</p>
-    ${
-      order.status === 'pending'
-        ? `<button onclick="confirmOrder('${orderId}')">Confirmar Pedido</button>`
-        : ''
-    }
-    <button onclick="editOrder('${orderId}')">Editar Pedido</button>
-  `;
-  return card;
-}
-
-/**
- * Confirmar pedido: cambia de 'pending' a 'inProcess'
- */
-async function confirmOrder(orderId) {
-  try {
-    await db.collection('orders').doc(orderId).update({ status: 'inProcess' });
-    loadPendingOrdersAdmin();
-    loadInProcessOrdersAdmin();
-  } catch (error) {
-    console.error('Error al confirmar el pedido:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al confirmar el pedido: ' + error.message
-    });
-  }
-}
-
-/**
- * ================================
  * Función para mostrar el contenedor
  * de creación de nuevo pedido
  * ================================
  */
 async function showOrderCreationContainer() {
-  // Ocultar lista de pedidos
-  document.getElementById('ordersContainer').style.display = 'none';
   // Mostrar contenedor de creación
   document.getElementById('orderCreationContainer').style.display = 'block';
 
@@ -431,7 +329,7 @@ function filterProducts() {
   const table = document.getElementById('productSelectionTable');
   const tr = table.getElementsByTagName('tr');
 
-  for (let i = 2; i < tr.length; i++) {
+  for (let i = 2; i < tr.length; i++) { // Asumiendo que la primera fila es de encabezados
     const td = tr[i].getElementsByTagName('td')[0];
     if (td) {
       const txtValue = td.textContent || td.innerText;
@@ -672,9 +570,6 @@ async function saveNewOrder() {
 
     // Resetear formulario
     closeOrderCreationContainer();
-    if (document.getElementById('pendingOrdersAdminCards')) {
-      loadPendingOrdersAdmin();
-    }
   } catch (error) {
     console.error('Error al guardar el pedido:', error);
     Swal.fire({
@@ -692,11 +587,7 @@ async function saveNewOrder() {
  */
 function closeOrderCreationContainer() {
   document.getElementById('orderCreationContainer').style.display = 'none';
-  document.getElementById('ordersContainer').style.display = 'block';
-
-  // Desbloquear el selector de proveedor y limpiar la tabla
-  document.getElementById('newOrderProviderSelect').disabled = false;
-  document.getElementById('newOrderTable').getElementsByTagName('tbody')[0].innerHTML = '';
+  // Opcional: Mostrar un mensaje de éxito o redirigir
 }
 
 /**
@@ -939,24 +830,16 @@ function exportOrderAsPDF(orderDetails) {
 
 /**
  * ================================
- * Editar pedido (no implementado)
+ * Función para escapar HTML
  * ================================
  */
-function editOrder(orderId) {
-  Swal.fire({
-    icon: 'info',
-    title: 'Funcionalidad No Implementada',
-    text: 'La funcionalidad de editar pedidos aún no está implementada.'
-  });
-}
-
-/**
- * ================================
- * Mostrar pedidos (opcional)
- * ================================
- */
-function showOrders() {
-  document.getElementById('ordersContainer').style.display = 'block';
-  document.getElementById('orderCreationContainer').style.display = 'none';
-  loadNewOrderProviders();
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
 }

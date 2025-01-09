@@ -1,0 +1,27 @@
+<!-- realizar_pedidos/detallePedido.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del Pedido</title>
+    <!-- Enlace a estilos específicos -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Firebase SDK v8.6.8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <!-- Tu archivo JS específico para detalles -->
+    <script defer src="detallePedidoApp.js"></script>
+</head>
+<body>
+    <h1>Detalle del Pedido</h1>
+    <div class="navigation">
+        <button onclick="window.history.back()">Volver</button>
+    </div>
+    <div id="orderDetails">
+        <!-- Los detalles del pedido se cargarán aquí -->
+    </div>
+</body>
+</html>
