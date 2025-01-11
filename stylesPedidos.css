@@ -111,7 +111,7 @@ h1 {
     background-color: white;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     transition: box-shadow 0.3s, transform 0.2s;
-    margin-bottom: 20px; /* Para separar las tarjetas */
+    margin-bottom: 20px;
 }
 
 .order-card:hover {
@@ -149,7 +149,7 @@ h1 {
 /* Botones específicos (Recibos manuales/automáticos, etc.) */
 .order-card button.generate-manual-receipt,
 .order-card button.generate-automatic-receipt {
-    background-color: #28a745; /* Verde */
+    background-color: #28a745;
 }
 
 .order-card button.generate-manual-receipt:hover,
@@ -158,36 +158,98 @@ h1 {
 }
 
 .order-card button.download-receipt {
-    background-color: #17a2b8; /* Cyan */
+    background-color: #17a2b8;
 }
 
 .order-card button.download-receipt:hover {
     background-color: #117a8b;
 }
 
+.order-card button.change-status-button {
+    background-color: #ffc107;
+    color: black;
+}
+
+.order-card button.change-status-button:hover {
+    background-color: #e0a800;
+}
+
+/* =========================================================
+   Barra de Progreso de Estado
+   ========================================================= */
+.progress-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.progress-step .step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #ccc;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.progress-step.completed .step-number {
+    background-color: #28a745;
+}
+
+.progress-step.current .step-number {
+    background-color: #ffc107;
+}
+
+.progress-step .step-label {
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+.progress-line {
+    flex: 1;
+    height: 4px;
+    background-color: #ccc;
+    margin: 0 10px;
+}
+
+.progress-line.completed {
+    background-color: #28a745;
+}
+
 /* =========================================================
    Modales
    ========================================================= */
 .modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1000; /* Sit on top */
+    display: none;
+    position: fixed;
+    z-index: 1000;
     left: 0;
     top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
 }
 
 .modal-content {
     background-color: #fefefe;
-    margin: 5% auto; /* 5% from the top and centered */
+    margin: 5% auto;
     padding: 20px;
     border: 1px solid #888;
-    width: 80%; /* Could be more or less, depending on screen size */
+    width: 80%;
     border-radius: 8px;
-    max-width: 600px; 
+    max-width: 800px;
 }
 
 .close {
@@ -199,97 +261,79 @@ h1 {
     transition: color 0.3s;
 }
 
-.close:hover,
-.close:focus {
+.close:hover {
     color: black;
-    text-decoration: none;
 }
 
-/* =========================================================
-   Formularios / Tablas
-   ========================================================= */
-table {
+/* Estilo para tablas dentro de modales */
+.modal table {
     width: 100%;
     border-collapse: collapse;
-    margin: 20px 0;
+    margin-top: 20px;
 }
 
-table, th, td {
+.modal th,
+.modal td {
     border: 1px solid #ddd;
-}
-
-th, td {
     padding: 10px;
     text-align: left;
 }
 
-th {
+.modal th {
     background-color: #f2f2f2;
 }
 
-/* Botones en el contenido del modal */
-.modal button {
-    padding: 10px 20px;
-    border: none;
-    background-color: #007BFF;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.2s;
-    border-radius: 5px;
-    margin: 10px 5px;
-}
-
-.modal button:hover {
-    background-color: #0056b3;
-    transform: scale(1.05);
-}
-
-.modal h2 {
-    margin-top: 0;
-    color: #007BFF;
-    font-size: 1.5em;
-    border-bottom: 2px solid #007BFF;
-    padding-bottom: 10px;
-}
-
-.modal input[type="text"],
-.modal input[type="date"],
-.modal input[type="number"],
+/* Inputs en el contenido del modal */
+.modal input,
 .modal textarea {
-    width: calc(100% - 22px);
-    padding: 10px;
+    width: 100%;
+    padding: 8px;
     margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 5px;
     box-sizing: border-box;
-    font-size: 1em;
 }
 
 /* =========================================================
-   Lista de recibos
+   Formulario de Confirmación de Pedido
    ========================================================= */
-.receiptsContainer ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-.receiptsContainer li {
-    margin: 5px 0;
+#invoiceTotalContainer {
+    text-align: right;
+    font-size: 1.2em;
+    margin-top: 20px;
 }
 
 /* =========================================================
-   Formulario de Recibo Automático
+   Responsividad
    ========================================================= */
-.auto-receipt-product {
-    margin-bottom: 10px;
-}
+@media screen and (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        padding: 15px;
+    }
 
-/* Para resaltar el label de “Sucursal” dentro del modal */
-#generateReceiptModal p,
-#generateAutomaticReceiptModal p {
-    font-weight: bold;
-}
-#generateReceiptModal span,
-#generateAutomaticReceiptModal span {
-    font-weight: normal;
+    .tab-button {
+        font-size: 14px;
+        padding: 8px 16px;
+    }
+
+    .order-card h3 {
+        font-size: 1em;
+    }
+
+    .order-card p {
+        font-size: 0.9em;
+    }
+
+    .progress-step .step-label {
+        font-size: 10px;
+    }
+
+    .modal h2 {
+        font-size: 1.3em;
+    }
+
+    #invoiceTotalContainer {
+        font-size: 1em;
+    }
 }
