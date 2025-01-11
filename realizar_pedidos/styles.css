@@ -179,7 +179,6 @@
   .close:focus {
     color: black;
     text-decoration: none;
-    cursor: pointer;
   }
   
   /* =====================================
@@ -309,5 +308,62 @@
       width: 90%;
       padding: 10px 15px;
     }
+  }
+  
+  /* =====================================
+     Nuevos Estilos para Generar Imagen del Ticket
+     ===================================== */
+  
+  /* =========================================================
+     Estilos para el Ticket
+  ========================================================= */
+  #ticketContainer {
+      width: 300px;
+      padding: 20px;
+      background-color: #fff;
+      border: 2px dashed #007BFF;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  
+  .ticket {
+      font-family: 'Courier New', Courier, monospace;
+      color: #333;
+  }
+  
+  .ticket h2 {
+      text-align: center;
+      color: #007BFF;
+      margin-bottom: 20px;
+  }
+  
+  .ticket p {
+      margin: 5px 0;
+      font-size: 14px;
+  }
+  
+  .ticket table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+  }
+  
+  .ticket th, .ticket td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+  }
+  
+  .ticket th {
+      background-color: #f2f2f2;
+  }
+  
+  .thank-you {
+      text-align: center;
+      margin-top: 20px;
+      font-weight: bold;
+      color: #28a745;
+      font-size: 16px;
   }
   

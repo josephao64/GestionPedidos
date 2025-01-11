@@ -22,11 +22,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Inicializar Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
-  authDomain: "logisticdb-2e63c.firebaseapp.com",
-  projectId: "logisticdb-2e63c",
-  storageBucket: "logisticdb-2e63c.appspot.com",
-  messagingSenderId: "917523682093",
-  appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
+    authDomain: "logisticdb-2e63c.firebaseapp.com",
+    projectId: "logisticdb-2e63c",
+    storageBucket: "logisticdb-2e63c.appspot.com",
+    messagingSenderId: "917523682093",
+    appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
   };
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
@@ -51,6 +51,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Mostrar el formulario de creación de pedido automáticamente
   showOrderCreationContainer();
+
+  // Añadir manejador de evento al botón de regreso
+  const backButton = document.getElementById('backButton');
+  if (backButton) {
+    backButton.addEventListener('click', handleBackButton);
+  }
 });
 
 /**
@@ -546,30 +552,81 @@ async function saveNewOrder() {
     return;
   }
 
+  // Mostrar SweetAlert con opciones: Cancelar, Preguardar, Salir sin guardar
+  Swal.fire({
+    title: 'Confirmar acción',
+    text: '¿Qué deseas hacer con el pedido?',
+    icon: 'question',
+    html: `
+      <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+        <button id="cancelarBtn" class="swal2-styled" style="background-color: #d33;">Cancelar</button>
+        <button id="preguardarBtn" class="swal2-styled" style="background-color: #f0ad4e;">Preguardar</button>
+        <button id="salirBtn" class="swal2-styled" style="background-color: #5cb85c;">Salir sin guardar</button>
+      </div>
+    `,
+    showConfirmButton: false,
+    allowOutsideClick: false,
+    focusConfirm: false,
+    didOpen: () => {
+      // Obtener referencias a los botones
+      const cancelarBtn = Swal.getPopup().querySelector('#cancelarBtn');
+      const preguardarBtn = Swal.getPopup().querySelector('#preguardarBtn');
+      const salirBtn = Swal.getPopup().querySelector('#salirBtn');
+
+      // Cancelar: Cierra el modal y permite continuar en la página
+      cancelarBtn.addEventListener('click', () => {
+        Swal.close();
+      });
+
+      // Preguardar: Guarda el pedido como borrador y cierra el modal
+      preguardarBtn.addEventListener('click', async () => {
+        Swal.showLoading();
+        await preguardarPedido({
+          providerId,
+          providerName,
+          sucursalId,
+          sucursalName,
+          orderDate,
+          orderId,
+          products,
+          status: 'preguardado'
+        });
+        Swal.close();
+        Swal.fire({
+          icon: 'success',
+          title: 'Pedido Preguardado',
+          text: 'El pedido ha sido guardado como preguardado.'
+        });
+        // Resetear formulario para permitir agregar nuevos pedidos
+        closeOrderCreationContainer();
+      });
+
+      // Salir sin guardar: Navega al menú principal sin guardar el pedido
+      salirBtn.addEventListener('click', () => {
+        window.location.href = 'menu.html'; // Redirigir a menu.html
+      });
+    }
+  });
+}
+
+/**
+ * ================================
+ * Función para guardar el pedido en Firestore
+ * ================================
+ */
+async function guardarPedido(orderDetails) {
   try {
     await db.collection('orders').add({
-      providerId,
-      providerName,
-      sucursalId,
-      sucursalName,
-      orderDate,
-      orderId,
-      products,
-      status: 'pending',
+      providerId: orderDetails.providerId,
+      providerName: orderDetails.providerName,
+      sucursalId: orderDetails.sucursalId,
+      sucursalName: orderDetails.sucursalName,
+      orderDate: orderDetails.orderDate,
+      orderId: orderDetails.orderId,
+      products: orderDetails.products,
+      status: orderDetails.status,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
-
-    // Mostrar alerta de confirmación
-    showOrderConfirmationModal({
-      orderId,
-      providerName,
-      sucursalName,
-      orderDate,
-      products
-    });
-
-    // Resetear formulario
-    closeOrderCreationContainer();
   } catch (error) {
     console.error('Error al guardar el pedido:', error);
     Swal.fire({
@@ -582,97 +639,249 @@ async function saveNewOrder() {
 
 /**
  * ================================
- * Cerrar contenedor de creación
+ * Función para preguardar el pedido
  * ================================
  */
-function closeOrderCreationContainer() {
-  document.getElementById('orderCreationContainer').style.display = 'none';
-  // Opcional: Mostrar un mensaje de éxito o redirigir
+async function preguardarPedido(orderDetails) {
+  try {
+    await db.collection('orders').add({
+      providerId: orderDetails.providerId,
+      providerName: orderDetails.providerName,
+      sucursalId: orderDetails.sucursalId,
+      sucursalName: orderDetails.sucursalName,
+      orderDate: orderDetails.orderDate,
+      orderId: orderDetails.orderId,
+      products: orderDetails.products,
+      status: orderDetails.status,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error al preguardar el pedido:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al preguardar el pedido: ' + error.message
+    });
+  }
 }
 
 /**
  * ================================
- * Mostrar la alerta de confirmación
- * usando SweetAlert2
+ * Función para compartir el pedido
  * ================================
  */
-function showOrderConfirmationModal(orderDetails) {
-  // Construir la tabla HTML de productos
-  let productsRows = '';
-  orderDetails.products.forEach((product) => {
-    productsRows += `
-      <tr>
-        <td>${escapeHtml(product.name)}</td>
-        <td>${escapeHtml(product.presentation)}</td>
-        <td>${product.quantity}</td>
-        <td>${product.stock}</td>
-      </tr>
-    `;
-  });
-
-  const orderTableHTML = `
-    <div style="text-align: center; margin-bottom: 20px;">
-      <h2>Pedido Confirmado</h2>
-    </div>
-    <div style="text-align: left;">
-      <p><strong>ID Pedido:</strong> <span style="font-size: 18px; font-weight: bold;">
-        ${escapeHtml(orderDetails.orderId)}</span></p>
-      <p><strong>Proveedor:</strong> ${escapeHtml(orderDetails.providerName)}</p>
-      <p><strong>Sucursal:</strong> ${escapeHtml(orderDetails.sucursalName)}</p>
-      <p><strong>Fecha de Pedido:</strong> ${escapeHtml(orderDetails.orderDate)}</p>
-      <h3>Productos:</h3>
-      <table border="1" style="width:100%; text-align:left;">
-        <tr>
-          <th>Producto</th>
-          <th>Presentación</th>
-          <th>Cantidad</th>
-          <th>Stock</th>
-        </tr>
-        ${productsRows}
-      </table>
-    </div>
-  `;
-
+function shareOrder(orderDetails) {
   Swal.fire({
-    title: 'Confirme su Pedido',
-    html: orderTableHTML,
+    title: 'Compartir Pedido',
+    text: '¿Cómo deseas compartir el pedido?',
+    showDenyButton: true,
     showCancelButton: true,
-    confirmButtonText: 'Guardar',
-    cancelButtonText: 'Editar',
-    width: '600px',
-    focusConfirm: false,
-    preConfirm: () => 'guardar'
+    confirmButtonText: 'Exportar como Imagen',
+    denyButtonText: `Exportar como PDF`,
+    cancelButtonText: 'Cerrar',
   }).then((result) => {
     if (result.isConfirmed) {
-      // Después de confirmar, permitir exportar como Imagen o PDF
-      Swal.fire({
-        title: 'Pedido Guardado',
-        text: '¿Qué deseas hacer a continuación?',
-        showDenyButton: true,
-        showCancelButton: true,
-        confirmButtonText: 'Exportar como Imagen',
-        denyButtonText: `Exportar como PDF`,
-        cancelButtonText: 'Cerrar',
-      }).then((result2) => {
-        if (result2.isConfirmed) {
-          exportOrderAsImage(orderDetails);
-        } else if (result2.isDenied) {
-          exportOrderAsPDF(orderDetails);
-        }
-      });
-    } else if (result.dismiss === Swal.DismissReason.cancel) {
-      Swal.fire({
-        icon: 'info',
-        title: 'Editar Pedido',
-        text: 'Puedes editar el pedido y guardarlo nuevamente.'
-      });
+      exportOrderAsImage(orderDetails);
+    } else if (result.isDenied) {
+      exportOrderAsPDF(orderDetails);
     }
+    // Si se cierra o se cancela, no hacer nada
   });
 }
 
 /**
  * ================================
- * Exportar pedido como Imagen
+ * Función para manejar el clic en el botón de regreso
+ * ================================
+ */
+function handleBackButton(event) {
+  if (hasUnsavedOrder()) {
+    event.preventDefault();
+    Swal.fire({
+      title: 'Pedido no guardado',
+      text: 'Tienes un pedido en proceso que no se guardará si regresas al menú principal. ¿Qué deseas hacer?',
+      icon: 'warning',
+      html: `
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+          <button id="cancelarBtn" class="swal2-styled" style="background-color: #d33;">Cancelar</button>
+          <button id="preguardarBtn" class="swal2-styled" style="background-color: #f0ad4e;">Preguardar</button>
+          <button id="salirBtn" class="swal2-styled" style="background-color: #5cb85c;">Salir sin guardar</button>
+        </div>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      focusConfirm: false,
+      didOpen: () => {
+        // Obtener referencias a los botones
+        const cancelarBtn = Swal.getPopup().querySelector('#cancelarBtn');
+        const preguardarBtn = Swal.getPopup().querySelector('#preguardarBtn');
+        const salirBtn = Swal.getPopup().querySelector('#salirBtn');
+
+        // Cancelar: Cierra el modal y permite continuar en la página
+        cancelarBtn.addEventListener('click', () => {
+          Swal.close();
+        });
+
+        // Preguardar: Guarda el pedido como borrador y cierra el modal
+        preguardarBtn.addEventListener('click', async () => {
+          Swal.showLoading();
+          await preguardarPedido({
+            providerId: document.getElementById('newOrderProviderSelect').value,
+            providerName: document.getElementById('newOrderProviderSelect').options[
+              document.getElementById('newOrderProviderSelect').selectedIndex
+            ]?.text || '',
+            sucursalId: document.getElementById('newOrderSucursalSelect').value,
+            sucursalName: document.getElementById('newOrderSucursalSelect').options[
+              document.getElementById('newOrderSucursalSelect').selectedIndex
+            ]?.text || '',
+            orderDate: document.getElementById('orderDate').value,
+            orderId: document.getElementById('orderId').value,
+            products: getCurrentProducts(),
+            status: 'preguardado'
+          });
+          Swal.close();
+          Swal.fire({
+            icon: 'success',
+            title: 'Pedido Preguardado',
+            text: 'El pedido ha sido guardado como preguardado.'
+          });
+          // Resetear formulario para permitir agregar nuevos pedidos
+          closeOrderCreationContainer();
+          // Navegar al menú principal
+          window.location.href = 'menu.html'; // Redirigir a menu.html
+        });
+
+        // Salir sin guardar: Navega al menú principal sin guardar el pedido
+        salirBtn.addEventListener('click', () => {
+          window.location.href = 'menu.html'; // Redirigir a menu.html
+        });
+      }
+    });
+  } else {
+    window.location.href = 'menu.html'; // Redirigir a menu.html si no hay pedido en proceso
+  }
+}
+
+/**
+ * ================================
+ * Función para verificar si hay un pedido en proceso
+ * ================================
+ */
+function hasUnsavedOrder() {
+  // Verificar si hay productos en la tabla
+  const newOrderTableBody = document
+    .getElementById('newOrderTable')
+    .getElementsByTagName('tbody')[0];
+  return newOrderTableBody.rows.length > 0;
+}
+
+/**
+ * ================================
+ * Función para obtener los productos actuales del pedido
+ * ================================
+ */
+function getCurrentProducts() {
+  const newOrderTableBody = document
+    .getElementById('newOrderTable')
+    .getElementsByTagName('tbody')[0];
+  const rows = newOrderTableBody.getElementsByTagName('tr');
+
+  const products = [];
+  for (let i = 0; i < rows.length; i++) {
+    const cells = rows[i].getElementsByTagName('td');
+    products.push({
+      name: cells[0].textContent,
+      presentation: cells[1].textContent,
+      quantity: cells[2].textContent,
+      stock: cells[3].textContent
+    });
+  }
+  return products;
+}
+
+/**
+ * ================================
+ * Función para guardar el pedido en Firestore
+ * ================================
+ */
+async function guardarPedido(orderDetails) {
+  try {
+    await db.collection('orders').add({
+      providerId: orderDetails.providerId,
+      providerName: orderDetails.providerName,
+      sucursalId: orderDetails.sucursalId,
+      sucursalName: orderDetails.sucursalName,
+      orderDate: orderDetails.orderDate,
+      orderId: orderDetails.orderId,
+      products: orderDetails.products,
+      status: orderDetails.status,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error al guardar el pedido:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al guardar el pedido: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para preguardar el pedido
+ * ================================
+ */
+async function preguardarPedido(orderDetails) {
+  try {
+    await db.collection('orders').add({
+      providerId: orderDetails.providerId,
+      providerName: orderDetails.providerName,
+      sucursalId: orderDetails.sucursalId,
+      sucursalName: orderDetails.sucursalName,
+      orderDate: orderDetails.orderDate,
+      orderId: orderDetails.orderId,
+      products: orderDetails.products,
+      status: orderDetails.status,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error al preguardar el pedido:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al preguardar el pedido: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para compartir el pedido
+ * ================================
+ */
+function shareOrder(orderDetails) {
+  Swal.fire({
+    title: 'Compartir Pedido',
+    text: '¿Cómo deseas compartir el pedido?',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'Exportar como Imagen',
+    denyButtonText: `Exportar como PDF`,
+    cancelButtonText: 'Cerrar',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      exportOrderAsImage(orderDetails);
+    } else if (result.isDenied) {
+      exportOrderAsPDF(orderDetails);
+    }
+    // Si se cierra o se cancela, no hacer nada
+  });
+}
+
+/**
+ * ================================
+ * Función para exportar pedido como Imagen
  * ================================
  */
 function exportOrderAsImage(orderDetails) {
@@ -746,7 +955,7 @@ function exportOrderAsImage(orderDetails) {
 
 /**
  * ================================
- * Exportar pedido como PDF
+ * Función para exportar pedido como PDF
  * ================================
  */
 function exportOrderAsPDF(orderDetails) {
@@ -830,16 +1039,720 @@ function exportOrderAsPDF(orderDetails) {
 
 /**
  * ================================
- * Función para escapar HTML
+ * Función para compartir el pedido
  * ================================
  */
-function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
+function shareOrder(orderDetails) {
+  Swal.fire({
+    title: 'Compartir Pedido',
+    text: '¿Cómo deseas compartir el pedido?',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'Exportar como Imagen',
+    denyButtonText: `Exportar como PDF`,
+    cancelButtonText: 'Cerrar',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      exportOrderAsImage(orderDetails);
+    } else if (result.isDenied) {
+      exportOrderAsPDF(orderDetails);
+    }
+    // Si se cierra o se cancela, no hacer nada
+  });
+}
+
+/**
+ * ================================
+ * Función para manejar el clic en el botón de regreso
+ * ================================
+ */
+function handleBackButton(event) {
+  if (hasUnsavedOrder()) {
+    event.preventDefault();
+    Swal.fire({
+      title: 'Pedido no guardado',
+      text: 'Tienes un pedido en proceso que no se guardará si regresas al menú principal. ¿Qué deseas hacer?',
+      icon: 'warning',
+      html: `
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+          <button id="cancelarBtn" class="swal2-styled" style="background-color: #d33;">Cancelar</button>
+          <button id="preguardarBtn" class="swal2-styled" style="background-color: #f0ad4e;">Preguardar</button>
+          <button id="salirBtn" class="swal2-styled" style="background-color: #5cb85c;">Salir sin guardar</button>
+        </div>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      focusConfirm: false,
+      didOpen: () => {
+        // Obtener referencias a los botones
+        const cancelarBtn = Swal.getPopup().querySelector('#cancelarBtn');
+        const preguardarBtn = Swal.getPopup().querySelector('#preguardarBtn');
+        const salirBtn = Swal.getPopup().querySelector('#salirBtn');
+
+        // Cancelar: Cierra el modal y permite continuar en la página
+        cancelarBtn.addEventListener('click', () => {
+          Swal.close();
+        });
+
+        // Preguardar: Guarda el pedido como borrador y cierra el modal
+        preguardarBtn.addEventListener('click', async () => {
+          Swal.showLoading();
+          await preguardarPedido({
+            providerId: document.getElementById('newOrderProviderSelect').value,
+            providerName: document.getElementById('newOrderProviderSelect').options[
+              document.getElementById('newOrderProviderSelect').selectedIndex
+            ]?.text || '',
+            sucursalId: document.getElementById('newOrderSucursalSelect').value,
+            sucursalName: document.getElementById('newOrderSucursalSelect').options[
+              document.getElementById('newOrderSucursalSelect').selectedIndex
+            ]?.text || '',
+            orderDate: document.getElementById('orderDate').value,
+            orderId: document.getElementById('orderId').value,
+            products: getCurrentProducts(),
+            status: 'preguardado'
+          });
+          Swal.close();
+          Swal.fire({
+            icon: 'success',
+            title: 'Pedido Preguardado',
+            text: 'El pedido ha sido guardado como preguardado.'
+          });
+          // Resetear formulario para permitir agregar nuevos pedidos
+          closeOrderCreationContainer();
+          // Navegar al menú principal
+          window.location.href = 'menu.html'; // Redirigir a menu.html
+        });
+
+        // Salir sin guardar: Navega al menú principal sin guardar el pedido
+        salirBtn.addEventListener('click', () => {
+          window.location.href = 'menu.html'; // Redirigir a menu.html
+        });
+      }
+    });
+  } else {
+    window.location.href = 'menu.html'; // Redirigir a menu.html si no hay pedido en proceso
+  }
+}
+
+/**
+ * ================================
+ * Función para verificar si hay un pedido en proceso
+ * ================================
+ */
+function hasUnsavedOrder() {
+  // Verificar si hay productos en la tabla
+  const newOrderTableBody = document
+    .getElementById('newOrderTable')
+    .getElementsByTagName('tbody')[0];
+  return newOrderTableBody.rows.length > 0;
+}
+
+/**
+ * ================================
+ * Función para obtener los productos actuales del pedido
+ * ================================
+ */
+function getCurrentProducts() {
+  const newOrderTableBody = document
+    .getElementById('newOrderTable')
+    .getElementsByTagName('tbody')[0];
+  const rows = newOrderTableBody.getElementsByTagName('tr');
+
+  const products = [];
+  for (let i = 0; i < rows.length; i++) {
+    const cells = rows[i].getElementsByTagName('td');
+    products.push({
+      name: cells[0].textContent,
+      presentation: cells[1].textContent,
+      quantity: cells[2].textContent,
+      stock: cells[3].textContent
+    });
+  }
+  return products;
+}
+
+/**
+ * ================================
+ * Función para guardar el pedido en Firestore
+ * ================================
+ */
+async function guardarPedido(orderDetails) {
+  try {
+    await db.collection('orders').add({
+      providerId: orderDetails.providerId,
+      providerName: orderDetails.providerName,
+      sucursalId: orderDetails.sucursalId,
+      sucursalName: orderDetails.sucursalName,
+      orderDate: orderDetails.orderDate,
+      orderId: orderDetails.orderId,
+      products: orderDetails.products,
+      status: orderDetails.status,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error al guardar el pedido:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al guardar el pedido: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para preguardar el pedido
+ * ================================
+ */
+async function preguardarPedido(orderDetails) {
+  try {
+    await db.collection('orders').add({
+      providerId: orderDetails.providerId,
+      providerName: orderDetails.providerName,
+      sucursalId: orderDetails.sucursalId,
+      sucursalName: orderDetails.sucursalName,
+      orderDate: orderDetails.orderDate,
+      orderId: orderDetails.orderId,
+      products: orderDetails.products,
+      status: orderDetails.status,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error al preguardar el pedido:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al preguardar el pedido: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para compartir el pedido
+ * ================================
+ */
+function shareOrder(orderDetails) {
+  Swal.fire({
+    title: 'Compartir Pedido',
+    text: '¿Cómo deseas compartir el pedido?',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'Exportar como Imagen',
+    denyButtonText: `Exportar como PDF`,
+    cancelButtonText: 'Cerrar',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      exportOrderAsImage(orderDetails);
+    } else if (result.isDenied) {
+      exportOrderAsPDF(orderDetails);
+    }
+    // Si se cierra o se cancela, no hacer nada
+  });
+}
+
+/**
+ * ================================
+ * Función para exportar pedido como Imagen
+ * ================================
+ */
+function exportOrderAsImage(orderDetails) {
+  // Llenar contenedor oculto
+  document.getElementById('imgOrderId').textContent = orderDetails.orderId;
+  document.getElementById('imgProviderName').textContent = orderDetails.providerName;
+  document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
+  document.getElementById('imgOrderDate').textContent = orderDetails.orderDate;
+
+  // Limpiar tabla de productos en el contenedor
+  const imgProductsTableBody = document.getElementById('imgProductsTableBody');
+  imgProductsTableBody.innerHTML = '';
+
+  orderDetails.products.forEach(product => {
+    const row = imgProductsTableBody.insertRow();
+    const cell1 = row.insertCell(0);
+    const cell2 = row.insertCell(1);
+    const cell3 = row.insertCell(2);
+    const cell4 = row.insertCell(3);
+    cell1.textContent = product.name;
+    cell2.textContent = product.presentation;
+    cell3.textContent = product.quantity;
+    cell4.textContent = product.stock;
+  });
+
+  const orderDetailsElement = document.getElementById('orderDetailsForImage');
+  orderDetailsElement.style.display = 'block';
+  orderDetailsElement.style.left = '50%';
+  orderDetailsElement.style.transform = 'translateX(-50%)';
+
+  html2canvas(orderDetailsElement, { scale: 2 })
+    .then(canvas => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const imgData = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = imgData;
+          link.download = `Pedido_${orderDetails.orderId}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Imagen Exportada',
+            text: 'El pedido ha sido exportado como imagen exitosamente.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al generar la imagen del pedido.'
+          });
+        }
+      }, 'image/jpeg', 0.95);
+
+      orderDetailsElement.style.display = 'none';
+      orderDetailsElement.style.left = '-9999px';
+    })
+    .catch(error => {
+      console.error('Error al exportar la imagen:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al exportar la imagen del pedido.'
+      });
+      orderDetailsElement.style.display = 'none';
+      orderDetailsElement.style.left = '-9999px';
+    });
+}
+
+/**
+ * ================================
+ * Función para exportar pedido como PDF
+ * ================================
+ */
+function exportOrderAsPDF(orderDetails) {
+  // Rellenar contenedor oculto
+  document.getElementById('imgOrderId').textContent = orderDetails.orderId;
+  document.getElementById('imgProviderName').textContent = orderDetails.providerName;
+  document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
+  document.getElementById('imgOrderDate').textContent = orderDetails.orderDate;
+
+  const imgProductsTableBody = document.getElementById('imgProductsTableBody');
+  imgProductsTableBody.innerHTML = '';
+
+  orderDetails.products.forEach(product => {
+    const row = imgProductsTableBody.insertRow();
+    row.insertCell(0).textContent = product.name;
+    row.insertCell(1).textContent = product.presentation;
+    row.insertCell(2).textContent = product.quantity;
+    row.insertCell(3).textContent = product.stock;
+  });
+
+  const orderDetailsElement = document.getElementById('orderDetailsForImage');
+  orderDetailsElement.style.display = 'block';
+  orderDetailsElement.style.left = '50%';
+  orderDetailsElement.style.transform = 'translateX(-50%)';
+
+  html2canvas(orderDetailsElement, { scale: 2 })
+    .then(canvas => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const imgData = URL.createObjectURL(blob);
+
+          // Crear pdf
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'px',
+            format: [
+              orderDetailsElement.offsetWidth,
+              orderDetailsElement.offsetHeight
+            ]
+          });
+          pdf.addImage(
+            imgData,
+            'JPEG',
+            0,
+            0,
+            orderDetailsElement.offsetWidth,
+            orderDetailsElement.offsetHeight
+          );
+
+          // Descargar
+          pdf.save(`Pedido_${orderDetails.orderId}.pdf`);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'PDF Exportado',
+            text: 'El pedido ha sido exportado como PDF exitosamente.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al generar el PDF del pedido.'
+          });
+        }
+      }, 'image/jpeg', 0.95);
+
+      orderDetailsElement.style.display = 'none';
+      orderDetailsElement.style.left = '-9999px';
+    })
+    .catch(error => {
+      console.error('Error al exportar el PDF:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al exportar el PDF del pedido.'
+      });
+      orderDetailsElement.style.display = 'none';
+      orderDetailsElement.style.left = '-9999px';
+    });
+}
+
+/**
+ * ================================
+ * Función para compartir el pedido
+ * ================================
+ */
+function shareOrder(orderDetails) {
+  Swal.fire({
+    title: 'Compartir Pedido',
+    text: '¿Cómo deseas compartir el pedido?',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'Exportar como Imagen',
+    denyButtonText: `Exportar como PDF`,
+    cancelButtonText: 'Cerrar',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      exportOrderAsImage(orderDetails);
+    } else if (result.isDenied) {
+      exportOrderAsPDF(orderDetails);
+    }
+    // Si se cierra o se cancela, no hacer nada
+  });
+}
+
+/**
+ * ================================
+ * Función para manejar el clic en el botón de regreso
+ * ================================
+ */
+function handleBackButton(event) {
+  if (hasUnsavedOrder()) {
+    event.preventDefault();
+    Swal.fire({
+      title: 'Pedido no guardado',
+      text: 'Tienes un pedido en proceso que no se guardará si regresas al menú principal. ¿Qué deseas hacer?',
+      icon: 'warning',
+      html: `
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+          <button id="cancelarBtn" class="swal2-styled" style="background-color: #d33;">Cancelar</button>
+          <button id="preguardarBtn" class="swal2-styled" style="background-color: #f0ad4e;">Preguardar</button>
+          <button id="salirBtn" class="swal2-styled" style="background-color: #5cb85c;">Salir sin guardar</button>
+        </div>
+      `,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      focusConfirm: false,
+      didOpen: () => {
+        // Obtener referencias a los botones
+        const cancelarBtn = Swal.getPopup().querySelector('#cancelarBtn');
+        const preguardarBtn = Swal.getPopup().querySelector('#preguardarBtn');
+        const salirBtn = Swal.getPopup().querySelector('#salirBtn');
+
+        // Cancelar: Cierra el modal y permite continuar en la página
+        cancelarBtn.addEventListener('click', () => {
+          Swal.close();
+        });
+
+        // Preguardar: Guarda el pedido como borrador y cierra el modal
+        preguardarBtn.addEventListener('click', async () => {
+          Swal.showLoading();
+          await preguardarPedido({
+            providerId: document.getElementById('newOrderProviderSelect').value,
+            providerName: document.getElementById('newOrderProviderSelect').options[
+              document.getElementById('newOrderProviderSelect').selectedIndex
+            ]?.text || '',
+            sucursalId: document.getElementById('newOrderSucursalSelect').value,
+            sucursalName: document.getElementById('newOrderSucursalSelect').options[
+              document.getElementById('newOrderSucursalSelect').selectedIndex
+            ]?.text || '',
+            orderDate: document.getElementById('orderDate').value,
+            orderId: document.getElementById('orderId').value,
+            products: getCurrentProducts(),
+            status: 'preguardado'
+          });
+          Swal.close();
+          Swal.fire({
+            icon: 'success',
+            title: 'Pedido Preguardado',
+            text: 'El pedido ha sido guardado como preguardado.'
+          });
+          // Resetear formulario para permitir agregar nuevos pedidos
+          closeOrderCreationContainer();
+          // Navegar al menú principal
+          window.location.href = 'menu.html'; // Redirigir a menu.html
+        });
+
+        // Salir sin guardar: Navega al menú principal sin guardar el pedido
+        salirBtn.addEventListener('click', () => {
+          window.location.href = 'menu.html'; // Redirigir a menu.html
+        });
+      }
+    });
+  } else {
+    window.location.href = 'menu.html'; // Redirigir a menu.html si no hay pedido en proceso
+  }
+}
+
+/**
+ * ================================
+ * Función para verificar si hay un pedido en proceso
+ * ================================
+ */
+function hasUnsavedOrder() {
+  // Verificar si hay productos en la tabla
+  const newOrderTableBody = document
+    .getElementById('newOrderTable')
+    .getElementsByTagName('tbody')[0];
+  return newOrderTableBody.rows.length > 0;
+}
+
+/**
+ * ================================
+ * Función para obtener los productos actuales del pedido
+ * ================================
+ */
+function getCurrentProducts() {
+  const newOrderTableBody = document
+    .getElementById('newOrderTable')
+    .getElementsByTagName('tbody')[0];
+  const rows = newOrderTableBody.getElementsByTagName('tr');
+
+  const products = [];
+  for (let i = 0; i < rows.length; i++) {
+    const cells = rows[i].getElementsByTagName('td');
+    products.push({
+      name: cells[0].textContent,
+      presentation: cells[1].textContent,
+      quantity: cells[2].textContent,
+      stock: cells[3].textContent
+    });
+  }
+  return products;
+}
+
+/**
+ * ================================
+ * Función para guardar el pedido en Firestore
+ * ================================
+ */
+async function guardarPedido(orderDetails) {
+  try {
+    await db.collection('orders').add({
+      providerId: orderDetails.providerId,
+      providerName: orderDetails.providerName,
+      sucursalId: orderDetails.sucursalId,
+      sucursalName: orderDetails.sucursalName,
+      orderDate: orderDetails.orderDate,
+      orderId: orderDetails.orderId,
+      products: orderDetails.products,
+      status: orderDetails.status,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error al guardar el pedido:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al guardar el pedido: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para preguardar el pedido
+ * ================================
+ */
+async function preguardarPedido(orderDetails) {
+  try {
+    await db.collection('orders').add({
+      providerId: orderDetails.providerId,
+      providerName: orderDetails.providerName,
+      sucursalId: orderDetails.sucursalId,
+      sucursalName: orderDetails.sucursalName,
+      orderDate: orderDetails.orderDate,
+      orderId: orderDetails.orderId,
+      products: orderDetails.products,
+      status: orderDetails.status,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error al preguardar el pedido:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al preguardar el pedido: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para exportar pedido como Imagen
+ * ================================
+ */
+function exportOrderAsImage(orderDetails) {
+  // Llenar contenedor oculto
+  document.getElementById('imgOrderId').textContent = orderDetails.orderId;
+  document.getElementById('imgProviderName').textContent = orderDetails.providerName;
+  document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
+  document.getElementById('imgOrderDate').textContent = orderDetails.orderDate;
+
+  // Limpiar tabla de productos en el contenedor
+  const imgProductsTableBody = document.getElementById('imgProductsTableBody');
+  imgProductsTableBody.innerHTML = '';
+
+  orderDetails.products.forEach(product => {
+    const row = imgProductsTableBody.insertRow();
+    const cell1 = row.insertCell(0);
+    const cell2 = row.insertCell(1);
+    const cell3 = row.insertCell(2);
+    const cell4 = row.insertCell(3);
+    cell1.textContent = product.name;
+    cell2.textContent = product.presentation;
+    cell3.textContent = product.quantity;
+    cell4.textContent = product.stock;
+  });
+
+  const orderDetailsElement = document.getElementById('orderDetailsForImage');
+  orderDetailsElement.style.display = 'block';
+  orderDetailsElement.style.left = '50%';
+  orderDetailsElement.style.transform = 'translateX(-50%)';
+
+  html2canvas(orderDetailsElement, { scale: 2 })
+    .then(canvas => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const imgData = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = imgData;
+          link.download = `Pedido_${orderDetails.orderId}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'Imagen Exportada',
+            text: 'El pedido ha sido exportado como imagen exitosamente.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al generar la imagen del pedido.'
+          });
+        }
+      }, 'image/jpeg', 0.95);
+
+      orderDetailsElement.style.display = 'none';
+      orderDetailsElement.style.left = '-9999px';
+    })
+    .catch(error => {
+      console.error('Error al exportar la imagen:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al exportar la imagen del pedido.'
+      });
+      orderDetailsElement.style.display = 'none';
+      orderDetailsElement.style.left = '-9999px';
+    });
+}
+
+/**
+ * ================================
+ * Función para exportar pedido como PDF
+ * ================================
+ */
+function exportOrderAsPDF(orderDetails) {
+  // Rellenar contenedor oculto
+  document.getElementById('imgOrderId').textContent = orderDetails.orderId;
+  document.getElementById('imgProviderName').textContent = orderDetails.providerName;
+  document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
+  document.getElementById('imgOrderDate').textContent = orderDetails.orderDate;
+
+  const imgProductsTableBody = document.getElementById('imgProductsTableBody');
+  imgProductsTableBody.innerHTML = '';
+
+  orderDetails.products.forEach(product => {
+    const row = imgProductsTableBody.insertRow();
+    row.insertCell(0).textContent = product.name;
+    row.insertCell(1).textContent = product.presentation;
+    row.insertCell(2).textContent = product.quantity;
+    row.insertCell(3).textContent = product.stock;
+  });
+
+  const orderDetailsElement = document.getElementById('orderDetailsForImage');
+  orderDetailsElement.style.display = 'block';
+  orderDetailsElement.style.left = '50%';
+  orderDetailsElement.style.transform = 'translateX(-50%)';
+
+  html2canvas(orderDetailsElement, { scale: 2 })
+    .then(canvas => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const imgData = URL.createObjectURL(blob);
+
+          // Crear pdf
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'px',
+            format: [
+              orderDetailsElement.offsetWidth,
+              orderDetailsElement.offsetHeight
+            ]
+          });
+          pdf.addImage(
+            imgData,
+            'JPEG',
+            0,
+            0,
+            orderDetailsElement.offsetWidth,
+            orderDetailsElement.offsetHeight
+          );
+
+          // Descargar
+          pdf.save(`Pedido_${orderDetails.orderId}.pdf`);
+
+          Swal.fire({
+            icon: 'success',
+            title: 'PDF Exportado',
+            text: 'El pedido ha sido exportado como PDF exitosamente.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al generar el PDF del pedido.'
+          });
+        }
+      }, 'image/jpeg', 0.95);
+
+      orderDetailsElement.style.display = 'none';
+      orderDetailsElement.style.left = '-9999px';
+    })
+    .catch(error => {
+      console.error('Error al exportar el PDF:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Error al exportar el PDF del pedido.'
+      });
+      orderDetailsElement.style.display = 'none';
+      orderDetailsElement.style.left = '-9999px';
+    });
 }

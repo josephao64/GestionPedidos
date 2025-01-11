@@ -104,7 +104,48 @@
         <div class="modal-content">
             <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
             <h2>Ingresar Cantidades Recibidas</h2>
-            <div id="confirmOrderDetails"></div>
+            
+            <!-- Campos de Factura Introducidos por el Usuario -->
+            <input type="hidden" id="confirmOrderId" value="">
+            <div id="invoiceDetails">
+                <label for="invoiceNumber"><strong>Número de Factura:</strong></label>
+                <input type="number" id="invoiceNumber" name="invoiceNumber" required><br><br>
+                
+                <label for="invoiceDate"><strong>Fecha de Factura:</strong></label>
+                <input type="date" id="invoiceDate" name="invoiceDate" required><br><br>
+            </div>
+            
+            <!-- Detalles del Pedido -->
+            <div id="orderInfo">
+                <p><strong>ID Pedido:</strong> <span id="orderIdDisplay"></span></p>
+                <p><strong>Proveedor:</strong> <span id="providerNameDisplay"></span></p>
+                <p><strong>Sucursal:</strong> <span id="sucursalNameDisplay"></span></p>
+                <p><strong>Fecha de Pedido:</strong> <span id="orderDateDisplay"></span></p>
+            </div>
+            
+            <!-- Tabla para Ingresar Cantidades Recibidas, Precio por Unidad y Comentarios -->
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Presentación</th>
+                        <th>Cantidad Pedido</th>
+                        <th>Cantidad Recibida</th>
+                        <th>Precio por Unidad (Q)</th>
+                        <th>Total (Q)</th>
+                        <th>Comentarios</th>
+                    </tr>
+                </thead>
+                <tbody id="confirmOrderProducts">
+                    <!-- Filas de productos generadas dinámicamente en pedidos.js -->
+                </tbody>
+            </table>
+            
+            <!-- Total de la Factura -->
+            <div id="invoiceTotalContainer" style="margin-top: 1rem; font-weight: bold;">
+                <p>Total de la Factura: Q<span id="invoiceTotal">0.00</span></p>
+            </div>
+            
             <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
         </div>
     </div>
@@ -124,9 +165,12 @@
             <span class="close" onclick="closeChangeStatusModal()">&times;</span>
             <h2>Cambiar Estado del Pedido</h2>
             <p>Selecciona el nuevo estado para este pedido:</p>
-            <button onclick="changeOrderStatusManually('pending')">Pedidos Pendientes</button>
-            <button onclick="changeOrderStatusManually('inProcess')">Pedidos en Proceso</button>
-            <button onclick="changeOrderStatusManually('completed')">Pedidos Completados</button>
+            <button onclick="changeOrderStatusManually('pending')">Pendiente</button>
+            <button onclick="changeOrderStatusManually('pedidoTomado')">Pedido Tomado</button>
+            <button onclick="changeOrderStatusManually('caminoABodega')">Camino a Bodega</button>
+            <button onclick="changeOrderStatusManually('pedidoEnBodega')">Pedido en Bodega</button>
+            <button onclick="changeOrderStatusManually('caminoATienda')">Camino a Tienda</button>
+            <button onclick="changeOrderStatusManually('completed')">Completado</button>
         </div>
     </div>
 
@@ -137,16 +181,16 @@
             <h2>Generar Recibo Manual</h2>
             <form id="receiptForm">
                 <input type="hidden" id="receiptOrderId" name="receiptOrderId">
-                <p>Sucursal: <span id="receiptSucursalName"></span></p>
+                <p><strong>Sucursal:</strong> <span id="receiptSucursalName"></span></p>
                 
-                <label for="receiptDate">Fecha:</label>
+                <label for="receiptDate"><strong>Fecha:</strong></label>
                 <input type="date" id="receiptDate" name="receiptDate" required><br><br>
                 
-                <label for="receiptDescription">Descripción:</label>
+                <label for="receiptDescription"><strong>Descripción:</strong></label>
                 <textarea id="receiptDescription" name="receiptDescription" rows="4" cols="50" required></textarea><br><br>
                 
-                <label for="receiptTotal">Total (Q):</label>
-                <input type="number" id="receiptTotal" name="receiptTotal" step="0.01" min="0" required><br><br>
+                <label for="receiptTotal"><strong>Total (Q):</strong></label>
+                <input type="number" id="receiptTotal" name="receiptTotal" step="0.01" min="0" required readonly><br><br>
                 
                 <button type="button" onclick="saveReceipt()">Guardar Recibo Manual</button>
             </form>
@@ -161,17 +205,17 @@
             <form id="automaticReceiptForm">
                 <input type="hidden" id="autoReceiptOrderId" name="autoReceiptOrderId">
                 
-                <p>Sucursal: <span id="autoReceiptSucursalName"></span></p>
+                <p><strong>Sucursal:</strong> <span id="autoReceiptSucursalName"></span></p>
                 
-                <label for="autoReceiptDate">Fecha:</label>
+                <label for="autoReceiptDate"><strong>Fecha:</strong></label>
                 <input type="date" id="autoReceiptDate" name="autoReceiptDate" required><br><br>
                 
-                <label for="autoReceiptDescription">Descripción:</label>
+                <label for="autoReceiptDescription"><strong>Descripción:</strong></label>
                 <textarea id="autoReceiptDescription" name="autoReceiptDescription" rows="4" cols="50" required></textarea><br><br>
                 
                 <!-- Se retira el campo de total manual; se calculará automáticamente en el JS -->
                 
-                <label for="autoReceiptProducts">Selecciona Productos:</label><br>
+                <label for="autoReceiptProducts"><strong>Selecciona Productos:</strong></label><br>
                 <div id="autoReceiptProductsContainer">
                   <!-- Aquí se listarán los productos filtrados del pedido (con su precio y cantidad) -->
                 </div><br>

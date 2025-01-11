@@ -1,41 +1,48 @@
-<!-- realizar_pedidos/pedidosPguardados.html -->
+<!-- pedidosPguardados.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedidos Preguardados</title>
-    <!-- Enlace a estilos específicos -->
-    <link rel="stylesheet" href="styles.css">
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Firebase SDK v8.6.8 -->
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-    <!-- Tu archivo JS específico -->
-    <script defer src="pedidosApp.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pedidos Pre-guardados</title>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+  <!-- Archivo de Estilos -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Lógica de pedidos preguardados -->
+  <script defer src="pedidosPguardadosApp.js"></script>
 </head>
 <body>
-    <h1>Pedidos Preguardados</h1>
-    <div class="navigation">
-        <button onclick="window.location.href='menu.html'">Volver al Menú</button>
-    </div>
-    <div class="orders-container">
-        <table id="savedOrdersTable">
-            <thead>
-                <tr>
-                    <th>ID Pedido</th>
-                    <th>Proveedor</th>
-                    <th>Sucursal</th>
-                    <th>Fecha</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Las filas se insertarán dinámicamente con JavaScript -->
-            </tbody>
-        </table>
-    </div>
+  <h1 style="text-align: center;">Pedidos Pre-guardados</h1>
+
+  <!-- Botón para regresar al menú principal -->
+  <div style="text-align: center; margin-bottom: 20px;">
+    <button onclick="window.location.href='menu.html'">Regresar al Menú Principal</button>
+  </div>
+
+  <!-- Sección que lista los pedidos preguardados -->
+  <div class="container">
+    <table id="savedOrdersTable">
+      <thead>
+        <tr>
+          <th>ID Pedido</th>
+          <th>Proveedor</th>
+          <th>Sucursal</th>
+          <th>Fecha</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Filas generadas dinámicamente -->
+      </tbody>
+    </table>
+  </div>
 </body>
 </html>

@@ -1,84 +1,81 @@
 // realizar_pedidos/detallePedidoApp.js
 
-document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const orderId = urlParams.get('orderId');
-
-    if (orderId) {
-        loadOrderDetails(orderId);
-    } else {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se ha proporcionado un ID de pedido.'
-        }).then(() => {
-            window.history.back();
-        });
-    }
-});
-
-/**
- * Función para cargar los detalles de un pedido específico
- */
-async function loadOrderDetails(orderId) {
-    try {
-        const orderDoc = await db.collection('orders').doc(orderId).get();
-        if (orderDoc.exists) {
-            const order = orderDoc.data();
-            const orderDetailsDiv = document.getElementById('orderDetails');
-            orderDetailsDiv.innerHTML = `
-                <p><strong>ID Pedido:</strong> ${escapeHtml(order.orderId)}</p>
-                <p><strong>Proveedor:</strong> ${escapeHtml(order.providerName)}</p>
-                <p><strong>Sucursal:</strong> ${escapeHtml(order.sucursalName)}</p>
-                <p><strong>Fecha de Pedido:</strong> ${escapeHtml(order.orderDate)}</p>
-                <p><strong>Estado:</strong> ${escapeHtml(order.status)}</p>
-                <h3>Productos:</h3>
-                <table border="1" style="width:100%; text-align:left;">
-                    <tr>
-                        <th>Producto</th>
-                        <th>Presentación</th>
-                        <th>Cantidad</th>
-                        <th>Stock</th>
-                    </tr>
-                    ${order.products.map(product => `
-                        <tr>
-                            <td>${escapeHtml(product.name)}</td>
-                            <td>${escapeHtml(product.presentation)}</td>
-                            <td>${product.quantity}</td>
-                            <td>${product.stock}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-            `;
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se encontró el pedido.'
-            }).then(() => {
-                window.history.back();
-            });
-        }
-    } catch (error) {
-        console.error('Error al cargar los detalles del pedido:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error al cargar los detalles del pedido: ' + error.message
-        });
-    }
-}
-
-/**
- * Función para escapar HTML
- */
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
+document.addEventListener('DOMContentLoaded', async () => {
+    // Inicializar Firebase
+    const firebaseConfig = {
+      // Tus credenciales
     };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
-}
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  
+    // Obtener orderId de la URL
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('orderId');
+  
+    if (!orderId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se proporcionó un ID de pedido válido'
+      }).then(() => {
+        window.location.href = 'pedidosPguardados.html';
+      });
+      return;
+    }
+  
+    // Consultar el pedido en Firestore
+    try {
+      const docRef = db.collection('orders').doc(orderId);
+      const docSnapshot = await docRef.get();
+      if (!docSnapshot.exists) {
+        Swal.fire({
+          icon: 'error',
+          title: 'No encontrado',
+          text: 'El pedido no existe o fue eliminado'
+        }).then(() => {
+          window.location.href = 'pedidosPguardados.html';
+        });
+        return;
+      }
+  
+      const orderData = docSnapshot.data();
+      renderOrderDetails(orderData);
+    } catch (error) {
+      console.error('Error al obtener el detalle del pedido:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: `No se pudo obtener el pedido: ${error.message}`
+      }).then(() => {
+        window.location.href = 'pedidosPguardados.html';
+      });
+    }
+  });
+  
+  /**
+   * Función para mostrar la info del pedido en la página
+   */
+  function renderOrderDetails(orderData) {
+    const orderDetailsDiv = document.getElementById('orderDetails');
+    
+    const html = `
+      <p><strong>ID Pedido:</strong> ${orderData.orderId || 'N/A'}</p>
+      <p><strong>Proveedor:</strong> ${orderData.providerName || 'N/A'}</p>
+      <p><strong>Sucursal:</strong> ${orderData.sucursalName || 'N/A'}</p>
+      <p><strong>Fecha:</strong> ${orderData.orderDate || 'N/A'}</p>
+      <p><strong>Estado:</strong> ${orderData.status || 'N/A'}</p>
+      <h3>Productos:</h3>
+      <ul>
+        ${
+          (orderData.products || [])
+            .map(prod => 
+              `<li>${prod.name} - ${prod.presentation} (Cant: ${prod.quantity}, Stock: ${prod.stock})</li>`
+            )
+            .join('')
+        }
+      </ul>
+    `;
+  
+    orderDetailsDiv.innerHTML = html;
+  }
+  

@@ -1,6 +1,7 @@
-// ========================================================================
+// ======================================================================== 
 //             CONFIGURACIÓN DE FIREBASE E INICIALIZACIÓN
 // ========================================================================
+
 const firebaseConfig = {
   apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
   authDomain: "logisticdb-2e63c.firebaseapp.com",
@@ -10,6 +11,7 @@ const firebaseConfig = {
   appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
 };
 
+// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -23,10 +25,10 @@ let userPermissions = {};     // Para almacenar los permisos (canChangeStatus, e
 let logoBase64 = "";          // Para almacenar el logo en base64 si lo usas en PDF
 
 // ========================================================================
-//     OBTENER USUARIO LOGUEADO, SUCURSAL Y ROL (AL CARGAR LA PÁGINA)
+//     OBTENER USUARIO LOGUEADO, SUCURSALID, ROL Y PERMISOS (AL CARGAR LA PÁGINA)
 // ========================================================================
 document.addEventListener("DOMContentLoaded", async () => {
-  // 1. Inicializamos datos del usuario (username, rol, sucursal, permisos)
+  // 1. Inicializar datos del usuario (username, rol, sucursal, permisos)
   await initUserAndSucursal();
 
   // 2. Si es administrador, mostrar el contenedor del filtro y cargar sucursales
@@ -45,9 +47,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ========================================================================
-//        FUNCIÓN PARA OBTENER USERNAME, SUCURSALID, ROL Y PERMISOS
+//     FUNCIÓN PARA OBTENER USERNAME, SUCURSALID, ROL Y PERMISOS
 // ========================================================================
 async function initUserAndSucursal() {
+  // Suponemos que el username del usuario logueado se almacena en localStorage
   loggedInUsername = localStorage.getItem("usuarioLogueado");
   if (!loggedInUsername) {
     Swal.fire({
@@ -139,7 +142,7 @@ function reloadOrders() {
 // ========================================================================
 function loadLogo() {
   const img = new Image();
-  img.src = "logo.png";
+  img.src = "logo.png"; // Asegúrate de que el logo.png esté en la ubicación correcta
   img.crossOrigin = "Anonymous";
   img.onload = function () {
     const canvas = document.createElement("canvas");
@@ -160,7 +163,7 @@ function loadLogo() {
 }
 
 // ========================================================================
-//        BOTONES / FUNCIONES GENERALES DE PESTAÑAS Y NAVEGACIÓN
+//         BOTONES / FUNCIONES GENERALES DE PESTAÑAS Y NAVEGACIÓN
 // ========================================================================
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("container");
@@ -176,7 +179,7 @@ function openTab(evt, tabName) {
 }
 
 function goToMainMenu() {
-  window.location.href = "INDEX.html";
+  window.location.href = "INDEX.html"; // Asegúrate de que la ruta sea correcta
 }
 
 // ========================================================================
@@ -216,7 +219,12 @@ async function loadPendingOrdersAdmin() {
 
 async function loadInProcessOrdersAdmin() {
   try {
-    let query = db.collection("orders").where("status", "==", "inProcess");
+    let query = db.collection("orders").where("status", "in", [
+      "pedidoTomado",
+      "caminoABodega",
+      "pedidoEnBodega",
+      "caminoATienda"
+    ]);
 
     if (userRole === "administrador") {
       const selectedSucursalId = document.getElementById("sucursalFilter").value;
@@ -290,6 +298,9 @@ function createOrderCard(orderDocId, order, status) {
     <p>Proveedor: ${order.providerName}</p>
     <p>Sucursal: ${order.sucursalName}</p>
     <p>Fecha: ${order.orderDate}</p>
+    <div class="order-status">
+      ${generateProgressBar(order.status)}
+    </div>
     <button onclick="showOrderDetails('${orderDocId}')">Mostrar Pedido</button>
   `;
 
@@ -309,12 +320,8 @@ function createOrderCard(orderDocId, order, status) {
   if (status === "completed") {
     cardHTML += `
       <button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>
+      <button onclick="openChangeStatusModal('${orderDocId}')">Cambiar Estado</button>
     `;
-    if (userRole === "administrador" || userPermissions.canChangeStatus) {
-      cardHTML += `
-        <button onclick="openChangeStatusModal('${orderDocId}')">Cambiar Estado</button>
-      `;
-    }
   }
 
   // Editar pedido => admin o canEditOrder
@@ -330,15 +337,6 @@ function createOrderCard(orderDocId, order, status) {
     cardHTML += `<button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>`;
   }
 
-  // Cambiar estado => pending -> inProcess (admin o canChangeStatus)
-  if (status === "pending") {
-    if (userRole === "administrador" || userPermissions.canChangeStatus) {
-      cardHTML += `
-        <button onclick="changeOrderStatus('${orderDocId}', 'inProcess')">Marcar como en Proceso</button>
-      `;
-    }
-  }
-
   // Recibos Manual/Automático
   cardHTML += `
     <button class="generate-manual-receipt" onclick="openGenerateReceiptModal('${orderDocId}')">
@@ -352,8 +350,45 @@ function createOrderCard(orderDocId, order, status) {
 
   card.innerHTML = cardHTML;
   loadReceipts(orderDocId, card);
-
   return card;
+}
+
+// ========================================================================
+//   FUNCIÓN PARA GENERAR LA BARRA DE PROGRESO DEL ESTADO DEL PEDIDO
+// ========================================================================
+function generateProgressBar(currentStatus) {
+  const statuses = [
+    { key: "pending", label: "Pendiente" },
+    { key: "pedidoTomado", label: "Pedido Tomado" },
+    { key: "caminoABodega", label: "Camino a Bodega" },
+    { key: "pedidoEnBodega", label: "Pedido en Bodega" },
+    { key: "caminoATienda", label: "Camino a Tienda" },
+    { key: "completed", label: "Completado" }
+  ];
+
+  let progressHTML = `<div class="progress-container">`;
+  statuses.forEach((status, index) => {
+    let stepClass = "";
+    const currentIndex = statuses.findIndex(s => s.key === currentStatus);
+    if (index < currentIndex) {
+      stepClass = "completed";
+    } else if (index === currentIndex) {
+      stepClass = "current";
+    }
+
+    progressHTML += `
+      <div class="progress-step ${stepClass}">
+        <div class="step-number">${index + 1}</div>
+        <div class="step-label">${status.label}</div>
+      </div>
+    `;
+
+    if (index < statuses.length - 1) {
+      progressHTML += `<div class="progress-line ${index < currentIndex ? "completed" : ""}"></div>`;
+    }
+  });
+  progressHTML += `</div>`;
+  return progressHTML;
 }
 
 // ========================================================================
@@ -375,9 +410,10 @@ async function loadReceipts(orderId, cardElement) {
         receiptsHTML += `
           <li>
             <strong>Recibo ${index + 1}:</strong>
-            Fecha: ${receipt.date} |
-            Descripción: ${receipt.description} |
-            Total: Q${receipt.total}
+            Fecha: ${receipt.invoiceDate || receipt.date} |
+            Número de Factura: ${receipt.invoiceNumber || "N/A"} |
+            Descripción: ${receipt.description || "N/A"} |
+            Total: Q${receipt.total || receipt.invoiceTotal || "N/A"}
             <button class="download-receipt"
                     onclick="downloadReceipt('${orderId}', '${doc.id}')">Descargar
             </button>
@@ -408,7 +444,7 @@ async function loadReceipts(orderId, cardElement) {
 }
 
 // ========================================================================
-//           ELIMINAR RECIBO DE UN PEDIDO
+//                ELIMINAR RECIBO DE UN PEDIDO
 // ========================================================================
 async function deleteReceipt(orderId, receiptId) {
   Swal.fire({
@@ -523,7 +559,7 @@ async function markOrderAsCompleted(orderId) {
 }
 
 // ========================================================================
-//       MOSTRAR DETALLES DEL PEDIDO EN UN MODAL
+//        MOSTRAR DETALLES DEL PEDIDO EN UN MODAL
 // ========================================================================
 function showOrderDetails(orderId) {
   db.collection("orders")
@@ -533,10 +569,10 @@ function showOrderDetails(orderId) {
       if (doc.exists) {
         const order = doc.data();
         let orderDetailsHTML = `
-          <p>ID Pedido: ${order.orderId}</p>
-          <p>Proveedor: ${order.providerName}</p>
-          <p>Sucursal: ${order.sucursalName}</p>
-          <p>Fecha: ${order.orderDate}</p>
+          <p><strong>ID Pedido:</strong> ${order.orderId}</p>
+          <p><strong>Proveedor:</strong> ${order.providerName}</p>
+          <p><strong>Sucursal:</strong> ${order.sucursalName}</p>
+          <p><strong>Fecha de Pedido:</strong> ${order.orderDate}</p>
           <table>
             <thead>
               <tr>
@@ -591,10 +627,10 @@ function editOrder(orderId) {
         const order = doc.data();
         let editOrderHTML = `
           <input type="hidden" id="editOrderId" value="${orderId}">
-          <p>ID Pedido: ${order.orderId}</p>
-          <p>Proveedor: ${order.providerName}</p>
-          <p>Sucursal: ${order.sucursalName}</p>
-          <p>Fecha: <input type="date" id="editOrderDate" value="${order.orderDate}"></p>
+          <p><strong>ID Pedido:</strong> ${order.orderId}</p>
+          <p><strong>Proveedor:</strong> ${order.providerName}</p>
+          <p><strong>Sucursal:</strong> ${order.sucursalName}</p>
+          <p><strong>Fecha de Pedido:</strong> <input type="date" id="editOrderDate" value="${order.orderDate}"></p>
           <table>
             <thead>
               <tr>
@@ -611,7 +647,7 @@ function editOrder(orderId) {
             <tr>
               <td><input type="text" value="${product.name}" id="editProductName${index}"></td>
               <td><input type="text" value="${product.presentation}" id="editProductPresentation${index}"></td>
-              <td><input type="number" value="${product.quantity}" id="editProductQuantity${index}"></td>
+              <td><input type="number" value="${product.quantity}" id="editProductQuantity${index}" min="1"></td>
               <td><button onclick="deleteProductRow(${index})">Eliminar</button></td>
             </tr>
           `;
@@ -619,7 +655,8 @@ function editOrder(orderId) {
         editOrderHTML += `
             </tbody>
           </table>
-          <button onclick="addProductRow()">Agregar Producto</button>
+          <button onclick="addProductRow()">Agregar Producto</button><br><br>
+          <button onclick="saveEditedOrder()">Guardar Cambios</button>
         `;
         document.getElementById("editOrderDetails").innerHTML = editOrderHTML;
         document.getElementById("editOrderModal").style.display = "block";
@@ -645,7 +682,7 @@ function addProductRow() {
     <tr>
       <td><input type="text" id="editProductName${index}"></td>
       <td><input type="text" id="editProductPresentation${index}"></td>
-      <td><input type="number" id="editProductQuantity${index}"></td>
+      <td><input type="number" id="editProductQuantity${index}" min="1"></td>
       <td><button onclick="deleteProductRow(${index})">Eliminar</button></td>
     </tr>
   `;
@@ -664,10 +701,22 @@ async function saveEditedOrder() {
   const orderDate = document.getElementById("editOrderDate").value;
   const productRows = document.querySelectorAll("#editOrderProducts tr");
   const products = Array.from(productRows).map((row, index) => ({
-    name: document.getElementById(`editProductName${index}`).value,
-    presentation: document.getElementById(`editProductPresentation${index}`).value,
+    name: document.getElementById(`editProductName${index}`).value.trim(),
+    presentation: document.getElementById(`editProductPresentation${index}`).value.trim(),
     quantity: parseInt(document.getElementById(`editProductQuantity${index}`).value, 10)
   }));
+
+  // Validar que todos los campos estén llenos y sean válidos
+  for (let i = 0; i < products.length; i++) {
+    if (!products[i].name || !products[i].presentation || isNaN(products[i].quantity) || products[i].quantity <= 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Campos Inválidos",
+        text: `Por favor, completa todos los campos correctamente para el producto ${i + 1}.`
+      });
+      return;
+    }
+  }
 
   try {
     await db.collection("orders").doc(orderId).update({
@@ -703,9 +752,8 @@ function closeExportModal() {
 }
 
 async function exportAs(format) {
-  const orderId =
-    document.getElementById("exportModal").dataset.orderId ||
-    document.getElementById("exportOrderId").value;
+  const exportModal = document.getElementById("exportModal");
+  const orderId = exportModal.dataset.orderId;
   try {
     const orderDoc = await db.collection("orders").doc(orderId).get();
     if (orderDoc.exists) {
@@ -740,7 +788,6 @@ function exportAsImage(order, fileName) {
     <p><strong>Proveedor:</strong> ${order.providerName}</p>
     <p><strong>Sucursal:</strong> ${order.sucursalName}</p>
     <p><strong>Fecha:</strong> ${order.orderDate}</p>
-    <p><strong>Descripción:</strong> ${order.description || "N/A"}</p>
     <table border="1" cellpadding="10" cellspacing="0">
       <thead>
         <tr style="background-color: #f2f2f2;">
@@ -786,7 +833,7 @@ function exportAsPDF(order, fileName) {
   }
 
   doc.setFontSize(16);
-  doc.text(`Recibo de Pedido ID: ${order.orderId}`, 100, 35, { align: "center" });
+  doc.text(`Recibo de Pedido ID: ${order.orderId}`, 105, 35, { align: "center" });
 
   doc.setFontSize(12);
   doc.text(`Fecha: ${order.orderDate}`, 10, 55);
@@ -832,148 +879,275 @@ function exportAsExcel(order, fileName) {
 }
 
 // ========================================================================
-//         CONFIRMAR RECEPCIÓN DE PEDIDO (CUANDO status='inProcess')
+//        CONFIRMAR RECEPCIÓN DE PEDIDO CON FACTURA
 // ========================================================================
-function confirmOrder(orderId) {
-  // Ya no limitamos a admin o canChangeStatus, todos pueden
-  db.collection("orders")
-    .doc(orderId)
-    .get()
-    .then((doc) => {
-      if (doc.exists) {
-        const order = doc.data();
-        let confirmOrderHTML = `
-          <input type="hidden" id="confirmOrderId" value="${orderId}">
-          <p>ID Pedido: ${order.orderId}</p>
-          <p>Proveedor: ${order.providerName}</p>
-          <p>Sucursal: ${order.sucursalName}</p>
-          <p>Fecha: ${order.orderDate}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Presentación</th>
-                <th>Cantidad Pedido</th>
-                <th>Cantidad Recibida</th>
-                <th>Comentarios</th>
-              </tr>
-            </thead>
-            <tbody id="confirmOrderProducts">
-        `;
-        order.products.forEach((product, index) => {
-          const receivedProduct =
-            order.receivedProducts && order.receivedProducts[index]
-              ? order.receivedProducts[index]
-              : {};
-          const receivedQuantity =
-            receivedProduct.receivedQuantity !== undefined
-              ? receivedProduct.receivedQuantity
-              : product.quantity;
-          const comments = receivedProduct.comments || "";
-          confirmOrderHTML += `
-            <tr>
-              <td>${product.name}</td>
-              <td>${product.presentation}</td>
-              <td>${product.quantity}</td>
-              <td>
-                <input type="number" id="receivedQuantity${index}"
-                       value="${receivedQuantity}"
-                       min="0" max="${product.quantity}">
-              </td>
-              <td><input type="text" id="productComments${index}" value="${comments}"></td>
-            </tr>
-          `;
-        });
-        confirmOrderHTML += `
-            </tbody>
-          </table>
-        `;
-        document.getElementById("confirmOrderDetails").innerHTML = confirmOrderHTML;
-        document.getElementById("confirmOrderModal").style.display = "block";
-      }
-    })
-    .catch((error) => {
-      Swal.fire({
-        icon: "error",
-        title: "Error al confirmar pedido",
-        text: error.message
-      });
-    });
-}
-
-function closeConfirmOrderModal() {
-  document.getElementById("confirmOrderDetails").innerHTML = "";
-  document.getElementById("confirmOrderModal").style.display = "none";
-}
-
-async function saveConfirmedOrder() {
-  const orderId = document.getElementById("confirmOrderId").value;
-  const productRows = document.querySelectorAll("#confirmOrderProducts tr");
-  const receivedProducts = Array.from(productRows).map((row, index) => {
-    const receivedQuantity = document.getElementById(`receivedQuantity${index}`).value;
-    const comments = document.getElementById(`productComments${index}`).value;
-    return {
-      receivedQuantity: parseInt(receivedQuantity, 10),
-      comments: comments.trim()
-    };
-  });
-
+async function confirmOrder(orderId) {
   try {
-    const orderDoc = await db.collection("orders").doc(orderId).get();
-    if (!orderDoc.exists) {
+    const docSnap = await db.collection("orders").doc(orderId).get();
+    if (!docSnap.exists) {
       Swal.fire({
         icon: "error",
-        title: "Pedido no existe",
+        title: "Pedido no encontrado",
         text: "No se encontró el pedido en la base de datos."
       });
       return;
     }
-    const order = orderDoc.data();
+    const order = docSnap.data();
 
-    const updatedReceivedProducts = order.products.map((product, index) => ({
-      name: product.name,
-      presentation: product.presentation,
-      quantity: product.quantity,
-      receivedQuantity: receivedProducts[index].receivedQuantity,
-      comments: receivedProducts[index].comments
-    }));
+    // Verificar si ya existe una recepción para este pedido
+    const receiptsSnapshot = await db.collection("orders").doc(orderId).collection("receipts").orderBy("timestamp", "desc").limit(1).get();
+    let existingReceipt = null;
+    if (!receiptsSnapshot.empty) {
+      existingReceipt = receiptsSnapshot.docs[0].data();
+    }
 
-    await db.collection("orders").doc(orderId).update({
-      receivedProducts: updatedReceivedProducts
+    // Rellenar los campos de información del pedido en el modal
+    document.getElementById("confirmOrderId").value = orderId;
+    document.getElementById("orderIdDisplay").textContent = order.orderId;
+    document.getElementById("providerNameDisplay").textContent = order.providerName;
+    document.getElementById("sucursalNameDisplay").textContent = order.sucursalName;
+    document.getElementById("orderDateDisplay").textContent = order.orderDate;
+
+    // Rellenar los campos de factura si ya existe una recepción
+    if (existingReceipt) {
+      document.getElementById("invoiceNumber").value = existingReceipt.invoiceNumber || "";
+      document.getElementById("invoiceDate").value = existingReceipt.invoiceDate || "";
+    } else {
+      document.getElementById("invoiceNumber").value = "";
+      document.getElementById("invoiceDate").value = "";
+    }
+
+    // Generar las filas de productos en la tabla
+    const productsContainer = document.getElementById("confirmOrderProducts");
+    productsContainer.innerHTML = ""; // Limpiar contenido previo
+
+    order.products.forEach((product, index) => {
+      const receivedProduct =
+        existingReceipt && existingReceipt.receivedProducts && existingReceipt.receivedProducts[index]
+          ? existingReceipt.receivedProducts[index]
+          : {};
+      const receivedQuantity =
+        receivedProduct.receivedQuantity !== undefined
+          ? receivedProduct.receivedQuantity
+          : 0;
+      const unitPrice =
+        receivedProduct.unitPrice !== undefined
+          ? receivedProduct.unitPrice
+          : 0;
+      const totalPerProduct =
+        receivedProduct.totalPerProduct !== undefined
+          ? receivedProduct.totalPerProduct
+          : 0;
+      const comments = receivedProduct.comments || "";
+
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td>${product.name}</td>
+        <td>${product.presentation}</td>
+        <td>${product.quantity}</td>
+        <td>
+          <input type="number" id="receivedQuantity${index}"
+                 value="${receivedQuantity}"
+                 min="0" max="${product.quantity}">
+        </td>
+        <td>
+          <input type="number" id="unitPrice${index}"
+                 value="${unitPrice}"
+                 step="0.01" min="0">
+        </td>
+        <td>Q<span id="totalPerProduct${index}">${totalPerProduct.toFixed(2)}</span></td>
+        <td><input type="text" id="productComments${index}" value="${comments}"></td>
+      `;
+
+      productsContainer.appendChild(row);
     });
+
+    // Inicializar el total de la factura
+    calculateInvoiceTotal(order.products.length);
+
+    // Agregar event listeners para actualizar totales al cambiar cantidad o precio
+    order.products.forEach((product, index) => {
+      const receivedQuantityInput = document.getElementById(`receivedQuantity${index}`);
+      const unitPriceInput = document.getElementById(`unitPrice${index}`);
+
+      receivedQuantityInput.addEventListener("input", () => {
+        updateTotalPerProduct(index, product.quantity);
+      });
+
+      unitPriceInput.addEventListener("input", () => {
+        updateTotalPerProduct(index, product.quantity);
+      });
+    });
+
+    // Mostrar el modal de confirmación
+    document.getElementById("confirmOrderModal").style.display = "block";
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "Error al confirmar pedido",
+      text: error.message
+    });
+  }
+}
+
+// Función para actualizar el total por producto
+function updateTotalPerProduct(index, maxQuantity) {
+  const receivedQuantityInput = document.getElementById(`receivedQuantity${index}`);
+  const unitPriceInput = document.getElementById(`unitPrice${index}`);
+  const totalPerProductSpan = document.getElementById(`totalPerProduct${index}`);
+
+  let receivedQuantity = parseInt(receivedQuantityInput.value, 10);
+  let unitPrice = parseFloat(unitPriceInput.value);
+
+  if (isNaN(receivedQuantity) || receivedQuantity < 0) {
+    receivedQuantity = 0;
+    receivedQuantityInput.value = receivedQuantity;
+  }
+  if (receivedQuantity > maxQuantity) {
+    receivedQuantity = maxQuantity;
+    receivedQuantityInput.value = receivedQuantity;
+  }
+  if (isNaN(unitPrice) || unitPrice < 0) {
+    unitPrice = 0;
+    unitPriceInput.value = unitPrice.toFixed(2);
+  }
+
+  const totalPerProduct = receivedQuantity * unitPrice;
+  totalPerProductSpan.textContent = totalPerProduct.toFixed(2);
+
+  // Actualizar el total de la factura
+  calculateInvoiceTotal(document.querySelectorAll("#confirmOrderProducts tr").length);
+}
+
+// Función para calcular y mostrar el total de la factura
+function calculateInvoiceTotal(numberOfProducts) {
+  let invoiceTotal = 0;
+  for (let i = 0; i < numberOfProducts; i++) {
+    const totalPerProduct = parseFloat(document.getElementById(`totalPerProduct${i}`).textContent);
+    if (!isNaN(totalPerProduct)) {
+      invoiceTotal += totalPerProduct;
+    }
+  }
+  document.getElementById("invoiceTotal").textContent = invoiceTotal.toFixed(2);
+}
+
+async function saveConfirmedOrder() {
+  const orderId = document.getElementById("confirmOrderId").value;
+
+  // Obtener los valores de los campos de factura
+  const invoiceNumber = document.getElementById("invoiceNumber").value.trim();
+  const invoiceDate = document.getElementById("invoiceDate").value;
+
+  // Validar que los campos no estén vacíos
+  if (!invoiceNumber) {
+    Swal.fire({
+      icon: "error",
+      title: "Número de Factura Vacío",
+      text: "Por favor, ingresa el número de factura."
+    });
+    return;
+  }
+
+  if (!invoiceDate) {
+    Swal.fire({
+      icon: "error",
+      title: "Fecha de Factura Vacía",
+      text: "Por favor, ingresa la fecha de factura."
+    });
+    return;
+  }
+
+  // Validar que invoiceNumber sea un número positivo
+  const invoiceNumberInt = parseInt(invoiceNumber, 10);
+  if (isNaN(invoiceNumberInt) || invoiceNumberInt <= 0) {
+    Swal.fire({
+      icon: "error",
+      title: "Número de Factura Inválido",
+      text: "El número de factura debe ser un número positivo."
+    });
+    return;
+  }
+
+  // Obtener las cantidades recibidas, precios y comentarios
+  const productRows = document.querySelectorAll("#confirmOrderProducts tr");
+  const receivedProducts = Array.from(productRows).map((row, index) => {
+    const receivedQuantity = parseInt(document.getElementById(`receivedQuantity${index}`).value, 10);
+    const unitPrice = parseFloat(document.getElementById(`unitPrice${index}`).value);
+    const totalPerProduct = parseFloat(document.getElementById(`totalPerProduct${index}`).textContent);
+    const comments = document.getElementById(`productComments${index}`).value.trim();
+    return {
+      name: row.cells[0].textContent,
+      presentation: row.cells[1].textContent,
+      quantity: parseInt(row.cells[2].textContent, 10),
+      receivedQuantity: isNaN(receivedQuantity) ? 0 : receivedQuantity,
+      unitPrice: isNaN(unitPrice) ? 0 : unitPrice,
+      totalPerProduct: isNaN(totalPerProduct) ? 0 : totalPerProduct,
+      comments: comments
+    };
+  });
+
+  // Validar las cantidades recibidas y precios
+  for (let product of receivedProducts) {
+    if (isNaN(product.receivedQuantity) || product.receivedQuantity < 0 || product.receivedQuantity > product.quantity) {
+      Swal.fire({
+        icon: "error",
+        title: "Cantidad Recibida Inválida",
+        text: `La cantidad recibida para "${product.name}" es inválida. Debe ser un número entre 0 y ${product.quantity}.`
+      });
+      return;
+    }
+    if (isNaN(product.unitPrice) || product.unitPrice < 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Precio por Unidad Inválido",
+        text: `El precio por unidad para "${product.name}" es inválido. Debe ser un número positivo.`
+      });
+      return;
+    }
+  }
+
+  try {
+    // Crear una nueva recepción en la subcolección 'receipts' usando los datos introducidos por el usuario
+    const invoiceTotal = parseFloat(document.getElementById("invoiceTotal").textContent);
+
+    const newReceipt = {
+      invoiceNumber: invoiceNumberInt,
+      invoiceDate: invoiceDate,
+      receivedProducts: receivedProducts,
+      invoiceTotal: invoiceTotal,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    await db.collection("orders").doc(orderId).collection("receipts").add(newReceipt);
+
+    // Actualizar el estado del pedido a 'caminoATienda' si es necesario
+    // Dependiendo de tu flujo, podrías querer avanzar automáticamente al siguiente estado
+    // Aquí, dejaremos que el administrador lo cambie manualmente
 
     Swal.fire({
       icon: "success",
-      title: "Recepción guardada",
-      text: "Cantidades recibidas y comentarios guardados exitosamente."
-    });
-
-    // Preguntar si desea generar imagen de la recepción
-    Swal.fire({
-      title: "¿Deseas generar la imagen de la recepción?",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Sí, generar",
-      cancelButtonText: "No, gracias"
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        await shareReceptionImage(orderId);
-      }
+      title: "Recepción Guardada",
+      text: "Las cantidades recibidas y los detalles de la factura se han guardado correctamente."
     });
 
     closeConfirmOrderModal();
     reloadOrders();
+
+    // Mostrar automáticamente la ventana de exportar imagen
+    shareReceptionImage(orderId);
+
   } catch (error) {
     Swal.fire({
       icon: "error",
-      title: "Error al guardar recepción",
+      title: "Error al Guardar Recepción",
       text: error.message
     });
   }
 }
 
 // ========================================================================
-//       MOSTRAR DETALLES DEL PEDIDO RECIBIDO (PEDIDOS COMPLETADOS)
+//      MOSTRAR DETALLES DEL PEDIDO RECIBIDO (PEDIDOS COMPLETADOS)
 // ========================================================================
 function showReceivedOrder(orderId) {
   db.collection("orders")
@@ -983,10 +1157,12 @@ function showReceivedOrder(orderId) {
       if (doc.exists) {
         const order = doc.data();
         let receivedOrderHTML = `
-          <p>ID Pedido: ${order.orderId}</p>
-          <p>Proveedor: ${order.providerName}</p>
-          <p>Sucursal: ${order.sucursalName}</p>
-          <p>Fecha: ${order.orderDate}</p>
+          <p><strong>ID Pedido:</strong> ${order.orderId}</p>
+          <p><strong>Proveedor:</strong> ${order.providerName}</p>
+          <p><strong>Sucursal:</strong> ${order.sucursalName}</p>
+          <p><strong>Fecha de Pedido:</strong> ${order.orderDate}</p>
+          <p><strong>Número de Factura:</strong> ${order.invoiceNumber || "N/A"}</p>
+          <p><strong>Fecha de Factura:</strong> ${order.invoiceDate || "N/A"}</p>
           <table>
             <thead>
               <tr>
@@ -994,6 +1170,8 @@ function showReceivedOrder(orderId) {
                 <th>Presentación</th>
                 <th>Cantidad Pedido</th>
                 <th>Cantidad Recibida</th>
+                <th>Precio por Unidad (Q)</th>
+                <th>Total (Q)</th>
                 <th>Comentarios</th>
               </tr>
             </thead>
@@ -1007,14 +1185,25 @@ function showReceivedOrder(orderId) {
                 <td>${product.presentation}</td>
                 <td>${product.quantity}</td>
                 <td>${product.receivedQuantity}</td>
+                <td>${product.unitPrice !== undefined ? `Q${product.unitPrice.toFixed(2)}` : "N/A"}</td>
+                <td>${product.totalPerProduct !== undefined ? `Q${product.totalPerProduct.toFixed(2)}` : "N/A"}</td>
                 <td>${product.comments}</td>
               </tr>
             `;
           });
+          receivedOrderHTML += `
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" style="text-align: right;"><strong>Total de la Factura:</strong></td>
+                <td colspan="2"><strong>Q${order.invoiceTotal.toFixed(2)}</strong></td>
+              </tr>
+            </tfoot>
+          `;
         } else {
           receivedOrderHTML += `
             <tr>
-              <td colspan="5">No se han ingresado cantidades recibidas.</td>
+              <td colspan="7">No se han ingresado cantidades recibidas.</td>
             </tr>
           `;
         }
@@ -1095,44 +1284,24 @@ async function changeOrderStatusManually(newStatus) {
 function getStatusText(status) {
   switch (status) {
     case "pending":
-      return "Pedidos Pendientes";
-    case "inProcess":
-      return "Pedidos en Proceso";
+      return "Pendiente";
+    case "pedidoTomado":
+      return "Pedido Tomado";
+    case "caminoABodega":
+      return "Camino a Bodega";
+    case "pedidoEnBodega":
+      return "Pedido en Bodega";
+    case "caminoATienda":
+      return "Camino a Tienda";
     case "completed":
-      return "Pedidos Completados";
+      return "Completado";
     default:
       return "Estado Desconocido";
   }
 }
 
-async function changeOrderStatus(orderId, newStatus) {
-  if (!(userRole === "administrador" || userPermissions.canChangeStatus)) {
-    Swal.fire({
-      icon: "warning",
-      title: "Sin Permiso",
-      text: "No tienes permiso para cambiar este pedido de estado."
-    });
-    return;
-  }
-  try {
-    await db.collection("orders").doc(orderId).update({ status: newStatus });
-    Swal.fire({
-      icon: "success",
-      title: "Estado cambiado",
-      text: `El pedido se movió a "${getStatusText(newStatus)}".`
-    });
-    reloadOrders();
-  } catch (error) {
-    Swal.fire({
-      icon: "error",
-      title: "Error al cambiar estado",
-      text: error.message
-    });
-  }
-}
-
 // ========================================================================
-//          GENERAR RECIBO MANUAL
+//        GENERAR RECIBO MANUAL
 // ========================================================================
 function openGenerateReceiptModal(orderId) {
   const generateReceiptModal = document.getElementById("generateReceiptModal");
@@ -1195,12 +1364,13 @@ async function saveReceipt() {
     const order = orderDoc.data();
 
     const newReceipt = {
-      date: receiptDate,
+      invoiceNumber: parseInt(document.getElementById("receiptOrderId").value, 10), // Suponiendo que orderId es el número de factura
+      invoiceDate: receiptDate,
       description: receiptDescription,
       total: receiptTotal,
       sucursalName: order.sucursalName,
       orderId: order.orderId,
-      products: []
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
 
     const receiptsRef = db.collection("orders").doc(orderId).collection("receipts");
@@ -1311,7 +1481,7 @@ async function loadAutomaticReceiptProducts(orderId) {
           >
           <br><br>
 
-          <label for="autoReceiptPrice${index}">Precio (Q):</label>
+          <label for="autoReceiptPrice${index}">Precio por Unidad (Q):</label>
           <input 
             type="number" 
             id="autoReceiptPrice${index}" 
@@ -1338,7 +1508,16 @@ async function loadAutomaticReceiptProducts(orderId) {
         if (!checked) {
           receivedQuantityInput.value = "";
           priceInput.value = "";
+          // No hay total por producto en este modal
         }
+      });
+
+      receivedQuantityInput.addEventListener("input", () => {
+        calculateInvoiceTotalAutomatic();
+      });
+
+      priceInput.addEventListener("input", () => {
+        calculateInvoiceTotalAutomatic();
       });
     });
   } catch (error) {
@@ -1350,118 +1529,21 @@ async function loadAutomaticReceiptProducts(orderId) {
   }
 }
 
-async function saveAutomaticReceipt() {
-  const generateAutomaticReceiptModal = document.getElementById("generateAutomaticReceiptModal");
-  const orderId = generateAutomaticReceiptModal.dataset.orderId;
-
-  const receiptDate = document.getElementById("autoReceiptDate").value;
-  const receiptDescription = document.getElementById("autoReceiptDescription").value.trim();
-
-  let calculatedTotal = 0;
-
-  if (!receiptDate || !receiptDescription) {
-    Swal.fire({
-      icon: "error",
-      title: "Campos incompletos",
-      text: "Completa la fecha y la descripción del recibo."
-    });
-    return;
-  }
-
-  const selectedProducts = [];
-  const productsContainer = document.getElementById("autoReceiptProductsContainer");
-  const productDivs = productsContainer.getElementsByClassName("auto-receipt-product");
-
+// Función para calcular y mostrar el total de la factura en recibo automático
+function calculateInvoiceTotalAutomatic() {
+  let invoiceTotal = 0;
+  const productDivs = document.getElementsByClassName("auto-receipt-product");
   for (let i = 0; i < productDivs.length; i++) {
-    const checkbox = productDivs[i].querySelector('input[type="checkbox"]');
-    const receivedQuantityInput = productDivs[i].querySelector('input[name="autoReceiptReceivedQuantity"]');
-    const priceInput = productDivs[i].querySelector('input[name="autoReceiptPrice"]');
-
+    const checkbox = document.getElementById(`autoReceiptProduct${i}`);
     if (checkbox.checked) {
-      const productName = checkbox.value;
-      const receivedQuantity = parseInt(receivedQuantityInput.value, 10);
-      const price = parseFloat(priceInput.value);
-
-      if (isNaN(receivedQuantity) || receivedQuantity < 0) {
-        Swal.fire({
-          icon: "error",
-          title: "Cantidad inválida",
-          text: `Cantidad recibida inválida para "${productName}".`
-        });
-        return;
-      }
-      if (isNaN(price) || price < 0) {
-        Swal.fire({
-          icon: "error",
-          title: "Precio inválido",
-          text: `Precio inválido para "${productName}".`
-        });
-        return;
-      }
-
-      calculatedTotal += price * receivedQuantity;
-
-      selectedProducts.push({
-        name: productName,
-        receivedQuantity: receivedQuantity,
-        price: price
-      });
+      const receivedQuantity = parseInt(document.getElementById(`autoReceiptReceivedQuantity${i}`).value, 10) || 0;
+      const unitPrice = parseFloat(document.getElementById(`autoReceiptPrice${i}`).value) || 0;
+      invoiceTotal += receivedQuantity * unitPrice;
     }
   }
-
-  if (selectedProducts.length === 0) {
-    Swal.fire({
-      icon: "info",
-      title: "Sin productos seleccionados",
-      text: "No se ha seleccionado ningún producto para el recibo."
-    });
-    return;
-  }
-
-  try {
-    const orderDoc = await db.collection("orders").doc(orderId).get();
-    if (!orderDoc.exists) {
-      Swal.fire({
-        icon: "error",
-        title: "Pedido no existe",
-        text: "No se encontró el pedido en la base de datos."
-      });
-      return;
-    }
-    const order = orderDoc.data();
-
-    const newReceipt = {
-      date: receiptDate,
-      description: receiptDescription,
-      total: parseFloat(calculatedTotal.toFixed(2)),
-      sucursalName: order.sucursalName,
-      orderId: order.orderId,
-      products: selectedProducts
-    };
-
-    const receiptsRef = db.collection("orders").doc(orderId).collection("receipts");
-    await receiptsRef.add(newReceipt);
-
-    Swal.fire({
-      icon: "success",
-      title: "Recibo automático guardado",
-      text: `Total calculado: Q${calculatedTotal.toFixed(2)}`
-    });
-    closeGenerateAutomaticReceiptModal();
-
-    // Refrescamos
-    loadCompletedOrdersAdmin();
-    loadReceipts(
-      orderId,
-      document.querySelector(`.order-card button[onclick="openGenerateAutomaticReceiptModal('${orderId}')"]`)?.parentElement
-    );
-  } catch (error) {
-    Swal.fire({
-      icon: "error",
-      title: "Error al guardar recibo",
-      text: error.message
-    });
-  }
+  // Puedes mostrar el total en el formulario de recibo automático si lo deseas
+  // Por ejemplo:
+  // document.getElementById("autoReceiptTotal").textContent = invoiceTotal.toFixed(2);
 }
 
 // ========================================================================
@@ -1500,23 +1582,25 @@ async function downloadReceipt(orderId, receiptId) {
     doc.addImage(logoBase64, "PNG", 10, 10, 66, 20);
 
     doc.setFontSize(16);
-    doc.text(`Recibo de Pedido ID: ${receipt.orderId}`, 100, 35, {
+    doc.text(`Recibo de Pedido ID: ${receipt.orderId}`, 105, 35, {
       align: "center",
     });
 
     doc.setFontSize(12);
-    doc.text(`Fecha: ${receipt.date}`, 10, 55);
+    doc.text(`Fecha: ${receipt.invoiceDate || receipt.date}`, 10, 55);
     doc.text(`Sucursal: ${receipt.sucursalName}`, 10, 65);
     doc.text(`Descripción: ${receipt.description}`, 10, 75);
 
-    if (receipt.products && receipt.products.length > 0) {
-      const tableColumn = ["Producto", "Cantidad Recibida", "Precio (Q)"];
+    if (receipt.receivedProducts && receipt.receivedProducts.length > 0) {
+      const tableColumn = ["Producto", "Presentación", "Cantidad Recibida", "Precio por Unidad (Q)", "Total (Q)"];
       const tableRows = [];
-      receipt.products.forEach((product) => {
+      receipt.receivedProducts.forEach((product) => {
         tableRows.push([
           product.name,
+          product.presentation,
           product.receivedQuantity,
-          product.price !== undefined ? `Q${product.price}` : "N/A"
+          product.unitPrice !== undefined ? `Q${product.unitPrice.toFixed(2)}` : "N/A",
+          product.totalPerProduct !== undefined ? `Q${product.totalPerProduct.toFixed(2)}` : "N/A"
         ]);
       });
 
@@ -1531,11 +1615,11 @@ async function downloadReceipt(orderId, receiptId) {
     }
 
     const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 85;
-    doc.text(`Total: Q${receipt.total}`, 140, finalY + 10);
+    doc.text(`Total de la Factura: Q${receipt.invoiceTotal.toFixed(2)}`, 140, finalY + 10);
 
     const safeSucursal = receipt.sucursalName.replace(/\s+/g, "_");
     const safeDescription = receipt.description.replace(/\s+/g, "_");
-    const safeDate = receipt.date.replace(/\s+/g, "_");
+    const safeDate = (receipt.invoiceDate || receipt.date).replace(/\s+/g, "_");
 
     const pdfFileName = `Recibo_${safeSucursal}_${safeDate}_${safeDescription}.pdf`;
     doc.save(pdfFileName);
@@ -1553,7 +1637,7 @@ async function downloadReceipt(orderId, receiptId) {
 // ========================================================================
 async function shareReceptionImage(orderId) {
   try {
-    // 1) Obtenemos el pedido para tener la info de la recepción
+    // 1) Obtener el pedido para tener la info de la recepción
     const docSnap = await db.collection("orders").doc(orderId).get();
     if (!docSnap.exists) {
       Swal.fire({
@@ -1565,7 +1649,19 @@ async function shareReceptionImage(orderId) {
     }
     const order = docSnap.data();
 
-    // 2) Creamos un contenedor temporal con la info recibida
+    // Obtener la última recepción
+    const receiptsSnapshot = await db.collection("orders").doc(orderId).collection("receipts").orderBy("timestamp", "desc").limit(1).get();
+    if (receiptsSnapshot.empty) {
+      Swal.fire({
+        icon: "info",
+        title: "No hay recepción registrada",
+        text: "No se ha registrado una recepción para este pedido."
+      });
+      return;
+    }
+    const receipt = receiptsSnapshot.docs[0].data();
+
+    // 2) Crear un contenedor temporal con la info recibida
     const tempDiv = document.createElement("div");
     tempDiv.style.padding = "20px";
     tempDiv.style.backgroundColor = "#fff";
@@ -1575,6 +1671,8 @@ async function shareReceptionImage(orderId) {
       <p><strong>Proveedor:</strong> ${order.providerName}</p>
       <p><strong>Sucursal:</strong> ${order.sucursalName}</p>
       <p><strong>Fecha:</strong> ${order.orderDate}</p>
+      <p><strong>Número de Factura:</strong> ${receipt.invoiceNumber || "N/A"}</p>
+      <p><strong>Fecha de Factura:</strong> ${receipt.invoiceDate || "N/A"}</p>
       <table border="1" cellpadding="10" cellspacing="0">
         <thead>
           <tr style="background-color: #f2f2f2;">
@@ -1582,36 +1680,46 @@ async function shareReceptionImage(orderId) {
             <th>Presentación</th>
             <th>Cantidad Pedida</th>
             <th>Cantidad Recibida</th>
+            <th>Precio por Unidad (Q)</th>
+            <th>Total (Q)</th>
             <th>Comentarios</th>
           </tr>
         </thead>
         <tbody>
           ${
-            order.receivedProducts && order.receivedProducts.length > 0
-              ? order.receivedProducts.map(rp => `
+            receipt.receivedProducts && receipt.receivedProducts.length > 0
+              ? receipt.receivedProducts.map(rp => `
                   <tr>
                     <td>${rp.name}</td>
                     <td>${rp.presentation}</td>
                     <td>${rp.quantity}</td>
                     <td>${rp.receivedQuantity}</td>
+                    <td>${rp.unitPrice !== undefined ? `Q${rp.unitPrice.toFixed(2)}` : "N/A"}</td>
+                    <td>${rp.totalPerProduct !== undefined ? `Q${rp.totalPerProduct.toFixed(2)}` : "N/A"}</td>
                     <td>${rp.comments || ''}</td>
                   </tr>
                 `).join("")
-              : `<tr><td colspan="5">No se han registrado cantidades recibidas.</td></tr>`
+              : `<tr><td colspan="7">No se han registrado cantidades recibidas.</td></tr>`
           }
         </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5" style="text-align: right;"><strong>Total de la Factura:</strong></td>
+            <td colspan="2"><strong>Q${receipt.invoiceTotal.toFixed(2)}</strong></td>
+          </tr>
+        </tfoot>
       </table>
     `;
     document.body.appendChild(tempDiv);
 
-    // 3) Generamos la imagen usando html2canvas
+    // 3) Generar la imagen usando html2canvas
     const canvas = await html2canvas(tempDiv);
     const imageData = canvas.toDataURL("image/png");
 
-    // 4) Eliminamos el DIV temporal
+    // 4) Eliminar el DIV temporal
     document.body.removeChild(tempDiv);
 
-    // 5) Ofrecemos dos opciones: Compartir o Descargar
+    // 5) Ofrecer dos opciones: Compartir o Descargar
     Swal.fire({
       title: "Recepción generada",
       text: "Selecciona una opción",
@@ -1624,7 +1732,7 @@ async function shareReceptionImage(orderId) {
         // Intentar compartir (Web Share API)
         if (navigator.share) {
           try {
-            // Convertimos la dataURL en un File para compartir
+            // Convertir la dataURL en un File para compartir
             const fileToShare = dataURLtoFile(imageData, `Recepcion_${order.orderId}.png`);
             await navigator.share({
               title: "Recepción de Pedido",
@@ -1632,7 +1740,7 @@ async function shareReceptionImage(orderId) {
               files: [fileToShare]
             });
           } catch (err) {
-            // Si falla la compartición, realizamos descarga como fallback
+            // Si falla la compartición, realizar descarga como fallback
             Swal.fire({
               icon: "info",
               title: "No se pudo compartir",
@@ -1641,7 +1749,7 @@ async function shareReceptionImage(orderId) {
             downloadImage(imageData, `Recepcion_${order.orderId}.png`);
           }
         } else {
-          // Si no está disponible navigator.share, forzamos descarga
+          // Si no está disponible navigator.share, forzar descarga
           Swal.fire({
             icon: "info",
             title: "Compartir no soportado",
@@ -1685,4 +1793,75 @@ function downloadImage(dataUrl, fileName) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+// ========================================================================
+//         CERRAR MODAL DE CONFIRMACIÓN DE PEDIDO
+// ========================================================================
+window.closeConfirmOrderModal = function() {
+  // Resetear campos de factura
+  document.getElementById("invoiceNumber").value = "";
+  document.getElementById("invoiceDate").value = "";
+
+  // Limpiar información del pedido
+  document.getElementById("orderIdDisplay").textContent = "";
+  document.getElementById("providerNameDisplay").textContent = "";
+  document.getElementById("sucursalNameDisplay").textContent = "";
+  document.getElementById("orderDateDisplay").textContent = "";
+
+  // Limpiar filas de productos
+  document.getElementById("confirmOrderProducts").innerHTML = "";
+
+  // Resetear total de la factura
+  document.getElementById("invoiceTotal").textContent = "0.00";
+
+  // Ocultar el modal
+  document.getElementById("confirmOrderModal").style.display = "none";
+};
+
+// ========================================================================
+//               CAMBIAR ESTADO DEL PEDIDO DIRECTAMENTE
+// ========================================================================
+/**
+ * Cambia el estado de un pedido directamente desde un botón.
+ * @param {string} orderId - ID del documento del pedido en Firestore.
+ * @param {string} newStatus - Nuevo estado a asignar (por ejemplo, 'pedidoTomado').
+ */
+async function changeOrderStatus(orderId, newStatus) {
+  // Obtener el texto legible del estado
+  const statusText = getStatusText(newStatus);
+
+  // Confirmación con el usuario antes de cambiar el estado
+  Swal.fire({
+    title: `¿Marcar como ${statusText}?`,
+    text: `Este pedido pasará a estado "${statusText}".`,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Sí, cambiar",
+    cancelButtonText: "Cancelar"
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        // Actualizar el estado del pedido en Firestore
+        await db.collection("orders").doc(orderId).update({ status: newStatus });
+
+        // Notificar al usuario sobre el éxito de la operación
+        Swal.fire({
+          icon: "success",
+          title: "Estado cambiado",
+          text: `El pedido ha sido marcado como "${statusText}".`
+        });
+
+        // Recargar la lista de pedidos para reflejar el cambio
+        reloadOrders();
+      } catch (error) {
+        // Manejar errores durante la actualización
+        Swal.fire({
+          icon: "error",
+          title: "Error al cambiar estado",
+          text: error.message
+        });
+      }
+    }
+  });
 }
