@@ -1,7 +1,8 @@
-/**********************************************************
+/********************************************************** 
  * CONFIGURACIÓN DE FIREBASE
  **********************************************************/
 const firebaseConfig = {
+  // Tus datos de configuración de Firebase
   apiKey: "AIzaSyBNalk...",
   authDomain: "logisticdb-2e63c.firebaseapp.com",
   projectId: "logisticdb-2e63c",
@@ -191,7 +192,7 @@ function buildOrderQuery(estado) {
   if (idSearch) {
     return db
       .collection("orders")
-      .where("orderId", "==", idSearch) // Buscar EXACT MATCH con orderId (string)
+      .where("orderId", "==", idSearch)
       .where("status", "==", estado);
   }
 
@@ -214,7 +215,6 @@ function buildOrderQuery(estado) {
   if (sortValue === "masReciente") {
     query = query.orderBy("timestamp", "desc");
   } else {
-    // masAntiguo
     query = query.orderBy("timestamp", "asc");
   }
 
@@ -251,7 +251,8 @@ async function loadInProcessOrdersAdmin() {
     const cont = document.getElementById("inProcessOrdersAdminCards");
     cont.innerHTML = "";
 
-    const inProcessStatuses = ["pedidoTomado","caminoABodega","pedidoEnBodega","caminoATienda"];
+    // Incluimos "enTiendaIncompleto" como parte de "inProcess" para que aparezca en la pestaña "Pedidos en Proceso"
+    const inProcessStatuses = ["pedidoTomado","caminoABodega","pedidoEnBodega","caminoATienda","enTiendaIncompleto"];
 
     if (idSearch) {
       const snap = await db
@@ -331,17 +332,32 @@ function createOrderCard(orderDocId, order, status) {
   const card = document.createElement("div");
   card.className = "order-card";
 
+  // Verificación si hay mismatch de cantidades
+  let mismatchText = "";
+  if (order.mismatchedQuantities === true) {
+    mismatchText = `<p style="color: red; font-weight: bold;">No se recibió la misma cantidad pedida</p>`;
+  }
+
+  // Verificación si está pendiente de factura
+  let pendingInvoiceText = "";
+  if (order.pendingInvoice === true) {
+    pendingInvoiceText = `<p style="color: orange; font-weight: bold;">Pendiente de Factura</p>`;
+  }
+
   let html = `
     <h3>Pedido ID: ${order.orderId}</h3>
     <p>Proveedor: ${order.providerName}</p>
     <p>Sucursal: ${order.sucursalName}</p>
     <p>Fecha: ${order.orderDate}</p>
+    ${mismatchText}
+    ${pendingInvoiceText}
     <div class="order-status">
       ${generateProgressBar(order.status)}
     </div>
     <button onclick="showOrderDetails('${orderDocId}')">Mostrar Pedido</button>
   `;
 
+  // Botones según estado
   if (status === "pending") {
     html += `<button onclick="markOrderAsTaken('${orderDocId}')">Pedido Tomado</button>`;
     if (userRole === "administrador" || userPermissions.canEditOrder) {
@@ -351,6 +367,7 @@ function createOrderCard(orderDocId, order, status) {
     if (userRole === "administrador" || userPermissions.canChangeStatus) {
       html += `<button onclick="openChangeStatusModal('${orderDocId}')">Cambiar Estado</button>`;
     }
+    // Si está en inProcess
     if (status === "inProcess") {
       html += `<button onclick="markOrderAsCompleted('${orderDocId}')">Marcar como Completado</button>`;
     }
@@ -358,15 +375,22 @@ function createOrderCard(orderDocId, order, status) {
 
   if (status === "completed") {
     html += `<button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>`;
+    // Permitir cambiar estado para pedidos completados (si eres administrador o tienes permiso)
+    if (userRole === "administrador" || userPermissions.canChangeStatus) {
+      html += `<button onclick="openChangeStatusModal('${orderDocId}')">Cambiar Estado</button>`;
+    }
   }
 
+  // Exportar pedido
   html += `<button onclick="exportOrder('${orderDocId}')">Exportar Pedido</button>`;
 
+  // Eliminar pedido (si tienes permisos)
   if (userRole === "administrador" || userPermissions.canDeleteOrder) {
     html += `<button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>`;
   }
 
-  const inProcessArray = ["pedidoTomado","caminoABodega","pedidoEnBodega","caminoATienda"];
+  // Si el pedido está en alguno de los estados inProcess (incluyendo "enTiendaIncompleto")
+  const inProcessArray = ["pedidoTomado","caminoABodega","pedidoEnBodega","caminoATienda","enTiendaIncompleto"];
   if (inProcessArray.includes(order.status)) {
     html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades Recibidas</button>`;
   }
@@ -378,6 +402,7 @@ function createOrderCard(orderDocId, order, status) {
 /**********************************************************
  * generateProgressBar
  **********************************************************/
+// Agregamos "enTiendaIncompleto" antes de "completed"
 function generateProgressBar(currentStatus) {
   const statuses = [
     { key: "pending", label: "Pendiente" },
@@ -385,6 +410,7 @@ function generateProgressBar(currentStatus) {
     { key: "caminoABodega", label: "Camino a Bodega" },
     { key: "pedidoEnBodega", label: "Pedido en Bodega" },
     { key: "caminoATienda", label: "Camino a Tienda" },
+    { key: "enTiendaIncompleto", label: "En Tienda (Incompleto)" },
     { key: "completed", label: "Completado" }
   ];
   const currentIndex = statuses.findIndex(s => s.key === currentStatus);
@@ -831,6 +857,7 @@ async function confirmOrder(orderId) {
     const hasInvoiceNumber = order.invoiceNumber !== undefined && order.invoiceNumber !== null;
     document.getElementById("invoiceNumber").value = hasInvoiceNumber ? order.invoiceNumber : "";
     document.getElementById("invoiceDate").value = order.invoiceDate || "";
+    document.getElementById("noInvoiceCheckbox").checked = !!order.pendingInvoice;
 
     // Info general del pedido
     document.getElementById("confirmOrderId").value = orderId;
@@ -843,7 +870,6 @@ async function confirmOrder(orderId) {
     const tBody = document.getElementById("confirmOrderProducts");
     tBody.innerHTML = "";
     order.products.forEach((p, idx) => {
-      // Revisar si hay un 'receivedProduct' para este idx
       let rp = { receivedQuantity: "", unitPrice: "", totalPerProduct: 0, comments: "" };
       if (order.receivedProducts && order.receivedProducts[idx]) {
         rp = order.receivedProducts[idx];
@@ -943,30 +969,36 @@ function calculateInvoiceTotal(numRows) {
   document.getElementById("invoiceTotal").textContent = tot.toFixed(2);
 }
 
+window.closeConfirmOrderModal = function() {
+  document.getElementById("invoiceNumber").value = "";
+  document.getElementById("invoiceDate").value = "";
+  document.getElementById("noInvoiceCheckbox").checked = false;
+  document.getElementById("confirmOrderId").value = "";
+  document.getElementById("orderIdDisplay").textContent = "";
+  document.getElementById("providerNameDisplay").textContent = "";
+  document.getElementById("sucursalNameDisplay").textContent = "";
+  document.getElementById("orderDateDisplay").textContent = "";
+  document.getElementById("confirmOrderProducts").innerHTML = "";
+  document.getElementById("invoiceTotal").textContent = "0.00";
+  document.getElementById("confirmOrderModal").style.display = "none";
+};
+
 /**********************************************************
  * saveConfirmedOrder
+ * - Si TODAS las cantidades recibidas == pedidas => "completed"
+ * - Si ALGUNA difiere => "enTiendaIncompleto"
  **********************************************************/
 async function saveConfirmedOrder() {
   const orderId = document.getElementById("confirmOrderId").value;
   const invoiceNumberStr = document.getElementById("invoiceNumber").value.trim();
   const invoiceDate = document.getElementById("invoiceDate").value;
-
-  if (!invoiceNumberStr) {
-    Swal.fire({ icon: "error", title: "Número de Factura Vacío" });
-    return;
-  }
-  const invoiceNumber = parseInt(invoiceNumberStr, 10);
-  if (isNaN(invoiceNumber) || invoiceNumber <= 0) {
-    Swal.fire({ icon: "error", title: "Número de Factura Inválido" });
-    return;
-  }
-  if (!invoiceDate) {
-    Swal.fire({ icon: "error", title: "Fecha de Factura Vacía" });
-    return;
-  }
+  const noInvoice = document.getElementById("noInvoiceCheckbox").checked;
 
   const rows = document.querySelectorAll("#confirmOrderProducts tr");
   const receivedProducts = [];
+  let mismatchedQuantities = false; // para marcar si hay diferencias
+  let allProductsMatch = true;      // para decidir si completamos o no
+
   for (let i = 0; i < rows.length; i++) {
     const tds = rows[i].getElementsByTagName("td");
     const maxQty = parseInt(tds[2].textContent, 10);
@@ -993,6 +1025,12 @@ async function saveConfirmedOrder() {
       return;
     }
 
+    // Detectar si hay diferencia
+    if (recvQty !== maxQty) {
+      mismatchedQuantities = true;
+      allProductsMatch = false;
+    }
+
     receivedProducts.push({
       name: tds[0].textContent,
       presentation: tds[1].textContent,
@@ -1006,17 +1044,58 @@ async function saveConfirmedOrder() {
 
   const invoiceTotal = parseFloat(document.getElementById("invoiceTotal").textContent || "0");
 
+  // Validaciones de factura
+  let finalInvoiceNumber = null;
+  let finalInvoiceDate = null;
+  let pendingInvoice = false; // Nuevo campo para marcar si está pendiente de factura
+
+  if (noInvoice) {
+    // Caso: "No se ingresó factura"
+    pendingInvoice = true;
+  } else {
+    // Validamos solo si no está marcado "No se ingresó factura"
+    if (!invoiceNumberStr) {
+      Swal.fire({ 
+        icon: "error", 
+        title: "Número de Factura Vacío", 
+        text: "O marca la casilla 'No se ingresó factura'." 
+      });
+      return;
+    }
+    const invoiceNumber = parseInt(invoiceNumberStr, 10);
+    if (isNaN(invoiceNumber) || invoiceNumber <= 0) {
+      Swal.fire({ icon: "error", title: "Número de Factura Inválido" });
+      return;
+    }
+    if (!invoiceDate) {
+      Swal.fire({ 
+        icon: "error", 
+        title: "Fecha de Factura Vacía", 
+        text: "O marca la casilla 'No se ingresó factura'." 
+      });
+      return;
+    }
+    finalInvoiceNumber = invoiceNumber;
+    finalInvoiceDate = invoiceDate;
+  }
+
+  // Determinar nuevo estado según si todas las cantidades coinciden o no
+  const newStatus = allProductsMatch ? "completed" : "enTiendaIncompleto";
+
   try {
     await db.collection("orders").doc(orderId).update({
-      invoiceNumber,
-      invoiceDate,
+      invoiceNumber: finalInvoiceNumber || null,
+      invoiceDate: finalInvoiceDate || null,
       receivedProducts,
-      invoiceTotal
+      invoiceTotal,
+      mismatchedQuantities, // si es true, mostrará en la tarjeta
+      pendingInvoice,       // si es true, mostrará "Pendiente de Factura" en la tarjeta
+      status: newStatus     // aquí se actualiza automáticamente al nuevo estado
     });
     Swal.fire({
       icon: "success",
       title: "Recepción Guardada",
-      text: "Los datos se han guardado correctamente."
+      text: `El pedido se ha marcado como "${newStatus}".`
     });
     closeConfirmOrderModal();
     reloadOrders();
@@ -1025,15 +1104,65 @@ async function saveConfirmedOrder() {
   }
 }
 
-window.closeConfirmOrderModal = function() {
-  document.getElementById("invoiceNumber").value = "";
-  document.getElementById("invoiceDate").value = "";
-  document.getElementById("confirmOrderId").value = "";
-  document.getElementById("orderIdDisplay").textContent = "";
-  document.getElementById("providerNameDisplay").textContent = "";
-  document.getElementById("sucursalNameDisplay").textContent = "";
-  document.getElementById("orderDateDisplay").textContent = "";
-  document.getElementById("confirmOrderProducts").innerHTML = "";
-  document.getElementById("invoiceTotal").textContent = "0.00";
-  document.getElementById("confirmOrderModal").style.display = "none";
-};
+/**********************************************************
+ * showReceivedOrder / closeReceivedOrderModal
+ **********************************************************/
+function showReceivedOrder(orderId) {
+  db.collection("orders").doc(orderId).get()
+    .then(docRef => {
+      if (!docRef.exists) {
+        Swal.fire({ icon: "error", title: "Pedido no encontrado" });
+        return;
+      }
+      const order = docRef.data();
+      let html = `
+        <p><strong>ID Pedido:</strong> ${order.orderId}</p>
+        <p><strong>Proveedor:</strong> ${order.providerName}</p>
+        <p><strong>Sucursal:</strong> ${order.sucursalName}</p>
+        <p><strong>Fecha de Pedido:</strong> ${order.orderDate}</p>
+        <p><strong>Número de Factura:</strong> ${order.invoiceNumber || "No ingresado"}</p>
+        <p><strong>Fecha de Factura:</strong> ${order.invoiceDate || "No ingresada"}</p>
+        <p><strong>Total de la Factura:</strong> Q${order.invoiceTotal || 0}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Presentación</th>
+              <th>Cant. Pedida</th>
+              <th>Cant. Recibida</th>
+              <th>Precio Unitario</th>
+              <th>Total</th>
+              <th>Comentarios</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      if (order.receivedProducts) {
+        order.receivedProducts.forEach((rp) => {
+          html += `
+            <tr>
+              <td>${rp.name}</td>
+              <td>${rp.presentation}</td>
+              <td>${rp.quantity}</td>
+              <td>${rp.receivedQuantity}</td>
+              <td>Q${rp.unitPrice}</td>
+              <td>Q${rp.totalPerProduct}</td>
+              <td>${rp.comments || ""}</td>
+            </tr>
+          `;
+        });
+      }
+      html += `</tbody></table>`;
+
+      document.getElementById("receivedOrderDetails").innerHTML = html;
+      document.getElementById("receivedOrderModal").style.display = "block";
+    })
+    .catch(err => {
+      Swal.fire({ icon: "error", title: "Error", text: err.message });
+    });
+}
+
+function closeReceivedOrderModal() {
+  document.getElementById("receivedOrderDetails").innerHTML = "";
+  document.getElementById("receivedOrderModal").style.display = "none";
+}

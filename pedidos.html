@@ -36,23 +36,17 @@
   <!-- Contenedor de Filtro para el ADMIN (se muestra solo si userRole = 'administrador') -->
   <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
     <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
-    <select id="sucursalFilter" onchange="reloadOrders()">
-      <!-- Se llenará dinámicamente en pedidos.js -->
-    </select>
+    <select id="sucursalFilter" onchange="reloadOrders()"></select>
 
     <label for="providerFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Proveedor:</label>
-    <select id="providerFilter" onchange="reloadOrders()">
-      <!-- Se llenará dinámicamente en pedidos.js -->
-    </select>
+    <select id="providerFilter" onchange="reloadOrders()"></select>
 
-    <!-- Nuevo: Ordenar por -->
     <label for="sortOrder" style="font-weight: bold; margin-left: 1rem;">Ordenar por:</label>
     <select id="sortOrder" onchange="reloadOrders()">
       <option value="masReciente" selected>Más Reciente</option>
       <option value="masAntiguo">Más Antiguo</option>
     </select>
 
-    <!-- Nuevo: Buscar por ID -->
     <label for="idSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por ID:</label>
     <input 
       type="text" 
@@ -121,7 +115,6 @@
       <span class="close" onclick="closeEditOrderModal()">&times;</span>
       <h2>Editar Pedido</h2>
       <div id="editOrderDetails"></div>
-      <!-- El botón "Guardar Cambios" se genera dinámicamente en pedidos.js -->
     </div>
   </div>
 
@@ -135,10 +128,16 @@
       <input type="hidden" id="confirmOrderId" value="" />
       <div id="invoiceDetails">
         <label for="invoiceNumber"><strong>Número de Factura:</strong></label>
-        <input type="number" id="invoiceNumber" name="invoiceNumber" required /><br /><br />
+        <input type="number" id="invoiceNumber" name="invoiceNumber" /><br /><br />
 
         <label for="invoiceDate"><strong>Fecha de Factura:</strong></label>
-        <input type="date" id="invoiceDate" name="invoiceDate" required /><br /><br />
+        <input type="date" id="invoiceDate" name="invoiceDate" /><br /><br />
+
+        <!-- Checkbox "No se ingresó factura" -->
+        <label style="display: inline-flex; align-items: center;">
+          <input type="checkbox" id="noInvoiceCheckbox" style="margin-right: 8px;" />
+          No se ingresó la factura
+        </label>
       </div>
 
       <!-- Detalles del Pedido -->
@@ -162,9 +161,7 @@
             <th>Comentarios</th>
           </tr>
         </thead>
-        <tbody id="confirmOrderProducts">
-          <!-- Filas generadas dinámicamente en pedidos.js -->
-        </tbody>
+        <tbody id="confirmOrderProducts"></tbody>
       </table>
 
       <!-- Total de la Factura -->
@@ -191,9 +188,14 @@
       <span class="close" onclick="closeChangeStatusModal()">&times;</span>
       <h2>Cambiar Estado del Pedido</h2>
       <p>Selecciona el nuevo estado para este pedido:</p>
+
+      <button onclick="changeOrderStatusManually('pedidoTomado')">Pedido Tomado</button>
       <button onclick="changeOrderStatusManually('caminoABodega')">Camino a Bodega</button>
       <button onclick="changeOrderStatusManually('pedidoEnBodega')">Pedido en Bodega</button>
       <button onclick="changeOrderStatusManually('caminoATienda')">Camino a Tienda</button>
+      <!-- Nuevo estado manual si quisieras cambiarlo desde el modal -->
+      <button onclick="changeOrderStatusManually('enTiendaIncompleto')">En Tienda (Incompleto)</button>
+
       <button onclick="changeOrderStatusManually('completed')">Completado</button>
     </div>
   </div>

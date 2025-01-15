@@ -337,3 +337,29 @@ h1 {
         font-size: 1em;
     }
 }
+
+/* =========================================================
+   NUEVAS CLASES (cambios solicitados)
+   ========================================================= */
+
+/* Texto para indicar mismatch de cantidades */
+.mismatch-quantities {
+    color: #dc3545; /* Rojo */
+    font-weight: bold;
+}
+
+/* Texto para indicar pedido pendiente de factura */
+.pending-invoice {
+    color: #fd7e14; /* Naranja */
+    font-weight: bold;
+}
+
+/* Si deseas resaltar la tarjeta de un pedido incompleto */
+.order-card.incomplete-state {
+    border: 2px dashed #dc3545; /* Borde rojo */
+}
+
+/* Ejemplo de color para estado 'enTiendaIncompleto' en la barra de progreso */
+.progress-step.enTiendaIncompleto .step-number {
+    background-color: #dc3545; /* Rojo (o el color que prefieras) */
+}
