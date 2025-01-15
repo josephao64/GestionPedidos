@@ -2,7 +2,7 @@
  * CONFIGURACIÓN DE FIREBASE
  **********************************************************/
 const firebaseConfig = {
-  apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
+  apiKey: "AIzaSyBNalk...",
   authDomain: "logisticdb-2e63c.firebaseapp.com",
   projectId: "logisticdb-2e63c",
   storageBucket: "logisticdb-2e63c.appspot.com",
@@ -28,16 +28,19 @@ let logoBase64 = "";
 document.addEventListener("DOMContentLoaded", async () => {
   await initUserAndSucursal();
 
+  // Si es administrador, se muestran y cargan filtros de sucursal/proveedor
   if (userRole === "administrador") {
     document.getElementById("adminFilterContainer").style.display = "block";
     loadSucursalesForAdmin();
     loadProvidersForAdmin();
   }
 
+  // Cargar las secciones
   loadPendingOrdersAdmin();
   loadInProcessOrdersAdmin();
   loadCompletedOrdersAdmin();
 
+  // Cargar el logo (si se usa en exportar PDF)
   loadLogo();
 });
 
@@ -50,7 +53,7 @@ async function initUserAndSucursal() {
     Swal.fire({
       icon: "warning",
       title: "No hay usuario logueado",
-      text: "Redirigiendo a la pantalla de login..."
+      text: "Redirigiendo a login..."
     }).then(() => {
       window.location.href = "login.html";
     });
@@ -182,15 +185,13 @@ function goToMainMenu() {
 
 /**********************************************************
  * buildOrderQuery(estado)
- * -> (Sigue tu lógica de buscar ID, filtrar sucursal, etc.)
  **********************************************************/
 function buildOrderQuery(estado) {
   const idSearch = document.getElementById("idSearchInput")?.value?.trim();
   if (idSearch) {
-    // Búsqueda EXACT MATCH con orderId como string
     return db
       .collection("orders")
-      .where("orderId", "==", idSearch)
+      .where("orderId", "==", idSearch) // Buscar EXACT MATCH con orderId (string)
       .where("status", "==", estado);
   }
 
@@ -213,6 +214,7 @@ function buildOrderQuery(estado) {
   if (sortValue === "masReciente") {
     query = query.orderBy("timestamp", "desc");
   } else {
+    // masAntiguo
     query = query.orderBy("timestamp", "asc");
   }
 
@@ -340,14 +342,12 @@ function createOrderCard(orderDocId, order, status) {
     <button onclick="showOrderDetails('${orderDocId}')">Mostrar Pedido</button>
   `;
 
-  // Pending => no "Cambiar Estado", solo "Pedido Tomado"
   if (status === "pending") {
     html += `<button onclick="markOrderAsTaken('${orderDocId}')">Pedido Tomado</button>`;
     if (userRole === "administrador" || userPermissions.canEditOrder) {
       html += `<button onclick="editOrder('${orderDocId}')">Editar Pedido</button>`;
     }
   } else {
-    // No pending => Cambiar Estado
     if (userRole === "administrador" || userPermissions.canChangeStatus) {
       html += `<button onclick="openChangeStatusModal('${orderDocId}')">Cambiar Estado</button>`;
     }
@@ -360,15 +360,12 @@ function createOrderCard(orderDocId, order, status) {
     html += `<button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>`;
   }
 
-  // Exportar
   html += `<button onclick="exportOrder('${orderDocId}')">Exportar Pedido</button>`;
 
-  // Eliminar
   if (userRole === "administrador" || userPermissions.canDeleteOrder) {
     html += `<button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>`;
   }
 
-  // Ingresar Cantidades => en proceso
   const inProcessArray = ["pedidoTomado","caminoABodega","pedidoEnBodega","caminoATienda"];
   if (inProcessArray.includes(order.status)) {
     html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades Recibidas</button>`;
@@ -830,32 +827,32 @@ async function confirmOrder(orderId) {
     }
     const order = snap.data();
 
-    // 1) Rellenar info de Factura (si existe)
+    // Factura: si hay invoiceNumber e invoiceDate, mostrar; si no, vacío
     const hasInvoiceNumber = order.invoiceNumber !== undefined && order.invoiceNumber !== null;
     document.getElementById("invoiceNumber").value = hasInvoiceNumber ? order.invoiceNumber : "";
     document.getElementById("invoiceDate").value = order.invoiceDate || "";
 
-    // 2) Info general del pedido
+    // Info general del pedido
     document.getElementById("confirmOrderId").value = orderId;
     document.getElementById("orderIdDisplay").textContent = order.orderId;
     document.getElementById("providerNameDisplay").textContent = order.providerName;
     document.getElementById("sucursalNameDisplay").textContent = order.sucursalName;
     document.getElementById("orderDateDisplay").textContent = order.orderDate;
 
-    // 3) Generar filas en la tabla
+    // Generar filas
     const tBody = document.getElementById("confirmOrderProducts");
     tBody.innerHTML = "";
     order.products.forEach((p, idx) => {
-      // Buscar si hay un 'receivedProduct' guardado
-      let rp = {};
+      // Revisar si hay un 'receivedProduct' para este idx
+      let rp = { receivedQuantity: "", unitPrice: "", totalPerProduct: 0, comments: "" };
       if (order.receivedProducts && order.receivedProducts[idx]) {
         rp = order.receivedProducts[idx];
       }
-      // Rellenar inputs con los valores guardados, o vacío si no existen
+
+      const totalValue = rp.totalPerProduct ? Number(rp.totalPerProduct).toFixed(2) : "0.00";
       const receivedQty = rp.receivedQuantity !== undefined ? rp.receivedQuantity : "";
-      const unitPrice = rp.unitPrice !== undefined ? rp.unitPrice : "";
-      const totalProd = rp.totalPerProduct !== undefined ? rp.totalPerProduct.toFixed(2) : "0.00";
-      const comments = rp.comments || "";
+      const priceVal = rp.unitPrice !== undefined ? rp.unitPrice : "";
+      const commentsVal = rp.comments || "";
 
       tBody.insertAdjacentHTML("beforeend", `
         <tr>
@@ -863,48 +860,44 @@ async function confirmOrder(orderId) {
           <td>${p.presentation}</td>
           <td>${p.quantity}</td>
           <td>
-            <input 
-              type="number" 
-              id="receivedQuantity${idx}" 
-              min="0" 
-              max="${p.quantity}" 
-              placeholder="" 
+            <input
+              type="number"
+              id="receivedQuantity${idx}"
+              min="0"
+              max="${p.quantity}"
+              placeholder=""
               value="${receivedQty}"
             >
           </td>
           <td>
-            <input 
-              type="number" 
-              id="unitPrice${idx}" 
-              step="0.01" 
-              min="0" 
-              placeholder="" 
-              value="${unitPrice}"
+            <input
+              type="number"
+              id="unitPrice${idx}"
+              step="0.01"
+              min="0"
+              placeholder=""
+              value="${priceVal}"
             >
           </td>
-          <td>Q<span id="totalPerProduct${idx}">${totalProd}</span></td>
-          <td><input type="text" id="productComments${idx}" value="${comments}" placeholder="Comentarios"></td>
+          <td>Q<span id="totalPerProduct${idx}">${totalValue}</span></td>
+          <td><input type="text" id="productComments${idx}" placeholder="Comentarios" value="${commentsVal}"></td>
         </tr>
       `);
     });
 
-    // 4) Calcular total
+    // Calcular total
     calculateInvoiceTotal(order.products.length);
 
-    // 5) Agregar listeners para recalcular totales
+    // Listeners
     order.products.forEach((p, idx) => {
       const qInp = document.getElementById(`receivedQuantity${idx}`);
       const prInp = document.getElementById(`unitPrice${idx}`);
 
-      qInp.addEventListener("input", () => {
-        updateTotalPerProduct(idx, p.quantity);
-      });
-      prInp.addEventListener("input", () => {
-        updateTotalPerProduct(idx, p.quantity);
-      });
+      qInp.addEventListener("input", () => updateTotalPerProduct(idx, p.quantity));
+      prInp.addEventListener("input", () => updateTotalPerProduct(idx, p.quantity));
     });
 
-    // 6) Mostrar modal
+    // Mostrar modal
     document.getElementById("confirmOrderModal").style.display = "block";
 
   } catch (error) {
@@ -912,7 +905,6 @@ async function confirmOrder(orderId) {
   }
 }
 
-// Actualiza el total por producto
 function updateTotalPerProduct(idx, maxQty) {
   const qInput = document.getElementById(`receivedQuantity${idx}`);
   const pInput = document.getElementById(`unitPrice${idx}`);
@@ -940,7 +932,6 @@ function updateTotalPerProduct(idx, maxQty) {
   calculateInvoiceTotal(document.querySelectorAll("#confirmOrderProducts tr").length);
 }
 
-// Calcula total de la factura
 function calculateInvoiceTotal(numRows) {
   let tot = 0;
   for (let i = 0; i < numRows; i++) {
@@ -954,9 +945,6 @@ function calculateInvoiceTotal(numRows) {
 
 /**********************************************************
  * saveConfirmedOrder
- * -> Este método ya guarda en doc: invoiceNumber, invoiceDate,
- *    receivedProducts[], invoiceTotal
- * -> Así la próxima vez, se mostrará al abrir confirmOrder()
  **********************************************************/
 async function saveConfirmedOrder() {
   const orderId = document.getElementById("confirmOrderId").value;
