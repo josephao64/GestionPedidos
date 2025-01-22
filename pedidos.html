@@ -12,11 +12,9 @@
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
 
-  <!-- Librerías para exportar (PDF, Imagen, Excel) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+  <!-- Librerías para exportar (Imagen, Excel) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -95,6 +93,8 @@
       <h2>Detalles del Pedido</h2>
       <div id="orderDetails"></div>
       <input type="hidden" id="exportOrderId" />
+      <!-- Botón para Exportar Pedido como Imagen -->
+      <button id="exportOrderImageButton" onclick="" style="margin-top: 1rem;">Exportar Pedido como Imagen</button>
     </div>
   </div>
 
@@ -169,6 +169,11 @@
         <p>Total de la Factura: Q<span id="invoiceTotal">0.00</span></p>
       </div>
 
+      <!-- Botón para Exportar Recepción de Pedido (Visible para Usuarios Normales después de guardar) -->
+      <div id="exportReceptionButtonContainer" style="margin-top: 1rem; display: none;">
+        <button onclick="exportAsReceivedOrderImage(document.getElementById('confirmOrderId').value)">Exportar Cantidades Recibidas</button>
+      </div>
+
       <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
     </div>
   </div>
@@ -179,6 +184,11 @@
       <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
       <h2>Detalles del Pedido Recibido</h2>
       <div id="receivedOrderDetails"></div>
+
+      <!-- Botón para Exportar Pedido Recibido como Imagen (Visible para Usuarios Normales) -->
+      <div id="exportReceivedOrderImageButtonContainer" style="margin-top: 1rem; display: none;">
+        <button onclick="">Exportar Pedido Recibido como Imagen</button>
+      </div>
     </div>
   </div>
 
@@ -223,6 +233,40 @@
         </tr>
       </thead>
       <tbody id="exportProductsTableBody"></tbody>
+    </table>
+
+    <div style="margin-top: 20px; font-weight: bold; text-align: center;">
+      ¡Gracias por su pedido!
+    </div>
+  </div>
+
+  <!-- Contenedor oculto para exportar Recepción de Pedido como Imagen -->
+  <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 500px;">
+    <!-- Logo -->
+    <img id="exportReceptionLogo" src="logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
+
+    <h2>Recepción de Pedido</h2>
+    <p><strong>ID Pedido:</strong> <span id="exportReceptionOrderIdHidden"></span></p>
+    <p><strong>Proveedor:</strong> <span id="exportReceptionProviderHidden"></span></p>
+    <p><strong>Sucursal:</strong> <span id="exportReceptionSucursalHidden"></span></p>
+    <p><strong>Fecha de Pedido:</strong> <span id="exportReceptionOrderDateHidden"></span></p>
+    <p><strong>Número de Factura:</strong> <span id="exportReceptionInvoiceNumberHidden"></span></p>
+    <p><strong>Fecha de Factura:</strong> <span id="exportReceptionInvoiceDateHidden"></span></p>
+    <p><strong>Total de la Factura:</strong> Q<span id="exportReceptionInvoiceTotalHidden"></span></p>
+    <p><strong>Última Edición:</strong> <span id="exportReceptionLastEditHidden"></span></p>
+
+    <table border="1" style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Presentación</th>
+          <th>Cantidad Pedida</th>
+          <th>Cantidad Recibida</th>
+          <th>Advertencias</th>
+          <th>Comentarios</th>
+        </tr>
+      </thead>
+      <tbody id="exportReceptionProductsTableBody"></tbody>
     </table>
 
     <div style="margin-top: 20px; font-weight: bold; text-align: center;">

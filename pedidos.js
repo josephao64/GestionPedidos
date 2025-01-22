@@ -462,9 +462,21 @@ function createOrderCard(orderDocId, order) {
     }
   }
 
-  // Mostrar Recibido
-  if (userRole === "administrador") {
-    html += `<button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>`;
+  // Mostrar Recibido en Pedidos Completados
+  if (order.status === "completed") {
+    // Para Usuarios Administradores
+    if (userRole === "administrador") {
+      html += `<button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>`;
+    }
+
+    // Para Usuarios Normales
+    if (userRole !== "administrador") {
+      html += `
+        <button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>
+        <!-- Eliminar los botones de exportación de la tarjeta -->
+        <!-- Los botones de exportación se añadirán dentro de la ventana modal -->
+      `;
+    }
   }
 
   card.innerHTML = html;
@@ -650,9 +662,26 @@ function showOrderDetails(orderId) {
         }
       }
 
+      // **Agregar Botón de "Exportar Pedido como Imagen" en Detalles del Pedido**
+      html += `
+        <button onclick="exportAsImage('${orderId}')">Exportar Pedido como Imagen</button>
+      `;
+
+      // **Agregar Botón de "Exportar Recepción de Pedido" si aplica**
+      if (order.receivedProducts && order.receivedProducts.length > 0) {
+        html += `<button onclick="exportReception('${orderId}')">Exportar Recepción de Pedido</button>`;
+      }
+
       document.getElementById("orderDetails").innerHTML = html;
       document.getElementById("orderDetailsModal").style.display = "block";
-      document.getElementById("exportOrderId").value = orderId;
+
+      // Configurar el botón de exportación de Pedido como Imagen con el orderId
+      const exportImageButton = document.getElementById("exportOrderImageButton");
+      if (exportImageButton) {
+        exportImageButton.onclick = function() {
+          exportAsImage(orderId);
+        };
+      }
     })
     .catch(err => {
       Swal.fire({ icon: "error", title: "Error", text: err.message });
@@ -800,7 +829,7 @@ async function saveEditedOrder() {
 }
 
 /**********************************************************
- * EXPORTAR (Imagen, PDF, Excel)
+ * EXPORTAR (Imagen, Excel)
  **********************************************************/
 function exportOrder(orderId) {
   document.getElementById("exportModal").style.display = "block";
@@ -826,7 +855,8 @@ async function exportAs(format) {
     if (format === "image") {
       exportAsImage(order, fileName);
     } else if (format === "pdf") {
-      exportAsPDF(order, fileName);
+      // **Deshabilitado:** La exportación a PDF para "Exportar Recepción de Pedido" ha sido removida
+      Swal.fire({ icon: "warning", title: "Funcionalidad Deshabilitada", text: "La exportación a PDF para recepción de pedidos no está disponible." });
     } else if (format === "excel") {
       exportAsExcel(order, fileName);
     }
@@ -938,47 +968,6 @@ function exportAsImage(order, fileName) {
       hiddenDiv.style.top = "-9999px";
       hiddenDiv.style.transform = "none";
     });
-}
-
-/**********************************************************
- * Exportar como PDF
- **********************************************************/
-function exportAsPDF(order, fileName) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  if (logoBase64) {
-    doc.addImage(logoBase64, "PNG", 10, 10, 66, 20);
-  }
-
-  doc.setFontSize(16);
-  doc.text(`Recibo de Pedido ID: ${order.orderId}`, 105, 35, { align: "center" });
-  doc.setFontSize(12);
-  doc.text(`Fecha: ${order.orderDate}`, 10, 55);
-  doc.text(`Proveedor: ${order.providerName}`, 10, 65);
-  doc.text(`Sucursal: ${order.sucursalName}`, 10, 75);
-
-  if (order.lastEditTimestamp) {
-    const editDate = new Date(order.lastEditTimestamp.toDate()).toLocaleString();
-    doc.text(`Última Edición: ${editDate}`, 10, 85);
-  }
-
-  const tableColumn = ["Producto", "Presentación", "Cantidad"];
-  const tableRows = [];
-  order.products.forEach((prod) => {
-    tableRows.push([prod.name, prod.presentation, prod.quantity]);
-  });
-
-  doc.autoTable({
-    startY: order.lastEditTimestamp ? 95 : 90,
-    head: [tableColumn],
-    body: tableRows,
-    theme: "striped",
-    styles: { cellPadding: 3, fontSize: 10 },
-    headStyles: { fillColor: [60, 141, 188] }
-  });
-
-  doc.save(`${fileName}.pdf`);
 }
 
 /**********************************************************
@@ -1131,6 +1120,9 @@ function closeConfirmOrderModal() {
 
   document.getElementById("confirmOrderProducts").innerHTML = "";
   document.getElementById("invoiceTotal").textContent = "0.00";
+
+  // Ocultar el botón de exportación para usuarios normales
+  document.getElementById("exportReceptionButtonContainer").style.display = "none";
 
   document.getElementById("confirmOrderModal").style.display = "none";
 }
@@ -1293,6 +1285,11 @@ async function saveConfirmedOrder() {
       text: `Todo coincide y se ingresó factura. Total Factura: Q${invoiceTotalValue}`
     });
 
+    // **Mostrar el botón de exportación para usuarios normales**
+    if (userRole !== "administrador") {
+      document.getElementById("exportReceptionButtonContainer").style.display = "block";
+    }
+
     closeConfirmOrderModal();
     reloadOrders();
 
@@ -1359,6 +1356,19 @@ function showReceivedOrder(orderId) {
       html += `</tbody></table>`;
 
       document.getElementById("receivedOrderDetails").innerHTML = html;
+
+      // **Mostrar el botón de exportación para usuarios normales**
+      if (userRole !== "administrador") {
+        document.getElementById("exportReceivedOrderImageButtonContainer").style.display = "block";
+        // Asignar el onclick con el orderId
+        const exportButton = document.querySelector("#exportReceivedOrderImageButtonContainer button");
+        if (exportButton) {
+          exportButton.onclick = function() {
+            exportAsReceivedOrderImage(orderId);
+          };
+        }
+      }
+
       document.getElementById("receivedOrderModal").style.display = "block";
     })
     .catch(err => {
@@ -1369,12 +1379,180 @@ function showReceivedOrder(orderId) {
 function closeReceivedOrderModal() {
   document.getElementById("receivedOrderDetails").innerHTML = "";
   document.getElementById("receivedOrderModal").style.display = "none";
+
+  // Ocultar el botón de exportación para usuarios normales
+  document.getElementById("exportReceivedOrderImageButtonContainer").style.display = "none";
 }
 
 /**********************************************************
- * EXPORTAR (Imagen, PDF, Excel) - Función ExportAsImage Actualizada
+ * EXPORTAR RECEPCIÓN DE PEDIDO
  **********************************************************/
-function exportAsImage(order, fileName) {
+async function exportReception(orderId) {
+  try {
+    const docRef = await db.collection("orders").doc(orderId).get();
+    if (!docRef.exists) {
+      Swal.fire({ icon: "error", title: "Pedido no encontrado" });
+      return;
+    }
+    const order = docRef.data();
+    const fileName = `Recepcion_Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
+    exportReceptionAsImage(orderId, fileName);
+  } catch (error) {
+    Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
+  }
+}
+
+/**********************************************************
+ * Exportar Recepción de Pedido como Imagen
+ **********************************************************/
+async function exportReceptionAsImage(orderId, fileName) {
+  if (!orderId) {
+    Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido para exportar." });
+    return;
+  }
+  try {
+    const docRef = await db.collection("orders").doc(orderId).get();
+    if (!docRef.exists) {
+      Swal.fire({ icon: "error", title: "Pedido no encontrado" });
+      return;
+    }
+    const order = docRef.data();
+    exportAsReceptionImage(order, fileName);
+  } catch (error) {
+    Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
+  }
+}
+
+/**********************************************************
+ * Exportar Recepción de Pedido como Imagen
+ **********************************************************/
+function exportAsReceptionImage(order, fileName) {
+  const hiddenDiv = document.getElementById("exportReceptionHiddenContainer");
+
+  // Obtener referencias a los elementos
+  const exportReceptionOrderIdHidden = document.getElementById("exportReceptionOrderIdHidden");
+  const exportReceptionProviderHidden = document.getElementById("exportReceptionProviderHidden");
+  const exportReceptionSucursalHidden = document.getElementById("exportReceptionSucursalHidden");
+  const exportReceptionOrderDateHidden = document.getElementById("exportReceptionOrderDateHidden");
+  const exportReceptionInvoiceNumberHidden = document.getElementById("exportReceptionInvoiceNumberHidden");
+  const exportReceptionInvoiceDateHidden = document.getElementById("exportReceptionInvoiceDateHidden");
+  const exportReceptionInvoiceTotalHidden = document.getElementById("exportReceptionInvoiceTotalHidden");
+  const exportReceptionLastEditHidden = document.getElementById("exportReceptionLastEditHidden");
+  const exportReceptionLogoImg = document.getElementById("exportReceptionLogo");
+  const exportReceptionTBody = document.getElementById("exportReceptionProductsTableBody");
+
+  // Verificar que todos los elementos existan
+  if (!exportReceptionOrderIdHidden || !exportReceptionProviderHidden || !exportReceptionSucursalHidden || !exportReceptionOrderDateHidden || !exportReceptionInvoiceNumberHidden || !exportReceptionInvoiceDateHidden || !exportReceptionInvoiceTotalHidden || !exportReceptionLastEditHidden || !exportReceptionLogoImg || !exportReceptionTBody) {
+    Swal.fire({ icon: "error", title: "Error", text: "Elementos de exportación no encontrados en el DOM." });
+    console.error("Uno o más elementos necesarios para la exportación de recepción no existen.");
+    return;
+  }
+
+  // Asignar datos al HTML oculto
+  exportReceptionOrderIdHidden.textContent = order.orderId;
+  exportReceptionProviderHidden.textContent = order.providerName;
+  exportReceptionSucursalHidden.textContent = order.sucursalName;
+  exportReceptionOrderDateHidden.textContent = order.orderDate;
+  exportReceptionInvoiceNumberHidden.textContent = order.invoiceNumber || "No ingresado";
+  exportReceptionInvoiceDateHidden.textContent = order.invoiceDate || "No ingresada";
+  exportReceptionInvoiceTotalHidden.textContent = order.invoiceTotal ? `Q${order.invoiceTotal}` : "Q0.00";
+
+  if (order.lastEditTimestamp) {
+    const editDate = new Date(order.lastEditTimestamp.toDate());
+    exportReceptionLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()}`;
+  } else {
+    exportReceptionLastEditHidden.textContent = "";
+  }
+
+  // Asignar el logo
+  if (logoBase64) {
+    exportReceptionLogoImg.src = logoBase64;
+  } else {
+    exportReceptionLogoImg.src = "logo.png"; // Asegúrate de que esta ruta sea correcta
+  }
+
+  // Llenar la tabla de recepción
+  exportReceptionTBody.innerHTML = "";
+  order.receivedProducts.forEach(prod => {
+    const row = document.createElement("tr");
+    const tdName = document.createElement("td");
+    const tdPres = document.createElement("td");
+    const tdQtyPed = document.createElement("td");
+    const tdQtyRec = document.createElement("td");
+    const tdAdver = document.createElement("td");
+    const tdComm = document.createElement("td");
+
+    tdName.textContent = prod.name;
+    tdPres.textContent = prod.presentation;
+    tdQtyPed.textContent = prod.quantity;
+    tdQtyRec.textContent = prod.receivedQuantity;
+    tdAdver.textContent = prod.receivedQuantity < prod.quantity ? "Cantidad recibida menor a la pedida." : "—";
+    tdComm.textContent = prod.comments || "—";
+
+    row.appendChild(tdName);
+    row.appendChild(tdPres);
+    row.appendChild(tdQtyPed);
+    row.appendChild(tdQtyRec);
+    row.appendChild(tdAdver);
+    row.appendChild(tdComm);
+    exportReceptionTBody.appendChild(row);
+  });
+
+  // Mostrar el contenedor oculto
+  hiddenDiv.style.display = "block";
+  hiddenDiv.style.left = "50%";
+  hiddenDiv.style.top = "50%";
+  hiddenDiv.style.transform = "translate(-50%, -50%)";
+
+  // Exportar como imagen usando html2canvas
+  html2canvas(hiddenDiv, { scale: 2 })
+    .then(canvas => {
+      const imgData = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = `${fileName}.png`;
+      link.click();
+    })
+    .catch(err => {
+      Swal.fire({ icon: "error", title: "Error al exportar", text: "No se pudo exportar la imagen" });
+      console.error("Error en html2canvas:", err);
+    })
+    .finally(() => {
+      // Ocultar el contenedor nuevamente
+      hiddenDiv.style.display = "none";
+      hiddenDiv.style.left = "-9999px";
+      hiddenDiv.style.top = "-9999px";
+      hiddenDiv.style.transform = "none";
+    });
+}
+
+/**********************************************************
+ * Exportar como Imagen desde Detalles del Pedido
+ **********************************************************/
+function exportAsImage(orderId) {
+  if (!orderId) {
+    Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido para exportar." });
+    return;
+  }
+  db.collection("orders").doc(orderId).get()
+    .then(docRef => {
+      if (!docRef.exists) {
+        Swal.fire({ icon: "error", title: "Pedido no encontrado" });
+        return;
+      }
+      const order = docRef.data();
+      const fileName = `Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
+      exportAsImageFunction(order, fileName);
+    })
+    .catch(error => {
+      Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
+    });
+}
+
+/**********************************************************
+ * Función para Exportar Pedido como Imagen
+ **********************************************************/
+function exportAsImageFunction(order, fileName) {
   const hiddenDiv = document.getElementById("exportHiddenContainer");
 
   // Obtener referencias a los elementos
@@ -1454,5 +1632,154 @@ function exportAsImage(order, fileName) {
       hiddenDiv.style.left = "-9999px";
       hiddenDiv.style.top = "-9999px";
       hiddenDiv.style.transform = "none";
+    });
+}
+
+/**********************************************************
+ * EXPORTAR RECEPCIÓN DE PEDIDO COMO IMAGEN
+ **********************************************************/
+function exportAsReceivedOrderImage(orderId) {
+  if (!orderId) {
+    Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido para exportar." });
+    return;
+  }
+  db.collection("orders").doc(orderId).get()
+    .then(docRef => {
+      if (!docRef.exists) {
+        Swal.fire({ icon: "error", title: "Pedido no encontrado" });
+        return;
+      }
+      const order = docRef.data();
+      const fileName = `Recepcion_Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
+      exportReceptionAsImageFunction(order, fileName);
+    })
+    .catch(error => {
+      Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
+    });
+}
+
+/**********************************************************
+ * Función para Exportar Recepción de Pedido como Imagen
+ **********************************************************/
+function exportReceptionAsImageFunction(order, fileName) {
+  const hiddenDiv = document.getElementById("exportReceptionHiddenContainer");
+
+  // Obtener referencias a los elementos
+  const exportReceptionOrderIdHidden = document.getElementById("exportReceptionOrderIdHidden");
+  const exportReceptionProviderHidden = document.getElementById("exportReceptionProviderHidden");
+  const exportReceptionSucursalHidden = document.getElementById("exportReceptionSucursalHidden");
+  const exportReceptionOrderDateHidden = document.getElementById("exportReceptionOrderDateHidden");
+  const exportReceptionInvoiceNumberHidden = document.getElementById("exportReceptionInvoiceNumberHidden");
+  const exportReceptionInvoiceDateHidden = document.getElementById("exportReceptionInvoiceDateHidden");
+  const exportReceptionInvoiceTotalHidden = document.getElementById("exportReceptionInvoiceTotalHidden");
+  const exportReceptionLastEditHidden = document.getElementById("exportReceptionLastEditHidden");
+  const exportReceptionLogoImg = document.getElementById("exportReceptionLogo");
+  const exportReceptionTBody = document.getElementById("exportReceptionProductsTableBody");
+
+  // Verificar que todos los elementos existan
+  if (!exportReceptionOrderIdHidden || !exportReceptionProviderHidden || !exportReceptionSucursalHidden || !exportReceptionOrderDateHidden || !exportReceptionInvoiceNumberHidden || !exportReceptionInvoiceDateHidden || !exportReceptionInvoiceTotalHidden || !exportReceptionLastEditHidden || !exportReceptionLogoImg || !exportReceptionTBody) {
+    Swal.fire({ icon: "error", title: "Error", text: "Elementos de exportación no encontrados en el DOM." });
+    console.error("Uno o más elementos necesarios para la exportación de recepción no existen.");
+    return;
+  }
+
+  // Asignar datos al HTML oculto
+  exportReceptionOrderIdHidden.textContent = order.orderId;
+  exportReceptionProviderHidden.textContent = order.providerName;
+  exportReceptionSucursalHidden.textContent = order.sucursalName;
+  exportReceptionOrderDateHidden.textContent = order.orderDate;
+  exportReceptionInvoiceNumberHidden.textContent = order.invoiceNumber || "No ingresado";
+  exportReceptionInvoiceDateHidden.textContent = order.invoiceDate || "No ingresada";
+  exportReceptionInvoiceTotalHidden.textContent = order.invoiceTotal ? `Q${order.invoiceTotal}` : "Q0.00";
+
+  if (order.lastEditTimestamp) {
+    const editDate = new Date(order.lastEditTimestamp.toDate());
+    exportReceptionLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()}`;
+  } else {
+    exportReceptionLastEditHidden.textContent = "";
+  }
+
+  // Asignar el logo
+  if (logoBase64) {
+    exportReceptionLogoImg.src = logoBase64;
+  } else {
+    exportReceptionLogoImg.src = "logo.png"; // Asegúrate de que esta ruta sea correcta
+  }
+
+  // Llenar la tabla de recepción
+  exportReceptionTBody.innerHTML = "";
+  order.receivedProducts.forEach(prod => {
+    const row = document.createElement("tr");
+    const tdName = document.createElement("td");
+    const tdPres = document.createElement("td");
+    const tdQtyPed = document.createElement("td");
+    const tdQtyRec = document.createElement("td");
+    const tdAdver = document.createElement("td");
+    const tdComm = document.createElement("td");
+
+    tdName.textContent = prod.name;
+    tdPres.textContent = prod.presentation;
+    tdQtyPed.textContent = prod.quantity;
+    tdQtyRec.textContent = prod.receivedQuantity;
+    tdAdver.textContent = prod.receivedQuantity < prod.quantity ? "Cantidad recibida menor a la pedida." : "—";
+    tdComm.textContent = prod.comments || "—";
+
+    row.appendChild(tdName);
+    row.appendChild(tdPres);
+    row.appendChild(tdQtyPed);
+    row.appendChild(tdQtyRec);
+    row.appendChild(tdAdver);
+    row.appendChild(tdComm);
+    exportReceptionTBody.appendChild(row);
+  });
+
+  // Mostrar el contenedor oculto
+  hiddenDiv.style.display = "block";
+  hiddenDiv.style.left = "50%";
+  hiddenDiv.style.top = "50%";
+  hiddenDiv.style.transform = "translate(-50%, -50%)";
+
+  // Exportar como imagen usando html2canvas
+  html2canvas(hiddenDiv, { scale: 2 })
+    .then(canvas => {
+      const imgData = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = `${fileName}.png`;
+      link.click();
+    })
+    .catch(err => {
+      Swal.fire({ icon: "error", title: "Error al exportar", text: "No se pudo exportar la imagen" });
+      console.error("Error en html2canvas:", err);
+    })
+    .finally(() => {
+      // Ocultar el contenedor nuevamente
+      hiddenDiv.style.display = "none";
+      hiddenDiv.style.left = "-9999px";
+      hiddenDiv.style.top = "-9999px";
+      hiddenDiv.style.transform = "none";
+    });
+}
+
+/**********************************************************
+ * EXPORTAR RECEPCIÓN DE PEDIDO COMO IMAGEN
+ **********************************************************/
+function exportAsReceivedOrderImage(orderId) {
+  if (!orderId) {
+    Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido para exportar." });
+    return;
+  }
+  db.collection("orders").doc(orderId).get()
+    .then(docRef => {
+      if (!docRef.exists) {
+        Swal.fire({ icon: "error", title: "Pedido no encontrado" });
+        return;
+      }
+      const order = docRef.data();
+      const fileName = `Recepcion_Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
+      exportReceptionAsImageFunction(order, fileName);
+    })
+    .catch(error => {
+      Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
     });
 }
