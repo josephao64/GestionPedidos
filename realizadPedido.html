@@ -28,21 +28,14 @@
   <!-- Barra de botones principales -->
   <div class="buttons">
     <button onclick="showOrders()">Gestión de Pedidos</button>
-    <button onclick="showPreSavedOrders()">Pedidos Preguardados</button> <!-- Nuevo Botón -->
     <button class="right" onclick="window.location.href='index.html'">Volver a Principal</button>
   </div>
 
-  <!-- Contenedor de pestañas (si lo necesitas para organizar tu contenido) -->
-  <div class="tab-container" id="tabContainer">
-    <!-- Botón para mostrar la sección de pedidos -->
-    <button class="tab-button active" onclick="openTab(event, 'ordersContainer')">Pedidos</button>
-    <button class="tab-button" onclick="openTab(event, 'preSavedOrdersContainer')">Pedidos Preguardados</button> <!-- Nueva Pestaña -->
-  </div>
+  <!-- Eliminado: Contenedor de pestañas -->
 
   <!-- Contenedor principal de pedidos -->
-  <div id="ordersContainer" class="container">
-    <!-- Botón para crear un nuevo pedido -->
-    <button onclick="showOrderCreationContainer()">Nuevo Pedido</button>
+  <div id="ordersContainer" class="container" style="display:none;">
+    <!-- Eliminado: Botón para crear un nuevo pedido -->
 
     <!-- Tabla para listar todos los pedidos -->
     <table id="ordersTable">
@@ -58,22 +51,7 @@
     </table>
   </div>
 
-  <!-- Contenedor para Pedidos Preguardados -->
-  <div id="preSavedOrdersContainer" class="container" style="display:none;">
-    <h2>Pedidos Preguardados</h2>
-    <table id="preSavedOrdersTable">
-      <thead>
-        <tr>
-          <th>ID Pedido</th>
-          <th>Proveedor</th>
-          <th>Sucursal</th>
-          <th>Fecha de Pedido</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+  <!-- Eliminado: Contenedor para Pedidos Preguardados -->
 
   <!-- Contenedor para mostrar tarjetas de pedidos pendientes (solo admin) -->
   <div id="pendingOrdersAdminCards" class="container">
@@ -95,10 +73,10 @@
         <select id="newOrderProviderSelect" onchange="loadNewOrderProducts()"></select>
       </div>
       <div class="form-group">
-        <label for="newOrderSucursalSelect">Seleccione Sucursal</label>
+        <label for="newOrderSucursalSelect">Sucursal</label>
         <!-- Este select se llena dinámicamente: 
              - Si es admin: todas las sucursales
-             - Si es usuario normal: su sucursal fija -->
+             - Si es usuario normal: su sucursal fija y deshabilitada -->
         <select id="newOrderSucursalSelect"></select>
       </div>
       <div class="form-group">

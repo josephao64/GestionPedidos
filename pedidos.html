@@ -202,11 +202,17 @@
 
   <!-- Contenedor oculto para exportar como Imagen con "¡Gracias por su pedido!" -->
   <div id="exportHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 400px;">
+    <!-- Logo -->
+    <img id="exportLogo" src="logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
+
     <h2>Detalles del Pedido</h2>
     <p><strong>ID Pedido:</strong> <span id="exportOrderIdHidden"></span></p>
     <p><strong>Proveedor:</strong> <span id="exportProviderHidden"></span></p>
     <p><strong>Sucursal:</strong> <span id="exportSucursalHidden"></span></p>
     <p><strong>Fecha:</strong> <span id="exportFechaHidden"></span></p>
+
+    <!-- Fecha y Hora de Edición -->
+    <p id="exportLastEditHidden" style="color: green; font-weight: bold;"></p>
 
     <table border="1" style="width: 100%; margin-top: 10px; border-collapse: collapse;">
       <thead>

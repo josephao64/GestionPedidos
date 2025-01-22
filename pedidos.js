@@ -162,6 +162,10 @@ function loadLogo() {
     ctx.drawImage(img, 0, 0);
     logoBase64 = canvas.toDataURL("image/png");
   };
+  img.onerror = function () {
+    console.error("No se pudo cargar el logo.png");
+    Swal.fire({ icon: "error", title: "Error", text: "No se pudo cargar el logo para la exportación." });
+  };
 }
 
 /**********************************************************
@@ -856,27 +860,43 @@ async function exportAsImageDirect(orderId) {
 function exportAsImage(order, fileName) {
   const hiddenDiv = document.getElementById("exportHiddenContainer");
 
-  document.getElementById("exportOrderIdHidden").textContent = order.orderId;
-  document.getElementById("exportProviderHidden").textContent = order.providerName;
-  document.getElementById("exportSucursalHidden").textContent = order.sucursalName;
-  document.getElementById("exportFechaHidden").textContent = order.orderDate;
+  // Obtener referencias a los elementos
+  const exportOrderIdHidden = document.getElementById("exportOrderIdHidden");
+  const exportProviderHidden = document.getElementById("exportProviderHidden");
+  const exportSucursalHidden = document.getElementById("exportSucursalHidden");
+  const exportFechaHidden = document.getElementById("exportFechaHidden");
+  const exportLastEditHidden = document.getElementById("exportLastEditHidden");
+  const exportLogoImg = document.getElementById("exportLogo");
+  const tBody = document.getElementById("exportProductsTableBody");
 
-  const lastEditElem = document.getElementById("exportLastEditHidden");
-  if (order.lastEditTimestamp) {
-    const editDate = new Date(order.lastEditTimestamp.toDate());
-    lastEditElem.textContent = `Pedido editado el: ${editDate.toLocaleString()}`;
-  } else {
-    lastEditElem.textContent = "";
+  // Verificar que todos los elementos existan
+  if (!exportOrderIdHidden || !exportProviderHidden || !exportSucursalHidden || !exportFechaHidden || !exportLastEditHidden || !exportLogoImg || !tBody) {
+    Swal.fire({ icon: "error", title: "Error", text: "Elementos de exportación no encontrados en el DOM." });
+    console.error("Uno o más elementos necesarios para la exportación no existen.");
+    return;
   }
 
-  const exportLogoImg = document.getElementById("exportLogo");
+  // Asignar datos al HTML oculto
+  exportOrderIdHidden.textContent = order.orderId;
+  exportProviderHidden.textContent = order.providerName;
+  exportSucursalHidden.textContent = order.sucursalName;
+  exportFechaHidden.textContent = order.orderDate;
+
+  if (order.lastEditTimestamp) {
+    const editDate = new Date(order.lastEditTimestamp.toDate());
+    exportLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()}`;
+  } else {
+    exportLastEditHidden.textContent = "";
+  }
+
+  // Asignar el logo
   if (logoBase64) {
     exportLogoImg.src = logoBase64;
   } else {
-    exportLogoImg.src = "logo.png";
+    exportLogoImg.src = "logo.png"; // Asegúrate de que esta ruta sea correcta
   }
 
-  const tBody = document.getElementById("exportProductsTableBody");
+  // Llenar la tabla de productos
   tBody.innerHTML = "";
   order.products.forEach(prod => {
     const row = document.createElement("tr");
@@ -892,11 +912,13 @@ function exportAsImage(order, fileName) {
     tBody.appendChild(row);
   });
 
+  // Mostrar el contenedor oculto
   hiddenDiv.style.display = "block";
   hiddenDiv.style.left = "50%";
   hiddenDiv.style.top = "50%";
   hiddenDiv.style.transform = "translate(-50%, -50%)";
 
+  // Exportar como imagen usando html2canvas
   html2canvas(hiddenDiv, { scale: 2 })
     .then(canvas => {
       const imgData = canvas.toDataURL("image/png");
@@ -906,10 +928,11 @@ function exportAsImage(order, fileName) {
       link.click();
     })
     .catch(err => {
-      Swal.fire({ icon: "error", title: "Error", text: "No se pudo exportar la imagen" });
-      console.error(err);
+      Swal.fire({ icon: "error", title: "Error al exportar", text: "No se pudo exportar la imagen" });
+      console.error("Error en html2canvas:", err);
     })
     .finally(() => {
+      // Ocultar el contenedor nuevamente
       hiddenDiv.style.display = "none";
       hiddenDiv.style.left = "-9999px";
       hiddenDiv.style.top = "-9999px";
@@ -1346,4 +1369,90 @@ function showReceivedOrder(orderId) {
 function closeReceivedOrderModal() {
   document.getElementById("receivedOrderDetails").innerHTML = "";
   document.getElementById("receivedOrderModal").style.display = "none";
+}
+
+/**********************************************************
+ * EXPORTAR (Imagen, PDF, Excel) - Función ExportAsImage Actualizada
+ **********************************************************/
+function exportAsImage(order, fileName) {
+  const hiddenDiv = document.getElementById("exportHiddenContainer");
+
+  // Obtener referencias a los elementos
+  const exportOrderIdHidden = document.getElementById("exportOrderIdHidden");
+  const exportProviderHidden = document.getElementById("exportProviderHidden");
+  const exportSucursalHidden = document.getElementById("exportSucursalHidden");
+  const exportFechaHidden = document.getElementById("exportFechaHidden");
+  const exportLastEditHidden = document.getElementById("exportLastEditHidden");
+  const exportLogoImg = document.getElementById("exportLogo");
+  const tBody = document.getElementById("exportProductsTableBody");
+
+  // Verificar que todos los elementos existan
+  if (!exportOrderIdHidden || !exportProviderHidden || !exportSucursalHidden || !exportFechaHidden || !exportLastEditHidden || !exportLogoImg || !tBody) {
+    Swal.fire({ icon: "error", title: "Error", text: "Elementos de exportación no encontrados en el DOM." });
+    console.error("Uno o más elementos necesarios para la exportación no existen.");
+    return;
+  }
+
+  // Asignar datos al HTML oculto
+  exportOrderIdHidden.textContent = order.orderId;
+  exportProviderHidden.textContent = order.providerName;
+  exportSucursalHidden.textContent = order.sucursalName;
+  exportFechaHidden.textContent = order.orderDate;
+
+  if (order.lastEditTimestamp) {
+    const editDate = new Date(order.lastEditTimestamp.toDate());
+    exportLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()}`;
+  } else {
+    exportLastEditHidden.textContent = "";
+  }
+
+  // Asignar el logo
+  if (logoBase64) {
+    exportLogoImg.src = logoBase64;
+  } else {
+    exportLogoImg.src = "logo.png"; // Asegúrate de que esta ruta sea correcta
+  }
+
+  // Llenar la tabla de productos
+  tBody.innerHTML = "";
+  order.products.forEach(prod => {
+    const row = document.createElement("tr");
+    const tdName = document.createElement("td");
+    const tdPres = document.createElement("td");
+    const tdQty = document.createElement("td");
+    tdName.textContent = prod.name;
+    tdPres.textContent = prod.presentation;
+    tdQty.textContent = prod.quantity;
+    row.appendChild(tdName);
+    row.appendChild(tdPres);
+    row.appendChild(tdQty);
+    tBody.appendChild(row);
+  });
+
+  // Mostrar el contenedor oculto
+  hiddenDiv.style.display = "block";
+  hiddenDiv.style.left = "50%";
+  hiddenDiv.style.top = "50%";
+  hiddenDiv.style.transform = "translate(-50%, -50%)";
+
+  // Exportar como imagen usando html2canvas
+  html2canvas(hiddenDiv, { scale: 2 })
+    .then(canvas => {
+      const imgData = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = `${fileName}.png`;
+      link.click();
+    })
+    .catch(err => {
+      Swal.fire({ icon: "error", title: "Error al exportar", text: "No se pudo exportar la imagen" });
+      console.error("Error en html2canvas:", err);
+    })
+    .finally(() => {
+      // Ocultar el contenedor nuevamente
+      hiddenDiv.style.display = "none";
+      hiddenDiv.style.left = "-9999px";
+      hiddenDiv.style.top = "-9999px";
+      hiddenDiv.style.transform = "none";
+    });
 }
