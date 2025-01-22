@@ -54,13 +54,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Detectar si se debe mostrar el formulario de creación de pedidos automáticamente
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('create') === 'true') {
-    showOrderCreationContainer();
-  } else {
-    showOrders(); // Mostrar la lista de pedidos por defecto
-  }
+  // Inicialmente, solo se muestran los botones principales
+  // Las secciones están ocultas hasta que se presione un botón
+  document.getElementById('ordersContainer').style.display = 'none';
+  document.getElementById('preSavedOrdersContainer').style.display = 'none';
+  document.getElementById('pendingOrdersAdminCards').style.display = 'none';
+  document.getElementById('inProcessOrdersAdminCards').style.display = 'none';
+  document.getElementById('orderCreationContainer').style.display = 'none';
 });
 
 /**
@@ -172,6 +172,14 @@ async function loadPendingOrdersAdmin() {
       const card = createOrderCard(doc.id, order);
       pendingOrdersAdminCards.appendChild(card);
     });
+
+    // Mostrar el contenedor solo si hay pedidos pendientes
+    if (ordersSnapshot.empty) {
+      pendingOrdersAdminCards.style.display = 'none';
+    } else {
+      pendingOrdersAdminCards.style.display = 'block';
+    }
+
   } catch (error) {
     console.error('Error al cargar pedidos pendientes:', error);
     Swal.fire({
@@ -206,6 +214,14 @@ async function loadInProcessOrdersAdmin() {
       const card = createOrderCard(doc.id, order);
       inProcessOrdersAdminCards.appendChild(card);
     });
+
+    // Mostrar el contenedor solo si hay pedidos en proceso
+    if (ordersSnapshot.empty) {
+      inProcessOrdersAdminCards.style.display = 'none';
+    } else {
+      inProcessOrdersAdminCards.style.display = 'block';
+    }
+
   } catch (error) {
     console.error('Error al cargar pedidos en proceso:', error);
     Swal.fire({
@@ -276,6 +292,7 @@ async function showOrderCreationContainer() {
   // Mostrar contenedor de creación
   document.getElementById('orderCreationContainer').style.display = 'block';
   document.getElementById('ordersContainer').style.display = 'block';
+  document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
   // Cargar proveedores
   loadNewOrderProviders();
@@ -299,63 +316,148 @@ async function showOrderCreationContainer() {
 
 /**
  * ================================
- * Función para limpiar el formulario
+ * Función para mostrar Pedidos Preguardados
  * ================================
  */
-function limpiarFormulario() {
-  document.getElementById('newOrderProviderSelect').value = '';
-  // La sucursal ya está asignada automáticamente y deshabilitada
-  // No es necesario cambiarla
-  if (userRole === 'administrador') {
-    setOrderDateToToday();
-  } else {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('orderDate').value = today;
-  }
-  document.getElementById('orderId').value = '';
-  document.getElementById('newOrderTable').getElementsByTagName('tbody')[0].innerHTML = '';
+async function showPreSavedOrders() {
+  // Ocultar otras secciones
+  document.getElementById('ordersContainer').style.display = 'none';
+  document.getElementById('orderCreationContainer').style.display = 'none';
+  // Mostrar contenedor de pedidos preguardados
+  document.getElementById('preSavedOrdersContainer').style.display = 'block';
+
+  // Cargar pedidos preguardados
+  loadPreSavedOrders();
 }
 
 /**
  * ================================
- * Función para mostrar la lista de pedidos
+ * Función para cargar Pedidos Preguardados
  * ================================
  */
-function showOrders() {
-  // Muestra la sección principal de “Pedidos”
-  document.getElementById('ordersContainer').style.display = 'block';
-  
-  // Mostrar el formulario de creación de pedidos automáticamente
-  showOrderCreationContainer();
-  
-  // No hay otros contenedores relevantes
-}
-
-/**
- * ================================
- * Cargar lista de sucursales (Admin)
- * ================================
- */
-async function cargarSucursalesSelectParaAdmin() {
+async function loadPreSavedOrders() {
   try {
-    const sucursalesSnap = await db.collection('sucursales').get();
-    const selectSucursal = document.getElementById('newOrderSucursalSelect');
-    selectSucursal.innerHTML = '<option value="" disabled selected>-- Selecciona una Sucursal --</option>';
+    const preSavedOrdersSnapshot = await db
+      .collection('orders')
+      .where('status', '==', 'preSaved')
+      .get();
 
-    sucursalesSnap.forEach(doc => {
-      const data = doc.data();
-      const option = document.createElement('option');
-      option.value = doc.id;         
-      option.textContent = data.name;
-      selectSucursal.appendChild(option);
+    const preSavedOrdersTableBody = document.getElementById('preSavedOrdersTable')
+      .getElementsByTagName('tbody')[0];
+    preSavedOrdersTableBody.innerHTML = '';
+
+    preSavedOrdersSnapshot.forEach(doc => {
+      const order = doc.data();
+      const row = preSavedOrdersTableBody.insertRow();
+
+      const cell1 = row.insertCell(0);
+      const cell2 = row.insertCell(1);
+      const cell3 = row.insertCell(2);
+      const cell4 = row.insertCell(3);
+      const cell5 = row.insertCell(4);
+
+      cell1.textContent = order.orderId;
+      cell2.textContent = order.providerName;
+      cell3.textContent = order.sucursalName;
+      cell4.textContent = order.orderDate;
+      cell5.innerHTML = `
+        <button onclick="openPreSavedOrder('${doc.id}')">Abrir Pedido</button>
+        <button onclick="deletePreSavedOrder('${doc.id}')">Eliminar Pedido</button>
+      `;
     });
 
+    // Mostrar el contenedor solo si hay pedidos preguardados
+    if (preSavedOrdersSnapshot.empty) {
+      document.getElementById('preSavedOrdersContainer').style.display = 'none';
+    } else {
+      document.getElementById('preSavedOrdersContainer').style.display = 'block';
+    }
+
   } catch (error) {
+    console.error('Error al cargar pedidos preguardados:', error);
     Swal.fire({
       icon: 'error',
-      title: 'Error al cargar sucursales',
-      text: error.message,
-      confirmButtonText: 'Ok'
+      title: 'Error',
+      text: 'Error al cargar pedidos preguardados: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para abrir un Pedido Preguardado
+ * ================================
+ */
+async function openPreSavedOrder(orderDocId) {
+  try {
+    const orderDoc = await db.collection('orders').doc(orderDocId).get();
+    if (orderDoc.exists) {
+      const orderData = orderDoc.data();
+      currentOrderId = orderDocId; // Guardar el ID del pedido actual
+
+      // Ocultar otras secciones y mostrar el formulario de creación de pedidos
+      document.getElementById('ordersContainer').style.display = 'none';
+      document.getElementById('preSavedOrdersContainer').style.display = 'none';
+      document.getElementById('orderCreationContainer').style.display = 'block';
+
+      // Cargar datos del pedido en el formulario
+      document.getElementById('newOrderProviderSelect').value = orderData.providerId;
+      document.getElementById('newOrderSucursalSelect').value = orderData.sucursalId;
+      document.getElementById('orderDate').value = orderData.orderDate;
+      document.getElementById('orderId').value = orderData.orderId;
+
+      // Deshabilitar la fecha de pedido si no es administrador
+      if (userRole !== 'administrador') {
+        document.getElementById('orderDate').disabled = true;
+      }
+
+      // Bloquear el selector de proveedor si ya hay productos
+      if (orderData.products.length > 0) {
+        document.getElementById('newOrderProviderSelect').disabled = true;
+      }
+
+      // Limpiar la tabla de productos actual
+      const newOrderTableBody = document
+        .getElementById('newOrderTable')
+        .getElementsByTagName('tbody')[0];
+      newOrderTableBody.innerHTML = '';
+
+      // Cargar productos del pedido en la tabla
+      orderData.products.forEach(product => {
+        const row = newOrderTableBody.insertRow();
+
+        const cell1 = row.insertCell(0);
+        const cell2 = row.insertCell(1);
+        const cell3 = row.insertCell(2);
+        const cell4 = row.insertCell(3);
+        const cell5 = row.insertCell(4);
+
+        cell1.textContent = product.name;
+        cell2.textContent = product.presentation;
+        cell3.textContent = product.quantity;
+        cell4.textContent = product.stock;
+        cell5.innerHTML = `
+          <button onclick="editNewOrderProduct(this)">Editar</button>
+          <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
+        `;
+      });
+
+      // Cargar proveedores (para asegurar que el proveedor seleccionado esté disponible)
+      loadNewOrderProviders();
+
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'El pedido preguardado no existe.'
+      });
+    }
+  } catch (error) {
+    console.error('Error al abrir el pedido preguardado:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al abrir el pedido preguardado: ' + error.message
     });
   }
 }
@@ -830,7 +932,11 @@ async function saveNewOrder() {
 
         // Resetear formulario
         closeOrderCreationContainer();
-        // Ya no hay contenedor de preSavedOrders, así que no se necesita recargar
+        // Actualizar la lista de pedidos preguardados si está visible
+        if (document.getElementById('preSavedOrdersContainer').style.display === 'block') {
+          loadPreSavedOrders();
+        }
+
       } catch (error) {
         console.error('Error al preguardar el pedido:', error);
         Swal.fire({
@@ -858,6 +964,7 @@ async function saveNewOrder() {
 function closeOrderCreationContainer() {
   document.getElementById('orderCreationContainer').style.display = 'none';
   document.getElementById('ordersContainer').style.display = 'block';
+  document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
   // Desbloquear el selector de proveedor y limpiar la tabla
   document.getElementById('newOrderProviderSelect').disabled = false;
@@ -1108,6 +1215,137 @@ function editOrder(orderId) {
     title: 'Funcionalidad No Implementada',
     text: 'La funcionalidad de editar pedidos aún no está implementada.'
   });
+}
+
+/**
+ * ================================
+ * Función para mostrar la lista de pedidos
+ * ================================
+ */
+function showOrders() {
+  // Muestra la sección principal de “Gestión de Pedidos”
+  document.getElementById('ordersContainer').style.display = 'block';
+  document.getElementById('preSavedOrdersContainer').style.display = 'none';
+  document.getElementById('orderCreationContainer').style.display = 'block';
+
+  // Cargar y mostrar el formulario de creación de pedidos
+  showOrderCreationContainer();
+
+  // Si el usuario es administrador, asegurarse de que las tarjetas de pedidos pendientes y en proceso estén visibles
+  if (userRole === 'administrador') {
+    document.getElementById('pendingOrdersAdminCards').style.display = 'block';
+    document.getElementById('inProcessOrdersAdminCards').style.display = 'block';
+  }
+}
+
+/**
+ * ================================
+ * Función para cargar Pedidos Preguardados
+ * ================================
+ */
+// Ya está definida anteriormente como loadPreSavedOrders()
+
+/**
+ * ================================
+ * Función para abrir un Pedido Preguardado
+ * ================================
+ */
+// Ya está definida anteriormente como openPreSavedOrder(orderDocId)
+
+/**
+ * ================================
+ * Función para editar pedido (no implementado)
+ * ================================
+ */
+// Ya está definida anteriormente como editOrder(orderId)
+
+/**
+ * ================================
+ * Función para eliminar un Pedido Preguardado
+ * ================================
+ */
+async function deletePreSavedOrder(orderDocId) {
+  try {
+    // Confirmar eliminación con el usuario
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: "Esta acción eliminará el pedido preguardado permanentemente.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (result.isConfirmed) {
+      // Eliminar el pedido de Firestore
+      await db.collection('orders').doc(orderDocId).delete();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Eliminado',
+        text: 'El pedido preguardado ha sido eliminado exitosamente.'
+      });
+
+      // Recargar la lista de pedidos preguardados
+      loadPreSavedOrders();
+    }
+  } catch (error) {
+    console.error('Error al eliminar el pedido preguardado:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al eliminar el pedido preguardado: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Cargar lista de sucursales (Admin)
+ * ================================
+ */
+async function cargarSucursalesSelectParaAdmin() {
+  try {
+    const sucursalesSnap = await db.collection('sucursales').get();
+    const selectSucursal = document.getElementById('newOrderSucursalSelect');
+    selectSucursal.innerHTML = '<option value="" disabled selected>-- Selecciona una Sucursal --</option>';
+
+    sucursalesSnap.forEach(doc => {
+      const data = doc.data();
+      const option = document.createElement('option');
+      option.value = doc.id;         
+      option.textContent = data.name;
+      selectSucursal.appendChild(option);
+    });
+
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error al cargar sucursales',
+      text: error.message,
+      confirmButtonText: 'Ok'
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para limpiar el formulario
+ * ================================
+ */
+function limpiarFormulario() {
+  document.getElementById('newOrderProviderSelect').value = '';
+  // La sucursal ya está asignada automáticamente y deshabilitada
+  // No es necesario cambiarla
+  if (userRole === 'administrador') {
+    setOrderDateToToday();
+  } else {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('orderDate').value = today;
+  }
+  document.getElementById('orderId').value = '';
+  document.getElementById('newOrderTable').getElementsByTagName('tbody')[0].innerHTML = '';
 }
 
 /**
