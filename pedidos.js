@@ -19,7 +19,7 @@ const db = firebase.firestore();
  **********************************************************/
 let userSucursalId = null;
 let loggedInUsername = null;
-let userRole = null;  // "administrador" o "usuario" (normal)
+let userRole = null;  
 let userPermissions = {};
 let logoBase64 = "";
 
@@ -29,19 +29,19 @@ let logoBase64 = "";
 document.addEventListener("DOMContentLoaded", async () => {
   await initUserAndSucursal();
 
-  // Si es administrador, mostramos filtro de sucursal/proveedor
+  // Mostrar filtros si es admin
   if (userRole === "administrador") {
     document.getElementById("adminFilterContainer").style.display = "block";
     loadSucursalesForAdmin();
     loadProvidersForAdmin();
   }
 
-  // Cargar cada sección
+  // Cargar las listas
   loadPendingOrdersAdmin();
   loadInProcessOrdersAdmin();
   loadCompletedOrdersAdmin();
 
-  // Cargar logo (para exportar Imagen/PDF)
+  // Cargar logo para exportar
   loadLogo();
 });
 
@@ -61,7 +61,6 @@ async function initUserAndSucursal() {
     return;
   }
 
-  // Mostrar en pantalla el nombre de usuario
   const loggedInUserDiv = document.getElementById("loggedInUser");
   if (loggedInUserDiv) {
     loggedInUserDiv.textContent = "Usuario: " + loggedInUsername;
@@ -86,7 +85,7 @@ async function initUserAndSucursal() {
     }
     const userData = snap.docs[0].data();
     userSucursalId = userData.sucursalId;
-    userRole = userData.rol;           // "administrador" o "usuario"
+    userRole = userData.rol;  // "administrador" o "usuario"
     userPermissions = userData.permisos || {};
   } catch (error) {
     Swal.fire({ icon: "error", title: "Error", text: error.message });
@@ -150,11 +149,10 @@ function reloadOrders() {
 
 /**********************************************************
  * loadLogo
- * (Convierte "logo.png" a Base64 para usarlo en PDF/Imagen)
  **********************************************************/
 function loadLogo() {
   const img = new Image();
-  img.src = "logo.png";  // Ajusta la ruta a tu archivo real de logo
+  img.src = "logo.png"; // Ajusta la ruta a tu logo
   img.crossOrigin = "Anonymous";
   img.onload = function () {
     const canvas = document.createElement("canvas");
@@ -162,7 +160,6 @@ function loadLogo() {
     canvas.height = img.height;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0);
-    // Guardar en variable global
     logoBase64 = canvas.toDataURL("image/png");
   };
 }
@@ -205,7 +202,6 @@ async function loadPendingOrdersAdmin() {
     } else {
       query = db.collection("orders").where("status", "==", "pending");
 
-      // Si es admin, aplicamos filtro de sucursal/proveedor si los escogieron
       if (userRole === "administrador") {
         const selSuc = document.getElementById("sucursalFilter").value;
         if (selSuc !== "all") {
@@ -216,7 +212,6 @@ async function loadPendingOrdersAdmin() {
           query = query.where("providerName", "==", selProv);
         }
       } else {
-        // Usuario normal => su sucursal
         query = query.where("sucursalId", "==", userSucursalId);
       }
     }
@@ -283,7 +278,6 @@ async function loadInProcessOrdersAdmin() {
         query = query.where("providerName", "==", selProv);
       }
     } else {
-      // Usuario normal
       query = query.where("sucursalId", "==", userSucursalId);
     }
 
@@ -333,7 +327,6 @@ async function loadCompletedOrdersAdmin() {
           query = query.where("providerName", "==", selProv);
         }
       } else {
-        // Usuario normal
         query = query.where("sucursalId", "==", userSucursalId);
       }
     }
@@ -360,12 +353,6 @@ async function loadCompletedOrdersAdmin() {
 
 /**********************************************************
  * createOrderCard
- * Ajustado para que en PEDIDOS PENDIENTES del ADMIN
- * muestre:
- *  - Mostrar Pedido
- *  - Marcar como Tomado
- *  - Eliminar Pedido
- * (dentro de "Mostrar Pedido", podrá EDITAR y EXPORTAR)
  **********************************************************/
 function createOrderCard(orderDocId, order) {
   const card = document.createElement("div");
@@ -378,27 +365,25 @@ function createOrderCard(orderDocId, order) {
     <p>Fecha: ${order.orderDate}</p>
   `;
 
-  // CASO 1: Usuario normal + pending
+  // USUARIO NORMAL + PENDIENTE
   if (order.status === "pending" && userRole !== "administrador") {
     html += `
       <h2 style="color: red;">El pedido aún no ha sido tomado por el proveedor</h2>
       <div class="order-status">${generateProgressBar(order.status)}</div>
-      <!-- Solo un botón -->
       <button onclick="showOrderDetails('${orderDocId}')">Mostrar Pedido</button>
     `;
     card.innerHTML = html;
     return card;
   }
 
-  // CASO 2: Usuario ADMIN + pending
+  // ADMIN + PENDIENTE
   if (order.status === "pending" && userRole === "administrador") {
-    // Mostramos mismatches, invoice pending, etc. si existen
     let mismatchText = "";
-    if (order.mismatchedQuantities === true) {
+    if (order.mismatchedQuantities) {
       mismatchText = `<p style="color: red; font-weight: bold;">No se recibió la misma cantidad pedida</p>`;
     }
     let pendingInvoiceText = "";
-    if (order.pendingInvoice === true) {
+    if (order.pendingInvoice) {
       pendingInvoiceText = `<p style="color: orange; font-weight: bold;">Pendiente de Factura</p>`;
     }
     let mismatchCommentHtml = "";
@@ -415,8 +400,6 @@ function createOrderCard(orderDocId, order) {
       ${pendingInvoiceText}
       ${mismatchCommentHtml}
       <div class="order-status">${generateProgressBar(order.status)}</div>
-
-      <!-- 3 botones: Mostrar, MarcarTomado, Eliminar -->
       <button onclick="showOrderDetails('${orderDocId}')">Mostrar Pedido</button>
       <button onclick="markOrderAsTaken('${orderDocId}')">Pedido Tomado por Proveedor</button>
       <button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>
@@ -425,15 +408,13 @@ function createOrderCard(orderDocId, order) {
     return card;
   }
 
-  // CASO 3: Cualquier otro estado (inProcess, completed, etc.) o user normal
-  //         (pero no pending).
-  // Mantenemos la lógica general
+  // OTROS ESTADOS
   let mismatchText = "";
-  if (order.mismatchedQuantities === true) {
+  if (order.mismatchedQuantities) {
     mismatchText = `<p style="color: red; font-weight: bold;">No se recibió la misma cantidad pedida</p>`;
   }
   let pendingInvoiceText = "";
-  if (order.pendingInvoice === true) {
+  if (order.pendingInvoice) {
     pendingInvoiceText = `<p style="color: orange; font-weight: bold;">Pendiente de Factura</p>`;
   }
   let mismatchCommentHtml = "";
@@ -449,49 +430,35 @@ function createOrderCard(orderDocId, order) {
     ${mismatchText}
     ${pendingInvoiceText}
     ${mismatchCommentHtml}
-    <div class="order-status">
-      ${generateProgressBar(order.status)}
-    </div>
+    <div class="order-status">${generateProgressBar(order.status)}</div>
     <button onclick="showOrderDetails('${orderDocId}')">Mostrar Pedido</button>
   `;
 
-  // Si es admin o tiene permiso, puede editar
+  // Editar, Exportar, Eliminar
   if (userRole === "administrador" || userPermissions.canEditOrder) {
     html += `<button onclick="editOrder('${orderDocId}')">Editar Pedido</button>`;
   }
-
-  // Exportar (solo admin)
   if (userRole === "administrador") {
     html += `<button onclick="exportOrder('${orderDocId}')">Exportar Pedido</button>`;
   }
-
-  // Eliminar (admin o permiso)
   if (userRole === "administrador" || userPermissions.canDeleteOrder) {
     html += `<button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>`;
   }
 
-  // Marcar como Tomado (admin), pero no lo hacemos si ya no está pending
-  // (Igual puedes ajustarlo si deseas permitir marcarlo en otras condiciones)
-  // if (order.status === "pending" && userRole === "administrador") {
-  //   html += `<button onclick="markOrderAsTaken('${orderDocId}')">Marcar como Tomado</button>`;
-  // }
-
-  // Estados "inProcess"
+  // InProcess => "Ingresar Cantidades"
   const inProcessArray = [
     "pedidoTomado","caminoABodega","pedidoEnBodega","caminoATienda","enTiendaIncompleto"
   ];
   if (inProcessArray.includes(order.status)) {
-    // Cambiar estado
     if (userRole === "administrador" || userPermissions.canChangeStatus) {
       html += `<button onclick="openChangeStatusModal('${orderDocId}')">Cambiar Estado</button>`;
     }
-    // Ingresar Cantidades (si "caminoATienda" o "enTiendaIncompleto")
     if (order.status === "caminoATienda" || order.status === "enTiendaIncompleto") {
       html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades</button>`;
     }
   }
 
-  // Mostrar Pedido Recibido (solo admin)
+  // Mostrar Recibido
   if (userRole === "administrador") {
     html += `<button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>`;
   }
@@ -619,8 +586,6 @@ async function deleteOrder(orderId) {
 
 /**********************************************************
  * showOrderDetails / closeOrderDetailsModal
- * - Aquí, si es ADMIN y pedido está pending => muestra "Editar" y "Exportar"
- * - Si es usuario normal y pending => "Editar" y "Exportar como Imagen Direct"
  **********************************************************/
 function showOrderDetails(orderId) {
   db.collection("orders").doc(orderId).get()
@@ -637,14 +602,13 @@ function showOrderDetails(orderId) {
         <p><strong>Fecha de Pedido:</strong> ${order.orderDate}</p>
       `;
 
-      // Si fue editado, mostrar fecha/hora
       if (order.lastEditTimestamp) {
         const editDate = new Date(order.lastEditTimestamp.toDate());
         const fechaStr = editDate.toLocaleString();
         html += `<p style="color: green;"><strong>Última Edición:</strong> ${fechaStr}</p>`;
       }
 
-      // Productos
+      // Lista de productos
       html += `
         <table>
           <thead>
@@ -667,9 +631,7 @@ function showOrderDetails(orderId) {
       });
       html += `</tbody></table>`;
 
-      // BOTONES dentro del modal:
-      // 1) ADMIN + PENDING => "Editar Pedido" y "Exportar Pedido"
-      // 2) Usuario normal + PENDING => "Editar Pedido" y "Exportar como Imagen"
+      // Botones: Editar + Exportar (dependiendo del rol y estado)
       if (order.status === "pending") {
         if (userRole === "administrador") {
           html += `
@@ -677,7 +639,6 @@ function showOrderDetails(orderId) {
             <button onclick="exportOrder('${orderId}')">Exportar Pedido</button>
           `;
         } else {
-          // Usuario normal
           html += `
             <button onclick="editOrder('${orderId}')">Editar Pedido</button>
             <button onclick="exportAsImageDirect('${orderId}')">Exportar como Imagen</button>
@@ -797,7 +758,7 @@ async function saveEditedOrder() {
     });
   });
 
-  // Validaciones
+  // Validar
   for (let i = 0; i < products.length; i++) {
     if (!products[i].name || !products[i].presentation || products[i].quantity <= 0) {
       Swal.fire({
@@ -827,7 +788,7 @@ async function saveEditedOrder() {
     });
 
     closeEditOrderModal();
-    closeOrderDetailsModal(); // Cerrar modal de detalles
+    closeOrderDetailsModal();
     reloadOrders();
   } catch (error) {
     Swal.fire({ icon: "error", title: "Error", text: error.message });
@@ -838,7 +799,6 @@ async function saveEditedOrder() {
  * EXPORTAR (Imagen, PDF, Excel)
  **********************************************************/
 function exportOrder(orderId) {
-  // Solo Admin ve este modal
   document.getElementById("exportModal").style.display = "block";
   document.getElementById("exportModal").dataset.orderId = orderId;
 }
@@ -858,7 +818,7 @@ async function exportAs(format) {
     }
     const order = doc.data();
     const fileName = `Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
-    
+
     if (format === "image") {
       exportAsImage(order, fileName);
     } else if (format === "pdf") {
@@ -873,7 +833,7 @@ async function exportAs(format) {
 }
 
 /**********************************************************
- * Exportar como Imagen Direct (para usuario normal)
+ * Exportar como Imagen DIRECT (usuario normal)
  **********************************************************/
 async function exportAsImageDirect(orderId) {
   try {
@@ -884,8 +844,6 @@ async function exportAsImageDirect(orderId) {
     }
     const order = docRef.data();
     const fileName = `Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
-
-    // Reutilizamos la misma función
     exportAsImage(order, fileName);
   } catch (error) {
     Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
@@ -893,14 +851,11 @@ async function exportAsImageDirect(orderId) {
 }
 
 /**********************************************************
- * Exportar como Imagen (Admin o Direct)
- * Incluye el logo, si está en logoBase64
+ * Exportar como Imagen
  **********************************************************/
 function exportAsImage(order, fileName) {
-  // Contenedor oculto
   const hiddenDiv = document.getElementById("exportHiddenContainer");
 
-  // Rellenamos datos
   document.getElementById("exportOrderIdHidden").textContent = order.orderId;
   document.getElementById("exportProviderHidden").textContent = order.providerName;
   document.getElementById("exportSucursalHidden").textContent = order.sucursalName;
@@ -914,15 +869,13 @@ function exportAsImage(order, fileName) {
     lastEditElem.textContent = "";
   }
 
-  // Logo
   const exportLogoImg = document.getElementById("exportLogo");
   if (logoBase64) {
     exportLogoImg.src = logoBase64;
   } else {
-    exportLogoImg.src = "logo.png"; 
+    exportLogoImg.src = "logo.png";
   }
 
-  // Productos
   const tBody = document.getElementById("exportProductsTableBody");
   tBody.innerHTML = "";
   order.products.forEach(prod => {
@@ -939,7 +892,6 @@ function exportAsImage(order, fileName) {
     tBody.appendChild(row);
   });
 
-  // Mostramos contenedor para que html2canvas lo vea
   hiddenDiv.style.display = "block";
   hiddenDiv.style.left = "50%";
   hiddenDiv.style.top = "50%";
@@ -958,7 +910,6 @@ function exportAsImage(order, fileName) {
       console.error(err);
     })
     .finally(() => {
-      // Ocultamos de nuevo
       hiddenDiv.style.display = "none";
       hiddenDiv.style.left = "-9999px";
       hiddenDiv.style.top = "-9999px";
@@ -967,7 +918,7 @@ function exportAsImage(order, fileName) {
 }
 
 /**********************************************************
- * Exportar como PDF (Admin)
+ * Exportar como PDF
  **********************************************************/
 function exportAsPDF(order, fileName) {
   const { jsPDF } = window.jspdf;
@@ -991,7 +942,7 @@ function exportAsPDF(order, fileName) {
 
   const tableColumn = ["Producto", "Presentación", "Cantidad"];
   const tableRows = [];
-  order.products.forEach(prod => {
+  order.products.forEach((prod) => {
     tableRows.push([prod.name, prod.presentation, prod.quantity]);
   });
 
@@ -1008,7 +959,7 @@ function exportAsPDF(order, fileName) {
 }
 
 /**********************************************************
- * Exportar como Excel (Admin)
+ * Exportar como Excel
  **********************************************************/
 function exportAsExcel(order, fileName) {
   const wb = XLSX.utils.book_new();
@@ -1035,10 +986,296 @@ function exportAsExcel(order, fileName) {
 
 /**********************************************************
  * confirmOrder
- * (Si lo usas para "Ingresar Cantidades" en estado "caminoATienda", etc.)
+ * Muestra el modal donde se ingresan cantidades, factura, etc.
  **********************************************************/
 async function confirmOrder(orderId) {
-  // ... tu lógica previa o la que ya tenías ...
+  try {
+    const docSnap = await db.collection("orders").doc(orderId).get();
+    if (!docSnap.exists) {
+      Swal.fire({ icon: "error", title: "Pedido no encontrado" });
+      return;
+    }
+    const order = docSnap.data();
+
+    document.getElementById("confirmOrderId").value = orderId;
+    document.getElementById("invoiceNumber").value = order.invoiceNumber || "";
+    document.getElementById("invoiceDate").value = order.invoiceDate || "";
+    document.getElementById("noInvoiceCheckbox").checked = !!order.pendingInvoice;
+
+    // Mostrar info
+    document.getElementById("orderIdDisplay").textContent = order.orderId;
+    document.getElementById("providerNameDisplay").textContent = order.providerName;
+    document.getElementById("sucursalNameDisplay").textContent = order.sucursalName;
+    document.getElementById("orderDateDisplay").textContent = order.orderDate;
+
+    // Llenar la tabla
+    const tBody = document.getElementById("confirmOrderProducts");
+    tBody.innerHTML = "";
+    const receivedArr = order.receivedProducts || [];
+
+    order.products.forEach((prod, i) => {
+      const rData = receivedArr[i] || {};
+      const receivedQty = rData.receivedQuantity || 0;
+      const priceVal = rData.unitPrice || 0;
+      const totalVal = rData.totalPerProduct || 0;
+      const commentsVal = rData.comments || "";
+
+      tBody.insertAdjacentHTML("beforeend", `
+        <tr>
+          <td>${prod.name}</td>
+          <td>${prod.presentation}</td>
+          <td>${prod.quantity}</td>
+          <td>
+            <input 
+              type="number" 
+              id="receivedQuantity${i}" 
+              min="0" 
+              max="${prod.quantity}"
+              value="${receivedQty}"
+              onchange="updateTotalPerProduct(${i}, ${prod.quantity})"
+            />
+          </td>
+          <td>
+            <input 
+              type="number" 
+              id="unitPrice${i}" 
+              step="0.01"
+              min="0"
+              value="${priceVal}"
+              onchange="updateTotalPerProduct(${i}, ${prod.quantity})"
+            />
+          </td>
+          <td>Q<span id="totalPerProduct${i}">${Number(totalVal).toFixed(2)}</span></td>
+          <td>
+            <input 
+              type="text" 
+              id="productComments${i}" 
+              value="${commentsVal}" 
+              placeholder="Comentarios"
+            />
+          </td>
+        </tr>
+      `);
+    });
+
+    calculateInvoiceTotal();
+    document.getElementById("confirmOrderModal").style.display = "block";
+  } catch (error) {
+    Swal.fire({ icon: "error", title: "Error", text: error.message });
+  }
+}
+
+function updateTotalPerProduct(i, maxQty) {
+  const qtyInput = document.getElementById(`receivedQuantity${i}`);
+  const priceInput = document.getElementById(`unitPrice${i}`);
+  const totalSpan = document.getElementById(`totalPerProduct${i}`);
+
+  let q = parseFloat(qtyInput.value) || 0;
+  let p = parseFloat(priceInput.value) || 0;
+  if (q < 0) q = 0;
+  if (q > maxQty) q = maxQty;
+  if (p < 0) p = 0;
+
+  qtyInput.value = q;
+  priceInput.value = p;
+
+  const total = q * p;
+  totalSpan.textContent = total.toFixed(2);
+
+  calculateInvoiceTotal();
+}
+
+function calculateInvoiceTotal() {
+  let grandTotal = 0;
+  const rows = document.querySelectorAll("#confirmOrderProducts tr");
+  rows.forEach((row, idx) => {
+    const val = parseFloat(document.getElementById(`totalPerProduct${idx}`).textContent) || 0;
+    grandTotal += val;
+  });
+  document.getElementById("invoiceTotal").textContent = grandTotal.toFixed(2);
+}
+
+function closeConfirmOrderModal() {
+  document.getElementById("confirmOrderId").value = "";
+  document.getElementById("invoiceNumber").value = "";
+  document.getElementById("invoiceDate").value = "";
+  document.getElementById("noInvoiceCheckbox").checked = false;
+
+  document.getElementById("orderIdDisplay").textContent = "";
+  document.getElementById("providerNameDisplay").textContent = "";
+  document.getElementById("sucursalNameDisplay").textContent = "";
+  document.getElementById("orderDateDisplay").textContent = "";
+
+  document.getElementById("confirmOrderProducts").innerHTML = "";
+  document.getElementById("invoiceTotal").textContent = "0.00";
+
+  document.getElementById("confirmOrderModal").style.display = "none";
+}
+
+/**********************************************************
+ * saveConfirmedOrder
+ * Valida:
+ * - Cantidades (si < lo pedido => mismatchQuantities)
+ * - Factura (si noInvoiceCheckbox => pendingInvoice = true)
+ * Luego, si mismatchQuantities o pendingInvoice, pide
+ * "motivo/comentario" en un SweetAlert, lo guarda en mismatchComment
+ * y NO cambia status => se mantiene en inProcess
+ **********************************************************/
+async function saveConfirmedOrder() {
+  try {
+    const orderId = document.getElementById("confirmOrderId").value;
+    if (!orderId) {
+      Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido." });
+      return;
+    }
+
+    const invoiceNumberField = document.getElementById("invoiceNumber").value.trim();
+    const invoiceDateField = document.getElementById("invoiceDate").value.trim();
+    const noInvoice = document.getElementById("noInvoiceCheckbox").checked;
+
+    // Validación de factura
+    if (!noInvoice) {
+      // Si no marcó "No se ingresó factura", entonces #invoiceNumber y #invoiceDate deben tener algo
+      if (!invoiceNumberField || !invoiceDateField) {
+        Swal.fire({
+          icon: "warning",
+          title: "Faltan datos de factura",
+          text: "Ingresa la factura o marca 'No se ingresó la factura'."
+        });
+        return;
+      }
+    }
+
+    // Obtener el pedido original
+    const orderDoc = await db.collection("orders").doc(orderId).get();
+    if (!orderDoc.exists) {
+      Swal.fire({ icon: "error", title: "Error", text: "Pedido no existe en DB" });
+      return;
+    }
+    const orderData = orderDoc.data();
+
+    // Recorrer la tabla
+    const tRows = document.querySelectorAll("#confirmOrderProducts tr");
+    let mismatchedQuantities = false;
+    let totalFactura = 0;
+    let receivedProducts = [];
+
+    for (let i = 0; i < tRows.length; i++) {
+      const originalProd = orderData.products[i];
+      const qPedida = parseFloat(originalProd.quantity) || 0;
+
+      const qRecibida = parseFloat(document.getElementById(`receivedQuantity${i}`).value) || 0;
+      const pUnit = parseFloat(document.getElementById(`unitPrice${i}`).value) || 0;
+      const totalCell = parseFloat(document.getElementById(`totalPerProduct${i}`).textContent) || 0;
+      const commentsVal = document.getElementById(`productComments${i}`).value.trim();
+
+      // Validación: no permitir recibir más de lo pedido
+      if (qRecibida > qPedida) {
+        Swal.fire({
+          icon: "error",
+          title: "Cantidad inválida",
+          text: `No puedes recibir más de lo pedido para el producto: ${originalProd.name}`
+        });
+        return;
+      }
+      // Si se recibió menos => mismatch
+      if (qRecibida < qPedida) {
+        mismatchedQuantities = true;
+      }
+
+      totalFactura += totalCell;
+
+      receivedProducts.push({
+        name: originalProd.name,
+        presentation: originalProd.presentation,
+        quantity: qPedida,
+        receivedQuantity: qRecibida,
+        unitPrice: pUnit,
+        totalPerProduct: totalCell,
+        comments: commentsVal
+      });
+    }
+
+    // Checar si no se ingresó factura
+    let pendingInvoice = false;
+    if (noInvoice) {
+      pendingInvoice = true;
+    }
+
+    const invoiceTotalValue = Number(totalFactura.toFixed(2));
+
+    // Si hay mismatch o no hay factura, pedimos un comentario de motivo
+    if (mismatchedQuantities || pendingInvoice) {
+      // Pedir el comentario (motivo)
+      const { value: reason } = await Swal.fire({
+        title: "Motivo del faltante o no factura",
+        input: "text",
+        inputLabel: "Comentario:",
+        inputPlaceholder: "Ej. 'No llegó factura', 'No vino todo el producto'...",
+        showCancelButton: true,
+        cancelButtonText: "Cancelar",
+        confirmButtonText: "Guardar",
+        inputValidator: (value) => {
+          if (!value) {
+            return "Por favor, ingresa un comentario.";
+          }
+          return null;
+        }
+      });
+
+      if (!reason) {
+        // Canceló
+        return; 
+      }
+
+      // Guardamos en mismatchComment
+      await db.collection("orders").doc(orderId).update({
+        invoiceNumber: pendingInvoice ? "" : invoiceNumberField,
+        invoiceDate: pendingInvoice ? "" : invoiceDateField,
+        pendingInvoice: pendingInvoice,
+        receivedProducts: receivedProducts,
+        invoiceTotal: invoiceTotalValue,
+        mismatchedQuantities: mismatchedQuantities,
+        mismatchComment: reason, 
+        // No cambiamos status a completed, se queda en inProcess
+      });
+
+      Swal.fire({
+        icon: "success",
+        title: "Recepción Guardada con Faltantes/Comentario",
+        text: `El pedido se mantiene en proceso. Total Factura: Q${invoiceTotalValue}`
+      });
+
+      closeConfirmOrderModal();
+      reloadOrders();
+      return;
+    }
+
+    // Caso Normal: se recibió todo, con factura
+    await db.collection("orders").doc(orderId).update({
+      invoiceNumber: invoiceNumberField,
+      invoiceDate: invoiceDateField,
+      pendingInvoice: false,
+      receivedProducts: receivedProducts,
+      invoiceTotal: invoiceTotalValue,
+      mismatchedQuantities: false,
+      mismatchComment: ""
+      // status: "inTiendaIncompleto" o "completed" si quisieras, 
+      // pero según tu requisito se mantiene en inProcess
+    });
+
+    Swal.fire({
+      icon: "success",
+      title: "Recepción Guardada",
+      text: `Todo coincide y se ingresó factura. Total Factura: Q${invoiceTotalValue}`
+    });
+
+    closeConfirmOrderModal();
+    reloadOrders();
+
+  } catch (error) {
+    Swal.fire({ icon: "error", title: "Error", text: error.message });
+  }
 }
 
 /**********************************************************

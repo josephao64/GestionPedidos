@@ -1,6 +1,8 @@
 // Importar jsPDF desde el objeto global proporcionado por la biblioteca jsPDF   
 const { jsPDF } = window.jspdf;
 
+console.log('app.js se ha cargado correctamente.');
+
 /**
  * ================================
  * Variables globales
@@ -62,6 +64,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     showOrders(); // Mostrar la lista de pedidos por defecto
   }
 });
+
+/**
+ * ================================
+ * Función para gestionar pedidos (botón)
+ * ================================
+ */
+function handleGestionPedidos() {
+  showOrderCreationContainer();
+}
+
+/**
+ * ================================
+ * Función para cerrar el modal de pedido recibido
+ * (evitar errores si no está implementado)
+ * ================================
+ */
+function closeReceivedOrderModal() {
+  document.getElementById('receivedOrderModal').style.display = 'none';
+}
+
+/**
+ * ================================
+ * Función para exportar el pedido recibido como imagen
+ * (placeholder, para evitar error de referencia)
+ * ================================
+ */
+function exportReceivedOrderAsImage() {
+  Swal.fire('Funcionalidad en desarrollo', 'Próximamente podrás exportar tu pedido recibido como imagen.', 'info');
+}
 
 /**
  * ================================
@@ -166,11 +197,10 @@ async function loadPendingOrdersAdmin() {
   }
 }
 
-// Cargar pedidos en proceso (unificamos con estados de "Gestión de Pedidos")
+// Cargar pedidos en proceso 
 async function loadInProcessOrdersAdmin() {
   try {
-    // Antes usabas:  .where('status', '==', 'inProcess')
-    // Ahora filtramos por varios estados (pedidoTomado, caminoABodega, etc.)
+    // Filtramos por varios estados
     const ordersSnapshot = await db
       .collection('orders')
       .where('status', 'in', [
@@ -232,7 +262,6 @@ function createOrderCard(orderId, order) {
  */
 async function confirmOrder(orderId) {
   try {
-    // En lugar de 'inProcess', ahora usamos 'pedidoTomado'
     await db.collection('orders').doc(orderId).update({ status: 'pedidoTomado' });
     loadPendingOrdersAdmin();
     loadInProcessOrdersAdmin();
@@ -259,9 +288,10 @@ async function confirmOrder(orderId) {
  */
 async function showOrderCreationContainer() {
   // Ocultar otras secciones
-  document.getElementById('ordersContainer').style.display = 'none';
+  const ordersContainer = document.getElementById('ordersContainer');
+  if (ordersContainer) ordersContainer.style.display = 'none';
+
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
-  // Mostrar contenedor de creación
   document.getElementById('orderCreationContainer').style.display = 'block';
 
   // Verificar rol para definir la sucursal
@@ -289,7 +319,6 @@ async function showOrderCreationContainer() {
   if (userRole === 'administrador') {
     setOrderDateToToday();
   } else {
-    // Para usuarios normales, la fecha ya está fijada y deshabilitada
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('orderDate').value = today;
   }
@@ -327,9 +356,10 @@ function limpiarFormulario() {
  */
 async function showPreSavedOrders() {
   // Ocultar otras secciones
-  document.getElementById('ordersContainer').style.display = 'none';
+  const ordersContainer = document.getElementById('ordersContainer');
+  if (ordersContainer) ordersContainer.style.display = 'none';
+
   document.getElementById('orderCreationContainer').style.display = 'none';
-  // Mostrar contenedor de pedidos preguardados
   document.getElementById('preSavedOrdersContainer').style.display = 'block';
 
   // Cargar pedidos preguardados
@@ -394,7 +424,9 @@ async function openPreSavedOrder(orderDocId) {
       currentOrderId = orderDocId; // Guardar el ID del pedido actual
 
       // Ocultar otras secciones y mostrar el formulario de creación de pedidos
-      document.getElementById('ordersContainer').style.display = 'none';
+      const ordersContainer = document.getElementById('ordersContainer');
+      if (ordersContainer) ordersContainer.style.display = 'none';
+
       document.getElementById('preSavedOrdersContainer').style.display = 'none';
       document.getElementById('orderCreationContainer').style.display = 'block';
 
@@ -410,7 +442,7 @@ async function openPreSavedOrder(orderDocId) {
       }
 
       // Bloquear el selector de proveedor si ya hay productos
-      if (orderData.products.length > 0) {
+      if (orderData.products && orderData.products.length > 0) {
         document.getElementById('newOrderProviderSelect').disabled = true;
       }
 
@@ -421,24 +453,26 @@ async function openPreSavedOrder(orderDocId) {
       newOrderTableBody.innerHTML = '';
 
       // Cargar productos del pedido en la tabla
-      orderData.products.forEach(product => {
-        const row = newOrderTableBody.insertRow();
+      if (orderData.products) {
+        orderData.products.forEach(product => {
+          const row = newOrderTableBody.insertRow();
 
-        const cell1 = row.insertCell(0);
-        const cell2 = row.insertCell(1);
-        const cell3 = row.insertCell(2);
-        const cell4 = row.insertCell(3);
-        const cell5 = row.insertCell(4);
+          const cell1 = row.insertCell(0);
+          const cell2 = row.insertCell(1);
+          const cell3 = row.insertCell(2);
+          const cell4 = row.insertCell(3);
+          const cell5 = row.insertCell(4);
 
-        cell1.textContent = product.name;
-        cell2.textContent = product.presentation;
-        cell3.textContent = product.quantity;
-        cell4.textContent = product.stock;
-        cell5.innerHTML = `
-          <button onclick="editNewOrderProduct(this)">Editar</button>
-          <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
-        `;
-      });
+          cell1.textContent = product.name;
+          cell2.textContent = product.presentation;
+          cell3.textContent = product.quantity;
+          cell4.textContent = product.stock;
+          cell5.innerHTML = `
+            <button onclick="editNewOrderProduct(this)">Editar</button>
+            <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
+          `;
+        });
+      }
 
       // Cargar proveedores (para asegurar que el proveedor seleccionado esté disponible)
       loadNewOrderProviders();
@@ -610,7 +644,8 @@ function filterProducts() {
   const table = document.getElementById('productSelectionTable');
   const tr = table.getElementsByTagName('tr');
 
-  for (let i = 2; i < tr.length; i++) { // Iniciar desde 2 para omitir el campo de búsqueda
+  // Iniciar desde 2 para omitir la fila que contiene el input de búsqueda
+  for (let i = 2; i < tr.length; i++) {
     const td = tr[i].getElementsByTagName('td')[0];
     if (td) {
       const txtValue = td.textContent || td.innerText;
@@ -649,10 +684,10 @@ function selectProductForOrder(event) {
  * de selección de producto
  * ================================
  */
-function showProductSelectionModal() {
+window.showProductSelectionModal = function() {
   loadNewOrderProducts();
   document.getElementById('productSelectionModal').style.display = 'block';
-}
+};
 
 /**
  * ================================
@@ -660,9 +695,9 @@ function showProductSelectionModal() {
  * de selección de producto
  * ================================
  */
-function closeProductSelectionModal() {
+window.closeProductSelectionModal = function() {
   document.getElementById('productSelectionModal').style.display = 'none';
-}
+};
 
 /**
  * ================================
@@ -843,7 +878,7 @@ async function saveNewOrder() {
       // Opción Guardar
       try {
         if (currentOrderId) {
-          // Si existe un pedido actual (preguardado), actualizarlo y cambiar estado a 'pending'
+          // Actualizar pedido existente (estaba preguardado) y cambiar estado a 'pending'
           await db.collection('orders').doc(currentOrderId).update({
             providerId,
             providerName,
@@ -896,7 +931,7 @@ async function saveNewOrder() {
       // Opción Preguardar
       try {
         if (currentOrderId) {
-          // Actualizar pedido existente y mantener estado como 'preSaved'
+          // Actualizar pedido existente y mantener estado 'preSaved'
           await db.collection('orders').doc(currentOrderId).update({
             providerId,
             providerName,
@@ -960,7 +995,8 @@ async function saveNewOrder() {
  */
 function closeOrderCreationContainer() {
   document.getElementById('orderCreationContainer').style.display = 'none';
-  document.getElementById('ordersContainer').style.display = 'block';
+  const ordersContainer = document.getElementById('ordersContainer');
+  if (ordersContainer) ordersContainer.style.display = 'block';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
   // Desbloquear el selector de proveedor y limpiar la tabla
@@ -1221,7 +1257,8 @@ function editOrder(orderId) {
  */
 function showOrders() {
   // Muestra la sección principal de “Pedidos”
-  document.getElementById('ordersContainer').style.display = 'block';
+  const ordersContainer = document.getElementById('ordersContainer');
+  if (ordersContainer) ordersContainer.style.display = 'block';
   document.getElementById('orderCreationContainer').style.display = 'none';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
 }

@@ -1,4 +1,4 @@
-// Importar jsPDF desde el objeto global proporcionado por la biblioteca jsPDF
+// Importar jsPDF desde el objeto global proporcionado por la biblioteca jsPDF   
 const { jsPDF } = window.jspdf;
 
 /**
@@ -6,12 +6,11 @@ const { jsPDF } = window.jspdf;
  * Variables globales
  * ================================
  */
-let db;                         
-let userSucursalId = null;      
-let userSucursalName = null;    
-let userRole = null;           
-let currentOrderId = null;      
-let editingExistingOrder = false;
+let db;                         // Firestore DB a nivel global
+let userSucursalId = null;      // ID de la sucursal a la que pertenece el usuario
+let userSucursalName = null;    // Nombre de la sucursal (para mostrar)
+let userRole = null;            // Rol del usuario (administrador / usuario)
+let currentOrderId = null;      // ID del pedido actual (nuevo o preguardado)
 
 /**
  * ================================
@@ -35,12 +34,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   await obtenerSucursalDelUsuario();
 
   // Si el usuario es administrador, cargar pedidos pendientes y en proceso
-  // (Si deseas seguir administrando esos contenedores, 
-  //  en tu caso puedes hacerlo, o comentar si ya no es necesario)
-  // if (userRole === 'administrador') {
-  //   loadPendingOrdersAdmin();
-  //   loadInProcessOrdersAdmin();
-  // }
+  if (userRole === 'administrador') {
+    loadPendingOrdersAdmin();
+    loadInProcessOrdersAdmin();
+  }
+
+  // Manejo del checkbox 'N/A' para stock
+  const stockNA = document.getElementById('stockNA');
+  const stockInput = document.getElementById('productStock');
+  if (stockNA && stockInput) {
+    stockNA.addEventListener('change', function () {
+      if (this.checked) {
+        stockInput.value = 'N/A';
+        stockInput.disabled = true;
+      } else {
+        stockInput.value = '';
+        stockInput.disabled = false;
+      }
+    });
+  }
+
+  // Detectar si se debe mostrar el formulario de creación de pedidos automáticamente
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('create') === 'true') {
+    showOrderCreationContainer();
+  } else {
+    showOrders(); // Mostrar la lista de pedidos por defecto
+  }
 });
 
 /**
@@ -50,6 +70,8 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 async function obtenerSucursalDelUsuario() {
   const usuarioLogueado = localStorage.getItem('usuarioLogueado');
+
+  // Si no hay usuario logueado, redirigir a login.
   if (!usuarioLogueado) {
     Swal.fire({
       icon: 'error',
@@ -89,7 +111,9 @@ async function obtenerSucursalDelUsuario() {
           orderDateInput.disabled = true;
         }
       }
+
     } else {
+      // Usuario no encontrado en la colección 'usuarios'
       Swal.fire({
         icon: 'error',
         title: 'Usuario No Encontrado',
@@ -103,97 +127,218 @@ async function obtenerSucursalDelUsuario() {
     Swal.fire({
       icon: 'error',
       title: 'Error',
-      text: 'Error al obtener la información de la sucursal.'
+      text: 'Error al obtener la información de la sucursal. Inténtalo nuevamente.'
     });
   }
 }
 
 /**
  * ================================
- * handleGestionPedidos()
- * => Al dar clic en el botón "Gestión de Pedidos",
- *    abrir directamente la creación de un nuevo pedido
+ * Funciones para cargar Pedidos (Admin)
  * ================================
  */
-function handleGestionPedidos() {
-  editingExistingOrder = false;
-  currentOrderId = null;
-  showOrderCreationContainer();
+
+// Cargar pedidos pendientes
+async function loadPendingOrdersAdmin() {
+  try {
+    const ordersSnapshot = await db
+      .collection('orders')
+      .where('status', '==', 'pending')
+      .get();
+
+    const pendingOrdersAdminCards = document.getElementById('pendingOrdersAdminCards');
+    if (!pendingOrdersAdminCards) return; // Si no existe en tu HTML, salir
+
+    pendingOrdersAdminCards.innerHTML = '';
+
+    ordersSnapshot.forEach(doc => {
+      const order = doc.data();
+      const card = createOrderCard(doc.id, order);
+      pendingOrdersAdminCards.appendChild(card);
+    });
+  } catch (error) {
+    console.error('Error al cargar pedidos pendientes:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al cargar pedidos pendientes: ' + error.message
+    });
+  }
+}
+
+// Cargar pedidos en proceso (unificamos con estados de "Gestión de Pedidos")
+async function loadInProcessOrdersAdmin() {
+  try {
+    // Antes usabas:  .where('status', '==', 'inProcess')
+    // Ahora filtramos por varios estados (pedidoTomado, caminoABodega, etc.)
+    const ordersSnapshot = await db
+      .collection('orders')
+      .where('status', 'in', [
+        'pedidoTomado',
+        'caminoABodega',
+        'pedidoEnBodega',
+        'caminoATienda'
+      ])
+      .get();
+
+    const inProcessOrdersAdminCards = document.getElementById('inProcessOrdersAdminCards');
+    if (!inProcessOrdersAdminCards) return; // Si no existe en tu HTML, salir
+
+    inProcessOrdersAdminCards.innerHTML = '';
+
+    ordersSnapshot.forEach(doc => {
+      const order = doc.data();
+      const card = createOrderCard(doc.id, order);
+      inProcessOrdersAdminCards.appendChild(card);
+    });
+  } catch (error) {
+    console.error('Error al cargar pedidos en proceso:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al cargar pedidos en proceso: ' + error.message
+    });
+  }
 }
 
 /**
  * ================================
- * Mostrar Contenedor de Creación
+ * Función para crear tarjeta de pedido
+ * ================================
+ */
+function createOrderCard(orderId, order) {
+  const card = document.createElement('div');
+  card.className = 'order-card';
+  card.innerHTML = `
+    <h3>Pedido ID: ${order.orderId}</h3>
+    <p>Proveedor: ${order.providerName}</p>
+    <p>Sucursal: ${order.sucursalName}</p>
+    <p>Fecha: ${order.orderDate}</p>
+    ${
+      order.status === 'pending'
+        ? `<button onclick="confirmOrder('${orderId}')">Confirmar Pedido</button>`
+        : ''
+    }
+    <button onclick="editOrder('${orderId}')">Editar Pedido</button>
+  `;
+  return card;
+}
+
+/**
+ * ================================
+ * Función para confirmar pedido
+ * Cambia el estado de 'pending' a 'pedidoTomado'
+ * ================================
+ */
+async function confirmOrder(orderId) {
+  try {
+    // En lugar de 'inProcess', ahora usamos 'pedidoTomado'
+    await db.collection('orders').doc(orderId).update({ status: 'pedidoTomado' });
+    loadPendingOrdersAdmin();
+    loadInProcessOrdersAdmin();
+    Swal.fire({
+      icon: 'success',
+      title: 'Pedido Confirmado',
+      text: 'El pedido ha sido confirmado exitosamente.'
+    });
+  } catch (error) {
+    console.error('Error al confirmar el pedido:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al confirmar el pedido: ' + error.message
+    });
+  }
+}
+
+/**
+ * ================================
+ * Función para mostrar el contenedor
+ * de creación de nuevo pedido
  * ================================
  */
 async function showOrderCreationContainer() {
-  // Ocultar preSavedOrdersContainer
+  // Ocultar otras secciones
+  document.getElementById('ordersContainer').style.display = 'none';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
-
   // Mostrar contenedor de creación
   document.getElementById('orderCreationContainer').style.display = 'block';
 
-  // Asignar la sucursal del usuario y bloquear el select
-  const selectSucursal = document.getElementById('newOrderSucursalSelect');
-  selectSucursal.innerHTML = '';
-  const option = document.createElement('option');
-  option.value = userSucursalId;
-  option.textContent = userSucursalName;
-  selectSucursal.appendChild(option);
-  selectSucursal.disabled = true;
+  // Verificar rol para definir la sucursal
+  if (userRole === 'administrador') {
+    // Cargar todas las sucursales en el select
+    cargarSucursalesSelectParaAdmin();
+    document.getElementById('newOrderSucursalSelect').disabled = false;
+  } else {
+    // Usuario normal: asignar su sucursal
+    const selectSucursal = document.getElementById('newOrderSucursalSelect');
+    selectSucursal.innerHTML = ''; // Limpia
+
+    const option = document.createElement('option');
+    option.value = userSucursalId;
+    option.textContent = userSucursalName;
+    selectSucursal.appendChild(option);
+
+    selectSucursal.disabled = true;
+  }
 
   // Cargar proveedores
   loadNewOrderProviders();
 
-  // Colocar fecha de hoy si es admin
+  // Colocar fecha de hoy (solo si el usuario es administrador)
+  if (userRole === 'administrador') {
+    setOrderDateToToday();
+  } else {
+    // Para usuarios normales, la fecha ya está fijada y deshabilitada
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('orderDate').value = today;
+  }
+
+  // Generar nuevo ID de pedido
+  generateOrderId();
+
+  // Limpiar cualquier pedido actual
+  currentOrderId = null;
+  limpiarFormulario();
+}
+
+/**
+ * ================================
+ * Función para limpiar el formulario
+ * ================================
+ */
+function limpiarFormulario() {
+  document.getElementById('newOrderProviderSelect').value = '';
+  document.getElementById('newOrderSucursalSelect').value = '';
   if (userRole === 'administrador') {
     setOrderDateToToday();
   } else {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('orderDate').value = today;
   }
-
-  // Generar nuevo ID de pedido
-  if (!editingExistingOrder) {
-    generateOrderId();
-  }
-
-  // Limpiar la tabla de productos
-  limpiarFormulario();
-}
-
-/**
- * ================================
- * Limpiar Formulario
- * ================================
- */
-function limpiarFormulario() {
-  document.getElementById('newOrderProviderSelect').disabled = false;
-  document.getElementById('newOrderProviderSelect').value = '';
-  if (userRole === 'administrador') {
-    setOrderDateToToday();
-  }
   document.getElementById('orderId').value = '';
-  document.getElementById('newOrderTable')
-    .getElementsByTagName('tbody')[0].innerHTML = '';
-  editingExistingOrder = false;
+  document.getElementById('newOrderTable').getElementsByTagName('tbody')[0].innerHTML = '';
 }
 
 /**
  * ================================
- * Mostrar Pedidos Preguardados
+ * Función para mostrar Pedidos Preguardados
  * ================================
  */
-function showPreSavedOrders() {
+async function showPreSavedOrders() {
+  // Ocultar otras secciones
+  document.getElementById('ordersContainer').style.display = 'none';
   document.getElementById('orderCreationContainer').style.display = 'none';
+  // Mostrar contenedor de pedidos preguardados
   document.getElementById('preSavedOrdersContainer').style.display = 'block';
+
+  // Cargar pedidos preguardados
   loadPreSavedOrders();
 }
 
 /**
  * ================================
- * loadPreSavedOrders
- * (con botón eliminar)
+ * Función para cargar Pedidos Preguardados
  * ================================
  */
 async function loadPreSavedOrders() {
@@ -203,8 +348,7 @@ async function loadPreSavedOrders() {
       .where('status', '==', 'preSaved')
       .get();
 
-    const preSavedOrdersTableBody = document
-      .getElementById('preSavedOrdersTable')
+    const preSavedOrdersTableBody = document.getElementById('preSavedOrdersTable')
       .getElementsByTagName('tbody')[0];
     preSavedOrdersTableBody.innerHTML = '';
 
@@ -224,7 +368,6 @@ async function loadPreSavedOrders() {
       cell4.textContent = order.orderDate;
       cell5.innerHTML = `
         <button onclick="openPreSavedOrder('${doc.id}')">Abrir Pedido</button>
-        <button onclick="deletePreSavedOrder('${doc.id}')">Eliminar</button>
       `;
     });
 
@@ -233,127 +376,93 @@ async function loadPreSavedOrders() {
     Swal.fire({
       icon: 'error',
       title: 'Error',
-      text: 'Error al cargar pedidos preguardados.'
+      text: 'Error al cargar pedidos preguardados: ' + error.message
     });
   }
 }
 
 /**
  * ================================
- * Eliminar Pedido Preguardado
- * ================================
- */
-function deletePreSavedOrder(orderDocId) {
-  Swal.fire({
-    title: "¿Eliminar Pedido Preguardado?",
-    text: "Esta acción no se puede deshacer.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Sí, eliminar",
-    cancelButtonText: "Cancelar"
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        await db.collection("orders").doc(orderDocId).delete();
-        Swal.fire({
-          icon: "success",
-          title: "Pedido Eliminado",
-          text: "El pedido preguardado se eliminó correctamente."
-        });
-        loadPreSavedOrders();
-      } catch (error) {
-        console.error("Error al eliminar pedido preguardado:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudo eliminar el pedido preguardado."
-        });
-      }
-    }
-  });
-}
-
-/**
- * ================================
- * Abrir un Pedido Preguardado
+ * Función para abrir un Pedido Preguardado
  * ================================
  */
 async function openPreSavedOrder(orderDocId) {
   try {
     const orderDoc = await db.collection('orders').doc(orderDocId).get();
-    if (!orderDoc.exists) {
+    if (orderDoc.exists) {
+      const orderData = orderDoc.data();
+      currentOrderId = orderDocId; // Guardar el ID del pedido actual
+
+      // Ocultar otras secciones y mostrar el formulario de creación de pedidos
+      document.getElementById('ordersContainer').style.display = 'none';
+      document.getElementById('preSavedOrdersContainer').style.display = 'none';
+      document.getElementById('orderCreationContainer').style.display = 'block';
+
+      // Cargar datos del pedido en el formulario
+      document.getElementById('newOrderProviderSelect').value = orderData.providerId;
+      document.getElementById('newOrderSucursalSelect').value = orderData.sucursalId;
+      document.getElementById('orderDate').value = orderData.orderDate;
+      document.getElementById('orderId').value = orderData.orderId;
+
+      // Deshabilitar la fecha de pedido si no es administrador
+      if (userRole !== 'administrador') {
+        document.getElementById('orderDate').disabled = true;
+      }
+
+      // Bloquear el selector de proveedor si ya hay productos
+      if (orderData.products.length > 0) {
+        document.getElementById('newOrderProviderSelect').disabled = true;
+      }
+
+      // Limpiar la tabla de productos actual
+      const newOrderTableBody = document
+        .getElementById('newOrderTable')
+        .getElementsByTagName('tbody')[0];
+      newOrderTableBody.innerHTML = '';
+
+      // Cargar productos del pedido en la tabla
+      orderData.products.forEach(product => {
+        const row = newOrderTableBody.insertRow();
+
+        const cell1 = row.insertCell(0);
+        const cell2 = row.insertCell(1);
+        const cell3 = row.insertCell(2);
+        const cell4 = row.insertCell(3);
+        const cell5 = row.insertCell(4);
+
+        cell1.textContent = product.name;
+        cell2.textContent = product.presentation;
+        cell3.textContent = product.quantity;
+        cell4.textContent = product.stock;
+        cell5.innerHTML = `
+          <button onclick="editNewOrderProduct(this)">Editar</button>
+          <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
+        `;
+      });
+
+      // Cargar proveedores (para asegurar que el proveedor seleccionado esté disponible)
+      loadNewOrderProviders();
+
+    } else {
       Swal.fire({
         icon: 'error',
         title: 'Error',
         text: 'El pedido preguardado no existe.'
       });
-      return;
     }
-    const orderData = orderDoc.data();
-    currentOrderId = orderDocId;
-    editingExistingOrder = true;
-
-    // Mostrar contenedor
-    document.getElementById('preSavedOrdersContainer').style.display = 'none';
-    document.getElementById('orderCreationContainer').style.display = 'block';
-
-    // Asignar sucursal + bloquear
-    const selectSucursal = document.getElementById('newOrderSucursalSelect');
-    selectSucursal.innerHTML = '';
-    const option = document.createElement('option');
-    option.value = userSucursalId;
-    option.textContent = userSucursalName;
-    selectSucursal.appendChild(option);
-    selectSucursal.disabled = true;
-
-    // Llenar datos
-    document.getElementById('newOrderProviderSelect').value = orderData.providerId;
-    document.getElementById('orderDate').value = orderData.orderDate;
-    document.getElementById('orderId').value = orderData.orderId;
-
-    // Deshabilitar la fecha si no es admin
-    if (userRole !== 'administrador') {
-      document.getElementById('orderDate').disabled = true;
-    }
-
-    // Bloquear proveedor si ya hay productos
-    const providerSelect = document.getElementById('newOrderProviderSelect');
-    providerSelect.disabled = (orderData.products.length > 0);
-
-    // Limpiar tabla
-    const newOrderTableBody = document.getElementById('newOrderTable')
-      .getElementsByTagName('tbody')[0];
-    newOrderTableBody.innerHTML = '';
-
-    // Cargar productos
-    orderData.products.forEach(product => {
-      const row = newOrderTableBody.insertRow();
-      row.insertCell(0).textContent = product.name;
-      row.insertCell(1).textContent = product.presentation;
-      row.insertCell(2).textContent = product.quantity;
-      row.insertCell(3).textContent = product.stock;
-      row.insertCell(4).innerHTML = `
-        <button onclick="editNewOrderProduct(this)">Editar</button>
-        <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
-      `;
-    });
-
-    // Cargar proveedores
-    loadNewOrderProviders();
-
   } catch (error) {
-    console.error('Error al abrir pedido preguardado:', error);
+    console.error('Error al abrir el pedido preguardado:', error);
     Swal.fire({
       icon: 'error',
       title: 'Error',
-      text: 'Error al abrir el pedido preguardado.'
+      text: 'Error al abrir el pedido preguardado: ' + error.message
     });
   }
 }
 
 /**
  * ================================
- * Generar ID de Pedido
+ * Función para generar ID pedido
  * ================================
  */
 async function generateOrderId() {
@@ -365,6 +474,7 @@ async function generateOrderId() {
     if (orderCounterDoc.exists) {
       newOrderId = orderCounterDoc.data().lastOrderId + 1;
     }
+
     await orderCounterRef.set({ lastOrderId: newOrderId });
     document.getElementById('orderId').value = newOrderId;
   } catch (error) {
@@ -372,14 +482,14 @@ async function generateOrderId() {
     Swal.fire({
       icon: 'error',
       title: 'Error',
-      text: 'Error al generar ID de pedido.'
+      text: 'Error al generar ID de pedido: ' + error.message
     });
   }
 }
 
 /**
  * ================================
- * setOrderDateToToday
+ * Función para colocar la fecha de hoy
  * ================================
  */
 function setOrderDateToToday() {
@@ -389,17 +499,16 @@ function setOrderDateToToday() {
 
 /**
  * ================================
- * Cargar proveedores
+ * Función para cargar proveedores
  * ================================
  */
 async function loadNewOrderProviders() {
   try {
     const providersSnapshot = await db.collection('providers').get();
     const newOrderProviderSelect = document.getElementById('newOrderProviderSelect');
-    newOrderProviderSelect.innerHTML =
-      '<option value="" disabled selected>-- Selecciona un Proveedor --</option>';
+    newOrderProviderSelect.innerHTML = '<option value="" disabled selected>-- Selecciona un Proveedor --</option>';
 
-    providersSnapshot.forEach(doc => {
+    providersSnapshot.forEach(function(doc) {
       const provider = doc.data();
       const option = document.createElement('option');
       option.value = doc.id;
@@ -407,18 +516,19 @@ async function loadNewOrderProviders() {
       newOrderProviderSelect.appendChild(option);
     });
   } catch (error) {
-    console.error('Error al cargar proveedores:', error);
+    console.error('Error al cargar proveedores del pedido:', error);
     Swal.fire({
       icon: 'error',
       title: 'Error',
-      text: 'Error al cargar proveedores.'
+      text: 'Error al cargar proveedores del pedido: ' + error.message
     });
   }
 }
 
 /**
  * ================================
- * loadNewOrderProducts
+ * Función para mostrar tabla de productos
+ * según el proveedor seleccionado
  * ================================
  */
 async function loadNewOrderProducts() {
@@ -438,11 +548,13 @@ async function loadNewOrderProducts() {
       .where('providerId', '==', providerId)
       .get();
 
-    const productSelectionTableBody = document.getElementById('productSelectionTable')
+    const productSelectionTableBody = document
+      .getElementById('productSelectionTable')
       .getElementsByTagName('tbody')[0];
+
     productSelectionTableBody.innerHTML = '';
 
-    productsSnapshot.forEach(doc => {
+    productsSnapshot.forEach((doc) => {
       const product = doc.data();
       const row = productSelectionTableBody.insertRow();
       const cell1 = row.insertCell(0);
@@ -454,26 +566,26 @@ async function loadNewOrderProducts() {
       cell3.innerHTML = `
         <button 
           onclick="selectProductForOrder(event)" 
-          data-id="${doc.id}"
-          data-name="${escapeHtml(product.name)}"
+          data-id="${doc.id}" 
+          data-name="${escapeHtml(product.name)}" 
           data-presentation="${escapeHtml(product.presentation)}">
           Seleccionar
         </button>
       `;
     });
   } catch (error) {
-    console.error('Error al cargar productos:', error);
+    console.error('Error al cargar productos para el pedido:', error);
     Swal.fire({
       icon: 'error',
       title: 'Error',
-      text: 'Error al cargar productos.'
+      text: 'Error al cargar productos para el pedido: ' + error.message
     });
   }
 }
 
 /**
  * ================================
- * escapeHtml
+ * Función para escapar HTML
  * ================================
  */
 function escapeHtml(text) {
@@ -489,7 +601,7 @@ function escapeHtml(text) {
 
 /**
  * ================================
- * Filtrar productos
+ * Filtrar productos en la búsqueda
  * ================================
  */
 function filterProducts() {
@@ -498,25 +610,25 @@ function filterProducts() {
   const table = document.getElementById('productSelectionTable');
   const tr = table.getElementsByTagName('tr');
 
-  for (let i = 2; i < tr.length; i++) {
+  for (let i = 2; i < tr.length; i++) { // Iniciar desde 2 para omitir el campo de búsqueda
     const td = tr[i].getElementsByTagName('td')[0];
     if (td) {
       const txtValue = td.textContent || td.innerText;
-      tr[i].style.display = (txtValue.toLowerCase().indexOf(filter) > -1) ? '' : 'none';
+      tr[i].style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? '' : 'none';
     }
   }
 }
 
 /**
  * ================================
- * selectProductForOrder
+ * Función para seleccionar producto
  * ================================
  */
 function selectProductForOrder(event) {
-  const btn = event.target;
-  const productId = btn.getAttribute('data-id');
-  const productName = btn.getAttribute('data-name');
-  const productPresentation = btn.getAttribute('data-presentation');
+  const button = event.target;
+  const productId = button.getAttribute('data-id');
+  const productName = button.getAttribute('data-name');
+  const productPresentation = button.getAttribute('data-presentation');
 
   if (productId && productName && productPresentation) {
     document.getElementById('productNameSelected').value = productName;
@@ -531,13 +643,30 @@ function selectProductForOrder(event) {
   }
 }
 
+/**
+ * ================================
+ * Función para mostrar modal
+ * de selección de producto
+ * ================================
+ */
+function showProductSelectionModal() {
+  loadNewOrderProducts();
+  document.getElementById('productSelectionModal').style.display = 'block';
+}
+
+/**
+ * ================================
+ * Función para cerrar modal
+ * de selección de producto
+ * ================================
+ */
 function closeProductSelectionModal() {
   document.getElementById('productSelectionModal').style.display = 'none';
 }
 
 /**
  * ================================
- * Añadir producto
+ * Añadir producto al nuevo pedido
  * ================================
  */
 function addProductToNewOrder() {
@@ -548,20 +677,27 @@ function addProductToNewOrder() {
   const stockValue = document.getElementById('productStock').value;
 
   if (productName && productPresentation && quantity && (stockNA || stockValue)) {
-    const newOrderTableBody = document.getElementById('newOrderTable')
+    const newOrderTableBody = document
+      .getElementById('newOrderTable')
       .getElementsByTagName('tbody')[0];
     const row = newOrderTableBody.insertRow();
 
-    row.insertCell(0).textContent = productName;
-    row.insertCell(1).textContent = productPresentation;
-    row.insertCell(2).textContent = quantity;
-    row.insertCell(3).textContent = stockNA ? 'N/A' : stockValue;
-    row.insertCell(4).innerHTML = `
+    const cell1 = row.insertCell(0);
+    const cell2 = row.insertCell(1);
+    const cell3 = row.insertCell(2);
+    const cell4 = row.insertCell(3);
+    const cell5 = row.insertCell(4);
+
+    cell1.textContent = productName;
+    cell2.textContent = productPresentation;
+    cell3.textContent = quantity;
+    cell4.textContent = stockNA ? 'N/A' : stockValue;
+    cell5.innerHTML = `
       <button onclick="editNewOrderProduct(this)">Editar</button>
       <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
     `;
 
-    // Limpiar
+    // Limpiar campos
     document.getElementById('productNameSelected').value = '';
     document.getElementById('productPresentationSelected').value = '';
     document.getElementById('productQuantity').value = '';
@@ -569,7 +705,7 @@ function addProductToNewOrder() {
     document.getElementById('stockNA').checked = false;
     document.getElementById('productStock').disabled = false;
 
-    // Bloquear proveedor
+    // Bloquear el selector de proveedor después de agregar el primer producto
     document.getElementById('newOrderProviderSelect').disabled = true;
   } else {
     Swal.fire({
@@ -582,23 +718,30 @@ function addProductToNewOrder() {
 
 /**
  * ================================
- * Editar / Eliminar producto
+ * Editar producto en la tabla
  * ================================
  */
 function editNewOrderProduct(button) {
   const row = button.parentNode.parentNode;
   const cells = row.getElementsByTagName('td');
 
+  // Cantidad
   const newQuantity = prompt('Nueva cantidad:', cells[2].textContent);
-  if (newQuantity === null) return;
+  if (newQuantity === null) return; 
   if (newQuantity.trim() === '' || isNaN(newQuantity) || Number(newQuantity) <= 0) {
-    Swal.fire({ icon: 'warning', title: 'Valor Inválido', text: 'Cantidad inválida.' });
+    Swal.fire({
+      icon: 'warning',
+      title: 'Valor Inválido',
+      text: 'La cantidad debe ser un número positivo.'
+    });
     return;
   }
   cells[2].textContent = newQuantity;
 
+  // Stock
   const currentStock = cells[3].textContent;
   if (currentStock === 'N/A') {
+    // Preguntar si lo mantiene N/A
     const confirmNA = confirm('¿Deseas mantener el stock como "N/A"?');
     if (confirmNA) {
       cells[3].textContent = 'N/A';
@@ -620,34 +763,50 @@ function editNewOrderProduct(button) {
   }
 }
 
+/**
+ * ================================
+ * Eliminar producto del pedido
+ * ================================
+ */
 function deleteNewOrderProduct(button) {
   const row = button.parentNode.parentNode;
   row.parentNode.removeChild(row);
 
-  const tbody = document.getElementById('newOrderTable').getElementsByTagName('tbody')[0];
-  if (tbody.rows.length === 0) {
+  // Si no hay más productos, desbloquear el proveedor
+  const newOrderTableBody = document
+    .getElementById('newOrderTable')
+    .getElementsByTagName('tbody')[0];
+  if (newOrderTableBody.rows.length === 0) {
     document.getElementById('newOrderProviderSelect').disabled = false;
   }
 }
 
 /**
  * ================================
- * Guardar el pedido (nuevo/editar)
+ * Guardar el nuevo pedido con opciones
  * ================================
  */
 async function saveNewOrder() {
-  const providerSelect = document.getElementById('newOrderProviderSelect');
-  const providerId = providerSelect.value;
-  const providerName = providerSelect.options[providerSelect.selectedIndex]?.text || '';
-
-  const sucursalId = userSucursalId;
-  const sucursalName = userSucursalName;
-
+  const providerId = document.getElementById('newOrderProviderSelect').value;
+  const providerName =
+    document.getElementById('newOrderProviderSelect').options[
+      document.getElementById('newOrderProviderSelect').selectedIndex
+    ]?.text || '';
+  
+  const sucursalId = document.getElementById('newOrderSucursalSelect').value;
+  const sucursalName =
+    document.getElementById('newOrderSucursalSelect').options[
+      document.getElementById('newOrderSucursalSelect').selectedIndex
+    ]?.text || '';
+  
   const orderDate = document.getElementById('orderDate').value;
   const orderId = document.getElementById('orderId').value;
 
-  const tableBody = document.getElementById('newOrderTable').getElementsByTagName('tbody')[0];
-  const rows = tableBody.getElementsByTagName('tr');
+  const newOrderTableBody = document
+    .getElementById('newOrderTable')
+    .getElementsByTagName('tbody')[0];
+  const rows = newOrderTableBody.getElementsByTagName('tr');
+
   const products = [];
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i].getElementsByTagName('td');
@@ -659,36 +818,16 @@ async function saveNewOrder() {
     });
   }
 
-  if (!providerId) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Advertencia',
-      text: 'Debe seleccionar un proveedor.'
-    });
-    return;
-  }
-  if (!orderId) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Advertencia',
-      text: 'No se ha generado un ID de pedido.'
-    });
-    return;
-  }
   if (products.length === 0) {
     Swal.fire({
       icon: 'warning',
       title: 'Advertencia',
-      text: 'No hay productos en el pedido.'
+      text: 'No hay productos en el pedido'
     });
     return;
   }
 
-  let docRef = null;
-  if (currentOrderId) {
-    docRef = db.collection('orders').doc(currentOrderId);
-  }
-
+  // Mostrar opciones Guardar, Preguardar, Cancelar
   Swal.fire({
     title: 'Guardar Pedido',
     text: '¿Cómo deseas guardar tu pedido?',
@@ -701,22 +840,22 @@ async function saveNewOrder() {
     reverseButtons: true
   }).then(async (result) => {
     if (result.isConfirmed) {
+      // Opción Guardar
       try {
-        if (docRef) {
-          // Editando
-          await docRef.update({
+        if (currentOrderId) {
+          // Si existe un pedido actual (preguardado), actualizarlo y cambiar estado a 'pending'
+          await db.collection('orders').doc(currentOrderId).update({
             providerId,
             providerName,
             sucursalId,
             sucursalName,
             orderDate,
-            orderId,
             products,
             status: 'pending',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
           });
         } else {
-          // Nuevo
+          // Nuevo pedido
           await db.collection('orders').add({
             providerId,
             providerName,
@@ -730,7 +869,7 @@ async function saveNewOrder() {
           });
         }
 
-        // Mostrar confirm + opciones de exportar
+        // Mostrar alerta de confirmación con opciones para compartir
         showOrderConfirmationModal({
           orderId,
           providerName,
@@ -739,10 +878,14 @@ async function saveNewOrder() {
           products
         });
 
+        // Resetear formulario
         closeOrderCreationContainer();
+        if (document.getElementById('pendingOrdersAdminCards')) {
+          loadPendingOrdersAdmin();
+        }
 
       } catch (error) {
-        console.error('Error al guardar pedido:', error);
+        console.error('Error al guardar el pedido:', error);
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -750,21 +893,22 @@ async function saveNewOrder() {
         });
       }
     } else if (result.isDenied) {
-      // Preguardar
+      // Opción Preguardar
       try {
-        if (docRef) {
-          await docRef.update({
+        if (currentOrderId) {
+          // Actualizar pedido existente y mantener estado como 'preSaved'
+          await db.collection('orders').doc(currentOrderId).update({
             providerId,
             providerName,
             sucursalId,
             sucursalName,
             orderDate,
-            orderId,
             products,
             status: 'preSaved',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
           });
         } else {
+          // Crear nuevo pedido con estado 'preSaved'
           await db.collection('orders').add({
             providerId,
             providerName,
@@ -781,12 +925,17 @@ async function saveNewOrder() {
         Swal.fire({
           icon: 'success',
           title: 'Pedido Preguardado',
-          text: 'El pedido se preguardó exitosamente.'
+          text: 'El pedido ha sido preguardado exitosamente.'
         });
 
+        // Resetear formulario
         closeOrderCreationContainer();
+        if (document.getElementById('preSavedOrdersContainer').style.display === 'block') {
+          loadPreSavedOrders();
+        }
+
       } catch (error) {
-        console.error('Error al preguardar pedido:', error);
+        console.error('Error al preguardar el pedido:', error);
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -794,10 +943,11 @@ async function saveNewOrder() {
         });
       }
     } else {
+      // Opción Cancelar
       Swal.fire({
         icon: 'info',
         title: 'Operación Cancelada',
-        text: 'Puedes seguir editando tu pedido.'
+        text: 'Puedes seguir agregando productos a tu pedido.'
       });
     }
   });
@@ -810,22 +960,24 @@ async function saveNewOrder() {
  */
 function closeOrderCreationContainer() {
   document.getElementById('orderCreationContainer').style.display = 'none';
+  document.getElementById('ordersContainer').style.display = 'block';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
-  document.getElementById('newOrderProviderSelect').disabled = false;
 
-  editingExistingOrder = false;
-  currentOrderId = null;
+  // Desbloquear el selector de proveedor y limpiar la tabla
+  document.getElementById('newOrderProviderSelect').disabled = false;
   document.getElementById('newOrderTable').getElementsByTagName('tbody')[0].innerHTML = '';
 }
 
 /**
  * ================================
- * Mostrar confirmación y exportar
+ * Mostrar la alerta de confirmación
+ * usando SweetAlert2
  * ================================
  */
 function showOrderConfirmationModal(orderDetails) {
+  // Construir la tabla HTML de productos
   let productsRows = '';
-  orderDetails.products.forEach(product => {
+  orderDetails.products.forEach((product) => {
     productsRows += `
       <tr>
         <td>${escapeHtml(product.name)}</td>
@@ -841,10 +993,8 @@ function showOrderConfirmationModal(orderDetails) {
       <h2>Pedido Confirmado</h2>
     </div>
     <div style="text-align: left;">
-      <p><strong>ID Pedido:</strong> 
-         <span style="font-size: 18px; font-weight: bold;">
-           ${escapeHtml(orderDetails.orderId)}
-         </span></p>
+      <p><strong>ID Pedido:</strong> <span style="font-size: 18px; font-weight: bold;">
+        ${escapeHtml(orderDetails.orderId)}</span></p>
       <p><strong>Proveedor:</strong> ${escapeHtml(orderDetails.providerName)}</p>
       <p><strong>Sucursal:</strong> ${escapeHtml(orderDetails.sucursalName)}</p>
       <p><strong>Fecha de Pedido:</strong> ${escapeHtml(orderDetails.orderDate)}</p>
@@ -872,6 +1022,7 @@ function showOrderConfirmationModal(orderDetails) {
     preConfirm: () => 'compartir'
   }).then((result) => {
     if (result.isConfirmed) {
+      // Mostrar opciones para compartir: Exportar como Imagen o PDF
       Swal.fire({
         title: 'Compartir Pedido',
         text: '¿Cómo deseas compartir tu pedido?',
@@ -881,10 +1032,10 @@ function showOrderConfirmationModal(orderDetails) {
         confirmButtonText: 'Exportar como Imagen',
         denyButtonText: `Exportar como PDF`,
         cancelButtonText: 'Cancelar'
-      }).then((res2) => {
-        if (res2.isConfirmed) {
+      }).then((result2) => {
+        if (result2.isConfirmed) {
           exportOrderAsImage(orderDetails);
-        } else if (res2.isDenied) {
+        } else if (result2.isDenied) {
           exportOrderAsPDF(orderDetails);
         }
       });
@@ -898,19 +1049,26 @@ function showOrderConfirmationModal(orderDetails) {
  * ================================
  */
 function exportOrderAsImage(orderDetails) {
+  // Llenar contenedor oculto
   document.getElementById('imgOrderId').textContent = orderDetails.orderId;
   document.getElementById('imgProviderName').textContent = orderDetails.providerName;
   document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
   document.getElementById('imgOrderDate').textContent = orderDetails.orderDate;
 
+  // Limpiar tabla de productos en el contenedor
   const imgProductsTableBody = document.getElementById('imgProductsTableBody');
   imgProductsTableBody.innerHTML = '';
+
   orderDetails.products.forEach(product => {
     const row = imgProductsTableBody.insertRow();
-    row.insertCell(0).textContent = product.name;
-    row.insertCell(1).textContent = product.presentation;
-    row.insertCell(2).textContent = product.quantity;
-    row.insertCell(3).textContent = product.stock;
+    const cell1 = row.insertCell(0);
+    const cell2 = row.insertCell(1);
+    const cell3 = row.insertCell(2);
+    const cell4 = row.insertCell(3);
+    cell1.textContent = product.name;
+    cell2.textContent = product.presentation;
+    cell3.textContent = product.quantity;
+    cell4.textContent = product.stock;
   });
 
   const orderDetailsElement = document.getElementById('orderDetailsForImage');
@@ -920,7 +1078,7 @@ function exportOrderAsImage(orderDetails) {
 
   html2canvas(orderDetailsElement, { scale: 2 })
     .then(canvas => {
-      canvas.toBlob(blob => {
+      canvas.toBlob((blob) => {
         if (blob) {
           const imgData = URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -933,7 +1091,7 @@ function exportOrderAsImage(orderDetails) {
           Swal.fire({
             icon: 'success',
             title: 'Imagen Exportada',
-            text: 'El pedido se exportó como imagen exitosamente.'
+            text: 'El pedido ha sido exportado como imagen exitosamente.'
           });
         } else {
           Swal.fire({
@@ -948,11 +1106,11 @@ function exportOrderAsImage(orderDetails) {
       orderDetailsElement.style.left = '-9999px';
     })
     .catch(error => {
-      console.error('Error al exportar imagen:', error);
+      console.error('Error al exportar la imagen:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'No se pudo exportar el pedido como imagen.'
+        text: 'Error al exportar la imagen del pedido.'
       });
       orderDetailsElement.style.display = 'none';
       orderDetailsElement.style.left = '-9999px';
@@ -965,6 +1123,7 @@ function exportOrderAsImage(orderDetails) {
  * ================================
  */
 function exportOrderAsPDF(orderDetails) {
+  // Rellenar contenedor oculto
   document.getElementById('imgOrderId').textContent = orderDetails.orderId;
   document.getElementById('imgProviderName').textContent = orderDetails.providerName;
   document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
@@ -972,6 +1131,7 @@ function exportOrderAsPDF(orderDetails) {
 
   const imgProductsTableBody = document.getElementById('imgProductsTableBody');
   imgProductsTableBody.innerHTML = '';
+
   orderDetails.products.forEach(product => {
     const row = imgProductsTableBody.insertRow();
     row.insertCell(0).textContent = product.name;
@@ -987,14 +1147,18 @@ function exportOrderAsPDF(orderDetails) {
 
   html2canvas(orderDetailsElement, { scale: 2 })
     .then(canvas => {
-      canvas.toBlob(blob => {
+      canvas.toBlob((blob) => {
         if (blob) {
           const imgData = URL.createObjectURL(blob);
 
+          // Crear pdf
           const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'px',
-            format: [orderDetailsElement.offsetWidth, orderDetailsElement.offsetHeight]
+            format: [
+              orderDetailsElement.offsetWidth,
+              orderDetailsElement.offsetHeight
+            ]
           });
           pdf.addImage(
             imgData,
@@ -1004,12 +1168,14 @@ function exportOrderAsPDF(orderDetails) {
             orderDetailsElement.offsetWidth,
             orderDetailsElement.offsetHeight
           );
+
+          // Descargar
           pdf.save(`Pedido_${orderDetails.orderId}.pdf`);
 
           Swal.fire({
             icon: 'success',
             title: 'PDF Exportado',
-            text: 'El pedido se exportó como PDF exitosamente.'
+            text: 'El pedido ha sido exportado como PDF exitosamente.'
           });
         } else {
           Swal.fire({
@@ -1024,11 +1190,11 @@ function exportOrderAsPDF(orderDetails) {
       orderDetailsElement.style.left = '-9999px';
     })
     .catch(error => {
-      console.error('Error al exportar PDF:', error);
+      console.error('Error al exportar el PDF:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'No se pudo exportar el pedido como PDF.'
+        text: 'Error al exportar el PDF del pedido.'
       });
       orderDetailsElement.style.display = 'none';
       orderDetailsElement.style.left = '-9999px';
@@ -1037,218 +1203,54 @@ function exportOrderAsPDF(orderDetails) {
 
 /**
  * ================================
- * Editar Pedido
+ * Función para editar pedido (no implementado)
  * ================================
  */
-async function editOrder(orderId) {
+function editOrder(orderId) {
+  Swal.fire({
+    icon: 'info',
+    title: 'Funcionalidad No Implementada',
+    text: 'La funcionalidad de editar pedidos aún no está implementada.'
+  });
+}
+
+/**
+ * ================================
+ * Función para mostrar la lista de pedidos
+ * ================================
+ */
+function showOrders() {
+  // Muestra la sección principal de “Pedidos”
+  document.getElementById('ordersContainer').style.display = 'block';
+  document.getElementById('orderCreationContainer').style.display = 'none';
+  document.getElementById('preSavedOrdersContainer').style.display = 'none';
+}
+
+/**
+ * ================================
+ * Cargar lista de sucursales (Admin)
+ * ================================
+ */
+async function cargarSucursalesSelectParaAdmin() {
   try {
-    const docSnap = await db.collection('orders').doc(orderId).get();
-    if (!docSnap.exists) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'No se encontró el pedido a editar.'
-      });
-      return;
-    }
-    const orderData = docSnap.data();
-    editingExistingOrder = true;
-    currentOrderId = orderId;
-
-    document.getElementById('preSavedOrdersContainer').style.display = 'none';
-    document.getElementById('orderCreationContainer').style.display = 'block';
-
-    // Asignar sucursal + bloquear
+    const sucursalesSnap = await db.collection('sucursales').get();
     const selectSucursal = document.getElementById('newOrderSucursalSelect');
-    selectSucursal.innerHTML = '';
-    const option = document.createElement('option');
-    option.value = userSucursalId;
-    option.textContent = userSucursalName;
-    selectSucursal.appendChild(option);
-    selectSucursal.disabled = true;
+    selectSucursal.innerHTML = '<option value="" disabled selected>-- Selecciona una Sucursal --</option>';
 
-    // Proveedor
-    document.getElementById('newOrderProviderSelect').disabled = false;
-    document.getElementById('newOrderProviderSelect').value = orderData.providerId;
-    document.getElementById('orderDate').value = orderData.orderDate;
-    document.getElementById('orderId').value = orderData.orderId;
-
-    if (userRole !== 'administrador') {
-      document.getElementById('orderDate').disabled = true;
-    }
-
-    const tableBody = document.getElementById('newOrderTable')
-      .getElementsByTagName('tbody')[0];
-    tableBody.innerHTML = '';
-
-    // Cargar productos
-    orderData.products.forEach(prod => {
-      const row = tableBody.insertRow();
-      row.insertCell(0).textContent = prod.name;
-      row.insertCell(1).textContent = prod.presentation;
-      row.insertCell(2).textContent = prod.quantity;
-      row.insertCell(3).textContent = prod.stock;
-      row.insertCell(4).innerHTML = `
-        <button onclick="editNewOrderProduct(this)">Editar</button>
-        <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
-      `;
+    sucursalesSnap.forEach(doc => {
+      const data = doc.data();
+      const option = document.createElement('option');
+      option.value = doc.id;         
+      option.textContent = data.name;
+      selectSucursal.appendChild(option);
     });
-
-    if (orderData.products.length > 0) {
-      document.getElementById('newOrderProviderSelect').disabled = true;
-    }
-
-    loadNewOrderProviders();
 
   } catch (error) {
     Swal.fire({
       icon: 'error',
-      title: 'Error',
-      text: 'Error al editar pedido: ' + error.message
+      title: 'Error al cargar sucursales',
+      text: error.message,
+      confirmButtonText: 'Ok'
     });
-  }
-}
-
-/**
- * ================================
- * Mostrar Pedido Completado
- * ================================
- */
-async function showReceivedOrder(orderId) {
-  try {
-    const docRef = await db.collection('orders').doc(orderId).get();
-    if (!docRef.exists) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'No se encontró el pedido.' });
-      return;
-    }
-    const order = docRef.data();
-    const modal = document.getElementById('receivedOrderModal');
-    const container = document.getElementById('receivedOrderDetails');
-
-    let html = `
-      <p><strong>ID Pedido:</strong> ${order.orderId}</p>
-      <p><strong>Proveedor:</strong> ${order.providerName}</p>
-      <p><strong>Sucursal:</strong> ${order.sucursalName}</p>
-      <p><strong>Fecha:</strong> ${order.orderDate}</p>
-    `;
-
-    if (order.status !== 'completed') {
-      html += `<p style="color:red;"><strong>Atención:</strong> Este pedido aún no está completado.</p>`;
-    }
-
-    html += `
-      <table border="1" style="width:100%; border-collapse: collapse; margin-top: 10px;">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Presentación</th>
-            <th>Cantidad</th>
-            <th>Stock</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    order.products.forEach(prod => {
-      html += `
-        <tr>
-          <td>${prod.name}</td>
-          <td>${prod.presentation}</td>
-          <td>${prod.quantity}</td>
-          <td>${prod.stock}</td>
-        </tr>
-      `;
-    });
-    html += `</tbody></table>`;
-
-    container.innerHTML = html;
-    modal.style.display = 'block';
-
-    modal.dataset.exportOrderId = orderId;
-
-  } catch (error) {
-    Swal.fire({ icon: 'error', title: 'Error', text: error.message });
-  }
-}
-
-function closeReceivedOrderModal() {
-  document.getElementById('receivedOrderDetails').innerHTML = '';
-  document.getElementById('receivedOrderModal').style.display = 'none';
-}
-
-/**
- * ================================
- * Exportar Pedido Recibido como Imagen
- * ================================
- */
-async function exportReceivedOrderAsImage() {
-  try {
-    const modal = document.getElementById('receivedOrderModal');
-    const orderId = modal.dataset.exportOrderId;
-    if (!orderId) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'No se identificó el pedido.' });
-      return;
-    }
-
-    // Obtener datos
-    const docRef = await db.collection('orders').doc(orderId).get();
-    if (!docRef.exists) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'No se encontró el pedido a exportar.' });
-      return;
-    }
-    const order = docRef.data();
-
-    document.getElementById('imgOrderId').textContent = order.orderId;
-    document.getElementById('imgProviderName').textContent = order.providerName;
-    document.getElementById('imgSucursalName').textContent = order.sucursalName;
-    document.getElementById('imgOrderDate').textContent = order.orderDate;
-
-    const imgProductsTableBody = document.getElementById('imgProductsTableBody');
-    imgProductsTableBody.innerHTML = '';
-    order.products.forEach(prod => {
-      const row = imgProductsTableBody.insertRow();
-      row.insertCell(0).textContent = prod.name;
-      row.insertCell(1).textContent = prod.presentation;
-      row.insertCell(2).textContent = prod.quantity;
-      row.insertCell(3).textContent = prod.stock;
-    });
-
-    const hiddenContainer = document.getElementById('orderDetailsForImage');
-    hiddenContainer.style.display = 'block';
-    hiddenContainer.style.left = '50%';
-    hiddenContainer.style.transform = 'translateX(-50%)';
-
-    const canvas = await html2canvas(hiddenContainer, { scale: 2 });
-    canvas.toBlob(blob => {
-      if (blob) {
-        const imgData = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = imgData;
-        link.download = `PedidoRecibido_${order.orderId}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        Swal.fire({
-          icon: 'success',
-          title: 'Imagen Exportada',
-          text: 'El pedido recibido se exportó como imagen exitosamente.'
-        });
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'No se pudo generar la imagen del pedido recibido.'
-        });
-      }
-
-      hiddenContainer.style.display = 'none';
-      hiddenContainer.style.left = '-9999px';
-      hiddenContainer.style.transform = 'none';
-    }, 'image/jpeg', 0.95);
-
-  } catch (err) {
-    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo exportar el pedido recibido.' });
-    console.error(err);
   }
 }

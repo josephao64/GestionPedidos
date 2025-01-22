@@ -1,47 +1,65 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Realizar Pedido</title>
-
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-
+  
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+  
   <!-- html2canvas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
+  
   <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+  
   <!-- Tus estilos -->
-  <link rel="stylesheet" href="styles.css" />
-
+  <link rel="stylesheet" href="styles.css">
+  
   <!-- Tu archivo JS con la lógica -->
   <script defer src="app.js"></script>
 </head>
 <body>
 
   <!-- Barra de botones principales -->
-  <div class="buttons" style="margin: 1rem;">
-    <!-- Botón para Gestión de Pedidos (que creará directo un nuevo pedido) -->
-    <button onclick="handleGestionPedidos()">Gestión de Pedidos</button>
+  <div class="buttons">
+    <button onclick="showOrders()">Gestión de Pedidos</button>
+    <button onclick="showPreSavedOrders()">Pedidos Preguardados</button> <!-- Nuevo Botón -->
+    <button class="right" onclick="window.location.href='index.html'">Volver a Principal</button>
+  </div>
 
-    <!-- Botón para ver Pedidos Preguardados -->
-    <button onclick="showPreSavedOrders()">Pedidos Preguardados</button>
+  <!-- Contenedor de pestañas (si lo necesitas para organizar tu contenido) -->
+  <div class="tab-container" id="tabContainer">
+    <!-- Botón para mostrar la sección de pedidos -->
+    <button class="tab-button active" onclick="openTab(event, 'ordersContainer')">Pedidos</button>
+    <button class="tab-button" onclick="openTab(event, 'preSavedOrdersContainer')">Pedidos Preguardados</button> <!-- Nueva Pestaña -->
+  </div>
 
-    <!-- Botón para volver a Principal -->
-    <button class="right" onclick="window.location.href='index.html'">
-      Volver a Principal
-    </button>
+  <!-- Contenedor principal de pedidos -->
+  <div id="ordersContainer" class="container">
+    <!-- Botón para crear un nuevo pedido -->
+    <button onclick="showOrderCreationContainer()">Nuevo Pedido</button>
+
+    <!-- Tabla para listar todos los pedidos -->
+    <table id="ordersTable">
+      <thead>
+        <tr>
+          <th>Proveedor</th>
+          <th>Sucursal</th>
+          <th>Productos</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <!-- Contenedor para Pedidos Preguardados -->
-  <div id="preSavedOrdersContainer" class="container" style="display: none;">
+  <div id="preSavedOrdersContainer" class="container" style="display:none;">
     <h2>Pedidos Preguardados</h2>
     <table id="preSavedOrdersTable">
       <thead>
@@ -57,8 +75,18 @@
     </table>
   </div>
 
-  <!-- Contenedor del formulario de creación/edición de pedido (inicialmente oculto) -->
-  <div id="orderCreationContainer" class="container" style="display: none;">
+  <!-- Contenedor para mostrar tarjetas de pedidos pendientes (solo admin) -->
+  <div id="pendingOrdersAdminCards" class="container">
+    <!-- Aquí el JS insertará las tarjetas de pedidos pendientes -->
+  </div>
+  
+  <!-- Contenedor para mostrar tarjetas de pedidos en proceso (solo admin) -->
+  <div id="inProcessOrdersAdminCards" class="container">
+    <!-- Aquí el JS insertará las tarjetas de pedidos en proceso -->
+  </div>
+
+  <!-- Contenedor del formulario de creación de pedido (inicialmente oculto) -->
+  <div id="orderCreationContainer" class="container" style="display:none;">
     
     <!-- Formulario de datos generales del pedido -->
     <div class="order-form">
@@ -68,15 +96,18 @@
       </div>
       <div class="form-group">
         <label for="newOrderSucursalSelect">Seleccione Sucursal</label>
+        <!-- Este select se llena dinámicamente: 
+             - Si es admin: todas las sucursales
+             - Si es usuario normal: su sucursal fija -->
         <select id="newOrderSucursalSelect"></select>
       </div>
       <div class="form-group">
         <label for="orderDate">Fecha de Pedido</label>
-        <input type="date" id="orderDate" />
+        <input type="date" id="orderDate">
       </div>
       <div class="form-group">
         <label for="orderId">ID Pedido</label>
-        <input type="text" id="orderId" placeholder="ID Pedido" readonly />
+        <input type="text" id="orderId" placeholder="ID Pedido" readonly>
       </div>
     </div>
 
@@ -84,28 +115,30 @@
     <div class="product-form-and-table">
       <div class="product-form-container">
         <div class="product-form-group">
+          <!-- Botón para abrir el modal de selección de producto -->
           <button onclick="showProductSelectionModal()">Seleccionar Producto</button>
         </div>
         <div class="product-form-group">
           <label for="productNameSelected">Producto</label>
-          <input type="text" id="productNameSelected" placeholder="Producto" readonly />
+          <input type="text" id="productNameSelected" placeholder="Producto" readonly>
         </div>
         <div class="product-form-group">
           <label for="productPresentationSelected">Presentación</label>
-          <input type="text" id="productPresentationSelected" placeholder="Presentación" readonly />
+          <input type="text" id="productPresentationSelected" placeholder="Presentación" readonly>
         </div>
         <div class="product-form-group">
           <label for="productQuantity">Cantidad Pedido</label>
-          <input type="number" id="productQuantity" placeholder="Cantidad Pedido" />
+          <input type="number" id="productQuantity" placeholder="Cantidad Pedido">
         </div>
         <div class="product-form-group">
           <label for="productStock">Stock Actual</label>
-          <input type="number" id="productStock" placeholder="Stock Actual" />
+          <input type="number" id="productStock" placeholder="Stock Actual">
           <label>
-            <input type="checkbox" id="stockNA" /> N/A
+            <input type="checkbox" id="stockNA"> N/A
           </label>
         </div>
         <div class="product-form-group">
+          <!-- Botón para agregar producto a la tabla -->
           <button onclick="addProductToNewOrder()">Agregar</button>
         </div>
       </div>
@@ -126,10 +159,8 @@
       </div>
     </div>
 
-    <!-- Botón para guardar/actualizar el pedido -->
-    <button class="save-order-button" onclick="saveNewOrder()">
-      Guardar Pedido
-    </button>
+    <!-- Botón para guardar el pedido -->
+    <button class="save-order-button" onclick="saveNewOrder()">Guardar Pedido</button>
   </div>
 
   <!-- Modal para la selección de productos -->
@@ -151,7 +182,7 @@
                 id="productSearch" 
                 onkeyup="filterProducts()" 
                 placeholder="Buscar Producto..."
-              />
+              >
             </th>
             <th></th>
             <th></th>
@@ -187,17 +218,6 @@
     </div>
     <div class="ticket-footer">
       <p>Gracias por su pedido.</p>
-    </div>
-  </div>
-
-  <!-- Modal para mostrar pedido completado/recibido -->
-  <div id="receivedOrderModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
-      <h2>Pedido Completado / Recibido</h2>
-      <div id="receivedOrderDetails"></div>
-      <!-- Botón para exportar como Imagen -->
-      <button onclick="exportReceivedOrderAsImage()">Exportar como Imagen</button>
     </div>
   </div>
 
