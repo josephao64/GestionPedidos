@@ -106,6 +106,88 @@ th {
   background-color: #f2f2f2;
 }
 
+/* 1. Estilo para el Botón "Seleccionar Producto" */
+#selectProductButton {
+  background-color: #007BFF; /* Azul vibrante */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  transition: background-color 0.3s ease;
+}
+
+#selectProductButton:hover {
+  background-color: #0056b3; /* Azul oscuro al pasar el cursor */
+}
+
+/* 2. Estilo para el Botón "Agregar" */
+.product-form-group button[onclick="addProductToNewOrder()"] {
+  background-color: #28a745; /* Verde */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  transition: background-color 0.3s ease;
+}
+
+.product-form-group button[onclick="addProductToNewOrder()"]:hover {
+  background-color: #218838; /* Verde oscuro al pasar el cursor */
+}
+
+/* 3. Estilo para el Botón "Guardar Pedido" */
+.save-order-button {
+  display: block;
+  margin-top: 20px;
+  margin-left: auto; /* Alinea el botón a la derecha */
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: #28a745; /* Verde */
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.save-order-button:hover {
+  background-color: #218838; /* Verde oscuro al pasar el cursor */
+}
+
+/* 4. Centrando las Columnas Específicas en las Tablas */
+
+/* Para la tabla de nuevos pedidos */
+#newOrderTable th:nth-child(1),
+#newOrderTable td:nth-child(1),
+#newOrderTable th:nth-child(2),
+#newOrderTable td:nth-child(2),
+#newOrderTable th:nth-child(3),
+#newOrderTable td:nth-child(3),
+#newOrderTable th:nth-child(4),
+#newOrderTable td:nth-child(4) {
+  text-align: center;
+}
+
+/* Para la tabla de pedidos preguardados */
+#preSavedOrdersTable th:nth-child(1),
+#preSavedOrdersTable td:nth-child(1),
+#preSavedOrdersTable th:nth-child(2),
+#preSavedOrdersTable td:nth-child(2),
+#preSavedOrdersTable th:nth-child(3),
+#preSavedOrdersTable td:nth-child(3),
+#preSavedOrdersTable th:nth-child(4),
+#preSavedOrdersTable td:nth-child(4),
+#preSavedOrdersTable th:nth-child(5),
+#preSavedOrdersTable td:nth-child(5) {
+  text-align: center;
+}
+
+/* Mantener el alineamiento de las acciones (botones) al centro */
+#newOrderTable th:nth-child(4),
+#newOrderTable td:nth-child(4),
+#preSavedOrdersTable th:nth-child(5),
+#preSavedOrdersTable td:nth-child(5) {
+  text-align: center;
+}
+
 /* Estilos para Botones */
 .buttons {
   margin-bottom: 20px;
@@ -123,6 +205,7 @@ th {
   border-radius: 5px;
   background-color: #007BFF;
   color: white;
+  transition: background-color 0.3s ease;
 }
 
 .buttons button.right {
@@ -204,16 +287,18 @@ th {
 .save-order-button {
   display: block;
   margin-top: 20px;
+  margin-left: auto; /* Alinea el botón a la derecha */
   padding: 10px 20px;
   border: none;
   border-radius: 5px;
-  background-color: #28a745;
+  background-color: #28a745; /* Verde */
   color: white;
   cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .save-order-button:hover {
-  background-color: #218838;
+  background-color: #218838; /* Verde oscuro al pasar el cursor */
 }
 
 /* Estilos para Pestañas */
@@ -346,18 +431,6 @@ th {
 .ticket .products-table td {
   text-align: left; /* Mantiene alineación a la izquierda para datos */
   word-wrap: break-word;
-}
-
-/* Estilos Comunes para todas las tablas de productos */
-.products-table th, .products-table td {
-  border: 1px solid #ddd;
-  padding: 6px;
-  font-size: 14px;
-}
-
-.products-table th {
-  background-color: #f9f9f9;
-  text-align: left; /* Alineación predeterminada, ajustada previamente */
 }
 
 .ticket-footer {

@@ -35,32 +35,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Si el usuario es administrador, cargar pedidos pendientes y en proceso
   if (userRole === 'administrador') {
-    loadPendingOrdersAdmin();
-    loadInProcessOrdersAdmin();
-  }
-
-  // Manejo del checkbox 'N/A' para stock
-  const stockNA = document.getElementById('stockNA');
-  const stockInput = document.getElementById('productStock');
-  if (stockNA && stockInput) {
-    stockNA.addEventListener('change', function () {
-      if (this.checked) {
-        stockInput.value = 'N/A';
-        stockInput.disabled = true;
-      } else {
-        stockInput.value = '';
-        stockInput.disabled = false;
-      }
-    });
+    // loadPendingOrdersAdmin(); // Eliminado
+    // loadInProcessOrdersAdmin(); // Eliminado
   }
 
   // Inicialmente, solo se muestran los botones principales
   // Las secciones están ocultas hasta que se presione un botón
-  document.getElementById('ordersContainer').style.display = 'none';
-  document.getElementById('preSavedOrdersContainer').style.display = 'none';
-  document.getElementById('pendingOrdersAdminCards').style.display = 'none';
-  document.getElementById('inProcessOrdersAdminCards').style.display = 'none';
   document.getElementById('orderCreationContainer').style.display = 'none';
+  document.getElementById('preSavedOrdersContainer').style.display = 'none';
+
+  // Ya no se necesita manejar el estado del botón "Seleccionar Producto" aquí
+  // porque ahora siempre estará habilitado y se verificará al hacer clic
 });
 
 /**
@@ -150,140 +135,6 @@ async function obtenerSucursalDelUsuario() {
 
 /**
  * ================================
- * Funciones para cargar Pedidos (Admin)
- * ================================
- */
-
-// Cargar pedidos pendientes
-async function loadPendingOrdersAdmin() {
-  try {
-    const ordersSnapshot = await db
-      .collection('orders')
-      .where('status', '==', 'pending')
-      .get();
-
-    const pendingOrdersAdminCards = document.getElementById('pendingOrdersAdminCards');
-    if (!pendingOrdersAdminCards) return; // Si no existe en tu HTML, salir
-
-    pendingOrdersAdminCards.innerHTML = '';
-
-    ordersSnapshot.forEach(doc => {
-      const order = doc.data();
-      const card = createOrderCard(doc.id, order);
-      pendingOrdersAdminCards.appendChild(card);
-    });
-
-    // Mostrar el contenedor solo si hay pedidos pendientes
-    if (ordersSnapshot.empty) {
-      pendingOrdersAdminCards.style.display = 'none';
-    } else {
-      pendingOrdersAdminCards.style.display = 'block';
-    }
-
-  } catch (error) {
-    console.error('Error al cargar pedidos pendientes:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al cargar pedidos pendientes: ' + error.message
-    });
-  }
-}
-
-// Cargar pedidos en proceso
-async function loadInProcessOrdersAdmin() {
-  try {
-    // Filtrar por varios estados
-    const ordersSnapshot = await db
-      .collection('orders')
-      .where('status', 'in', [
-        'pedidoTomado',
-        'caminoABodega',
-        'pedidoEnBodega',
-        'caminoATienda'
-      ])
-      .get();
-
-    const inProcessOrdersAdminCards = document.getElementById('inProcessOrdersAdminCards');
-    if (!inProcessOrdersAdminCards) return; // Si no existe en tu HTML, salir
-
-    inProcessOrdersAdminCards.innerHTML = '';
-
-    ordersSnapshot.forEach(doc => {
-      const order = doc.data();
-      const card = createOrderCard(doc.id, order);
-      inProcessOrdersAdminCards.appendChild(card);
-    });
-
-    // Mostrar el contenedor solo si hay pedidos en proceso
-    if (ordersSnapshot.empty) {
-      inProcessOrdersAdminCards.style.display = 'none';
-    } else {
-      inProcessOrdersAdminCards.style.display = 'block';
-    }
-
-  } catch (error) {
-    console.error('Error al cargar pedidos en proceso:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al cargar pedidos en proceso: ' + error.message
-    });
-  }
-}
-
-/**
- * ================================
- * Función para crear tarjeta de pedido
- * ================================
- */
-function createOrderCard(orderId, order) {
-  const card = document.createElement('div');
-  card.className = 'order-card';
-  card.innerHTML = `
-    <h3>Pedido ID: ${order.orderId}</h3>
-    <p>Proveedor: ${order.providerName}</p>
-    <p>Sucursal: ${order.sucursalName}</p>
-    <p>Fecha: ${order.orderDate}</p>
-    ${
-      order.status === 'pending'
-        ? `<button onclick="confirmOrder('${orderId}')">Confirmar Pedido</button>`
-        : ''
-    }
-    <button onclick="editOrder('${orderId}')">Editar Pedido</button>
-  `;
-  return card;
-}
-
-/**
- * ================================
- * Función para confirmar pedido
- * Cambia el estado de 'pending' a 'pedidoTomado'
- * ================================
- */
-async function confirmOrder(orderId) {
-  try {
-    // Cambiar el estado a 'pedidoTomado'
-    await db.collection('orders').doc(orderId).update({ status: 'pedidoTomado' });
-    loadPendingOrdersAdmin();
-    loadInProcessOrdersAdmin();
-    Swal.fire({
-      icon: 'success',
-      title: 'Pedido Confirmado',
-      text: 'El pedido ha sido confirmado exitosamente.'
-    });
-  } catch (error) {
-    console.error('Error al confirmar el pedido:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al confirmar el pedido: ' + error.message
-    });
-  }
-}
-
-/**
- * ================================
  * Función para mostrar el contenedor
  * de creación de nuevo pedido
  * ================================
@@ -291,7 +142,6 @@ async function confirmOrder(orderId) {
 async function showOrderCreationContainer() {
   // Mostrar contenedor de creación
   document.getElementById('orderCreationContainer').style.display = 'block';
-  document.getElementById('ordersContainer').style.display = 'block';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
   // Cargar proveedores
@@ -321,9 +171,7 @@ async function showOrderCreationContainer() {
  */
 async function showPreSavedOrders() {
   // Ocultar otras secciones
-  document.getElementById('ordersContainer').style.display = 'none';
   document.getElementById('orderCreationContainer').style.display = 'none';
-  // Mostrar contenedor de pedidos preguardados
   document.getElementById('preSavedOrdersContainer').style.display = 'block';
 
   // Cargar pedidos preguardados
@@ -342,8 +190,21 @@ async function loadPreSavedOrders() {
       .where('status', '==', 'preSaved')
       .get();
 
-    const preSavedOrdersTableBody = document.getElementById('preSavedOrdersTable')
+    const preSavedOrdersTableBody = document
+      .getElementById('preSavedOrdersTable')
       .getElementsByTagName('tbody')[0];
+
+    // Verificar si el tbody existe
+    if (!preSavedOrdersTableBody) {
+      console.error('El elemento tbody de preSavedOrdersTable no existe.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'La tabla de pedidos preguardados no está configurada correctamente.'
+      });
+      return;
+    }
+
     preSavedOrdersTableBody.innerHTML = '';
 
     preSavedOrdersSnapshot.forEach(doc => {
@@ -369,6 +230,11 @@ async function loadPreSavedOrders() {
     // Mostrar el contenedor solo si hay pedidos preguardados
     if (preSavedOrdersSnapshot.empty) {
       document.getElementById('preSavedOrdersContainer').style.display = 'none';
+      Swal.fire({
+        icon: 'info',
+        title: 'Sin Pedidos Preguardados',
+        text: 'No hay pedidos preguardados para mostrar.'
+      });
     } else {
       document.getElementById('preSavedOrdersContainer').style.display = 'block';
     }
@@ -396,9 +262,8 @@ async function openPreSavedOrder(orderDocId) {
       currentOrderId = orderDocId; // Guardar el ID del pedido actual
 
       // Ocultar otras secciones y mostrar el formulario de creación de pedidos
-      document.getElementById('ordersContainer').style.display = 'none';
-      document.getElementById('preSavedOrdersContainer').style.display = 'none';
       document.getElementById('orderCreationContainer').style.display = 'block';
+      document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
       // Cargar datos del pedido en el formulario
       document.getElementById('newOrderProviderSelect').value = orderData.providerId;
@@ -430,13 +295,12 @@ async function openPreSavedOrder(orderDocId) {
         const cell2 = row.insertCell(1);
         const cell3 = row.insertCell(2);
         const cell4 = row.insertCell(3);
-        const cell5 = row.insertCell(4);
 
         cell1.textContent = product.name;
         cell2.textContent = product.presentation;
         cell3.textContent = product.quantity;
-        cell4.textContent = product.stock;
-        cell5.innerHTML = `
+        // cell4.textContent = product.stock; // Eliminado
+        cell4.innerHTML = `
           <button onclick="editNewOrderProduct(this)">Editar</button>
           <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
         `;
@@ -559,21 +423,18 @@ async function loadNewOrderProducts() {
     productsSnapshot.forEach((doc) => {
       const product = doc.data();
       const row = productSelectionTableBody.insertRow();
-      const cell1 = row.insertCell(0);
-      const cell2 = row.insertCell(1);
-      const cell3 = row.insertCell(2);
+      row.setAttribute('data-id', doc.id);
+      row.setAttribute('data-name', escapeHtml(product.name));
+      row.setAttribute('data-presentation', escapeHtml(product.presentation));
+      row.style.cursor = 'pointer'; // Cambia el cursor para indicar que es clickable
 
-      cell1.textContent = product.name;
-      cell2.textContent = product.presentation;
-      cell3.innerHTML = `
-        <button 
-          onclick="selectProductForOrder(event)" 
-          data-id="${doc.id}" 
-          data-name="${escapeHtml(product.name)}" 
-          data-presentation="${escapeHtml(product.presentation)}">
-          Seleccionar
-        </button>
+      row.innerHTML = `
+        <td>${escapeHtml(product.name)}</td>
+        <td>${escapeHtml(product.presentation)}</td>
       `;
+
+      // Añadir evento click para seleccionar el producto
+      row.addEventListener('click', selectProductFromRow);
     });
   } catch (error) {
     console.error('Error al cargar productos para el pedido:', error);
@@ -623,18 +484,53 @@ function filterProducts() {
 
 /**
  * ================================
- * Función para seleccionar producto
+ * Función para seleccionar producto desde la fila
  * ================================
  */
-function selectProductForOrder(event) {
-  const button = event.target;
-  const productId = button.getAttribute('data-id');
-  const productName = button.getAttribute('data-name');
-  const productPresentation = button.getAttribute('data-presentation');
+function selectProductFromRow(event) {
+  const row = event.currentTarget;
+  const productId = row.getAttribute('data-id');
+  const productName = row.getAttribute('data-name');
+  const productPresentation = row.getAttribute('data-presentation');
+
+  // Verificar si un proveedor está seleccionado
+  const providerSelect = document.getElementById('newOrderProviderSelect');
+  const selectedProvider = providerSelect.value;
+
+  if (!selectedProvider) {
+    // Si no hay proveedor seleccionado, mostrar notificación y cerrar modal
+    Swal.fire({
+      icon: 'warning',
+      title: 'Advertencia',
+      text: 'Debes seleccionar un proveedor primero.'
+    }).then(() => {
+      // Enfocar el selector de proveedor
+      providerSelect.focus();
+    });
+
+    closeProductSelectionModal();
+    return; // Salir de la función para evitar continuar
+  }
 
   if (productId && productName && productPresentation) {
+    // Asignar el nombre y presentación del producto seleccionado
     document.getElementById('productNameSelected').value = productName;
     document.getElementById('productPresentationSelected').value = productPresentation;
+    
+    // Dejar el campo de "Cantidad Pedido" vacío
+    document.getElementById('productQuantity').value = '';
+
+    // Mostrar notificación emergente utilizando SweetAlert2
+    Swal.fire({
+      icon: 'info',
+      title: 'Producto seleccionado',
+      text: 'Ingrese la cantidad de pedido.'
+    }).then(() => {
+      // Enfocar automáticamente el campo de "Cantidad Pedido" después de cerrar la notificación
+      document.getElementById('productQuantity').focus();
+    });
+
+    // Cerrar el modal de selección de productos
     closeProductSelectionModal();
   } else {
     Swal.fire({
@@ -652,6 +548,20 @@ function selectProductForOrder(event) {
  * ================================
  */
 function showProductSelectionModal() {
+  const providerSelected = document.getElementById('newOrderProviderSelect').value;
+
+  if (!providerSelected) {
+    // Si no hay proveedor seleccionado, mostrar notificación y enfocar el selector
+    Swal.fire({
+      icon: 'warning',
+      title: 'Advertencia',
+      text: 'Debes seleccionar un proveedor primero.'
+    }).then(() => {
+      document.getElementById('newOrderProviderSelect').focus();
+    });
+    return; // No abrir el modal
+  }
+
   loadNewOrderProducts();
   document.getElementById('productSelectionModal').style.display = 'block';
 }
@@ -675,10 +585,8 @@ function addProductToNewOrder() {
   const productName = document.getElementById('productNameSelected').value;
   const productPresentation = document.getElementById('productPresentationSelected').value;
   const quantity = document.getElementById('productQuantity').value;
-  const stockNA = document.getElementById('stockNA').checked;
-  const stockValue = document.getElementById('productStock').value;
 
-  if (productName && productPresentation && quantity && (stockNA || stockValue)) {
+  if (productName && productPresentation && quantity) {
     const newOrderTableBody = document
       .getElementById('newOrderTable')
       .getElementsByTagName('tbody')[0];
@@ -687,14 +595,14 @@ function addProductToNewOrder() {
     const cell1 = row.insertCell(0);
     const cell2 = row.insertCell(1);
     const cell3 = row.insertCell(2);
-    const cell4 = row.insertCell(3);
-    const cell5 = row.insertCell(4);
+    const cell4 = row.insertCell(3); // Acciones
 
     cell1.textContent = productName;
     cell2.textContent = productPresentation;
     cell3.textContent = quantity;
-    cell4.textContent = stockNA ? 'N/A' : stockValue;
-    cell5.innerHTML = `
+    // cell4.textContent = 'N/A'; // Eliminado
+
+    cell4.innerHTML = `
       <button onclick="editNewOrderProduct(this)">Editar</button>
       <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
     `;
@@ -703,9 +611,6 @@ function addProductToNewOrder() {
     document.getElementById('productNameSelected').value = '';
     document.getElementById('productPresentationSelected').value = '';
     document.getElementById('productQuantity').value = '';
-    document.getElementById('productStock').value = '';
-    document.getElementById('stockNA').checked = false;
-    document.getElementById('productStock').disabled = false;
 
     // Bloquear el selector de proveedor después de agregar el primer producto
     document.getElementById('newOrderProviderSelect').disabled = true;
@@ -713,7 +618,7 @@ function addProductToNewOrder() {
     Swal.fire({
       icon: 'warning',
       title: 'Advertencia',
-      text: 'Debe ingresar la cantidad de pedido y el stock actual, o marcar "N/A".'
+      text: 'Debe ingresar la cantidad de pedido.'
     });
   }
 }
@@ -740,29 +645,7 @@ function editNewOrderProduct(button) {
   }
   cells[2].textContent = newQuantity;
 
-  // Stock
-  const currentStock = cells[3].textContent;
-  if (currentStock === 'N/A') {
-    // Preguntar si lo mantiene N/A
-    const confirmNA = confirm('¿Deseas mantener el stock como "N/A"?');
-    if (confirmNA) {
-      cells[3].textContent = 'N/A';
-      return;
-    }
-  }
-  const newStock = prompt('Nuevo stock (escribe "N/A" si no aplica):', currentStock);
-  if (newStock === null) return;
-  if (newStock.trim().toUpperCase() === 'N/A') {
-    cells[3].textContent = 'N/A';
-  } else if (!isNaN(newStock) && Number(newStock) >= 0) {
-    cells[3].textContent = newStock;
-  } else {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Valor Inválido',
-      text: 'El stock debe ser un número válido o "N/A".'
-    });
-  }
+  // Dado que ya no hay stock, no es necesario actualizarlo
 }
 
 /**
@@ -815,8 +698,8 @@ async function saveNewOrder() {
     products.push({
       name: cells[0].textContent,
       presentation: cells[1].textContent,
-      quantity: cells[2].textContent,
-      stock: cells[3].textContent
+      quantity: cells[2].textContent
+      // stock: cells[3].textContent // Eliminado
     });
   }
 
@@ -882,9 +765,9 @@ async function saveNewOrder() {
 
         // Resetear formulario
         closeOrderCreationContainer();
-        if (document.getElementById('pendingOrdersAdminCards')) {
-          loadPendingOrdersAdmin();
-        }
+        // if (document.getElementById('pendingOrdersAdminCards')) {
+        //   loadPendingOrdersAdmin();
+        // }
 
       } catch (error) {
         console.error('Error al guardar el pedido:', error);
@@ -933,9 +816,9 @@ async function saveNewOrder() {
         // Resetear formulario
         closeOrderCreationContainer();
         // Actualizar la lista de pedidos preguardados si está visible
-        if (document.getElementById('preSavedOrdersContainer').style.display === 'block') {
-          loadPreSavedOrders();
-        }
+        // if (document.getElementById('preSavedOrdersContainer').style.display === 'block') {
+        //   loadPreSavedOrders();
+        // }
 
       } catch (error) {
         console.error('Error al preguardar el pedido:', error);
@@ -963,7 +846,6 @@ async function saveNewOrder() {
  */
 function closeOrderCreationContainer() {
   document.getElementById('orderCreationContainer').style.display = 'none';
-  document.getElementById('ordersContainer').style.display = 'block';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
   // Desbloquear el selector de proveedor y limpiar la tabla
@@ -986,7 +868,7 @@ function showOrderConfirmationModal(orderDetails) {
         <td>${escapeHtml(product.name)}</td>
         <td>${escapeHtml(product.presentation)}</td>
         <td>${product.quantity}</td>
-        <td>${product.stock}</td>
+        <!-- <td>${product.stock}</td> Eliminado -->
       </tr>
     `;
   });
@@ -1007,7 +889,7 @@ function showOrderConfirmationModal(orderDetails) {
           <th>Producto</th>
           <th>Presentación</th>
           <th>Cantidad</th>
-          <th>Stock</th>
+          <!-- <th>Stock</th> Eliminado -->
         </tr>
         ${productsRows}
       </table>
@@ -1067,11 +949,11 @@ function exportOrderAsImage(orderDetails) {
     const cell1 = row.insertCell(0);
     const cell2 = row.insertCell(1);
     const cell3 = row.insertCell(2);
-    const cell4 = row.insertCell(3);
+    // const cell4 = row.insertCell(3); // Eliminado
     cell1.textContent = product.name;
     cell2.textContent = product.presentation;
     cell3.textContent = product.quantity;
-    cell4.textContent = product.stock;
+    // cell4.textContent = product.stock; // Eliminado
   });
 
   const orderDetailsElement = document.getElementById('orderDetailsForImage');
@@ -1140,7 +1022,7 @@ function exportOrderAsPDF(orderDetails) {
     row.insertCell(0).textContent = product.name;
     row.insertCell(1).textContent = product.presentation;
     row.insertCell(2).textContent = product.quantity;
-    row.insertCell(3).textContent = product.stock;
+    // row.insertCell(3).textContent = product.stock; // Eliminado
   });
 
   const orderDetailsElement = document.getElementById('orderDetailsForImage');
@@ -1206,58 +1088,19 @@ function exportOrderAsPDF(orderDetails) {
 
 /**
  * ================================
- * Función para editar pedido (no implementado)
- * ================================
- */
-function editOrder(orderId) {
-  Swal.fire({
-    icon: 'info',
-    title: 'Funcionalidad No Implementada',
-    text: 'La funcionalidad de editar pedidos aún no está implementada.'
-  });
-}
-
-/**
- * ================================
  * Función para mostrar la lista de pedidos
  * ================================
  */
 function showOrders() {
-  // Muestra la sección principal de “Gestión de Pedidos”
-  document.getElementById('ordersContainer').style.display = 'block';
-  document.getElementById('preSavedOrdersContainer').style.display = 'none';
+  // Mostrar únicamente el formulario de creación de pedidos
   document.getElementById('orderCreationContainer').style.display = 'block';
+  document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
   // Cargar y mostrar el formulario de creación de pedidos
   showOrderCreationContainer();
 
-  // Si el usuario es administrador, asegurarse de que las tarjetas de pedidos pendientes y en proceso estén visibles
-  if (userRole === 'administrador') {
-    document.getElementById('pendingOrdersAdminCards').style.display = 'block';
-    document.getElementById('inProcessOrdersAdminCards').style.display = 'block';
-  }
+  // No hay más secciones que mostrar
 }
-
-/**
- * ================================
- * Función para cargar Pedidos Preguardados
- * ================================
- */
-// Ya está definida anteriormente como loadPreSavedOrders()
-
-/**
- * ================================
- * Función para abrir un Pedido Preguardado
- * ================================
- */
-// Ya está definida anteriormente como openPreSavedOrder(orderDocId)
-
-/**
- * ================================
- * Función para editar pedido (no implementado)
- * ================================
- */
-// Ya está definida anteriormente como editOrder(orderId)
 
 /**
  * ================================
@@ -1347,11 +1190,3 @@ function limpiarFormulario() {
   document.getElementById('orderId').value = '';
   document.getElementById('newOrderTable').getElementsByTagName('tbody')[0].innerHTML = '';
 }
-
-/**
- * ================================
- * Función para mostrar la lista de pedidos
- * ================================
- */
-// Ya está definida anteriormente como showOrders()
-
