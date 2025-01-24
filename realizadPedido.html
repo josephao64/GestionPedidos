@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Realizar Pedido</title>
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
@@ -17,6 +18,12 @@
   <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   
+  <!-- FontAwesome para íconos (sin atributo integrity) -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+  
   <!-- Tus estilos -->
   <link rel="stylesheet" href="styles.css">
   
@@ -27,7 +34,7 @@
 
   <!-- Barra de botones principales -->
   <div class="buttons">
-    <button onclick="showOrders()">Gestión de Pedidos</button>
+    <button onclick="showNewOrderForm()">Realizar Nuevo Pedido</button>
     <button onclick="showPreSavedOrders()">Pedidos Preguardados</button>
     <button class="right" onclick="window.location.href='index.html'">Volver a Principal</button>
   </div>
@@ -43,9 +50,6 @@
       </div>
       <div class="form-group">
         <label for="newOrderSucursalSelect">Sucursal</label>
-        <!-- Este select se llena dinámicamente: 
-             - Si es admin: todas las sucursales
-             - Si es usuario normal: su sucursal fija -->
         <select id="newOrderSucursalSelect"></select>
       </div>
       <div class="form-group">
@@ -58,32 +62,8 @@
       </div>
     </div>
 
-    <!-- Sección para añadir productos al pedido -->
+    <!-- Sección para añadir productos al pedido con disposición Flexbox -->
     <div class="product-form-and-table">
-      <div class="product-form-container">
-        <div class="product-form-group">
-          <!-- Botón para abrir el modal de selección de producto -->
-          <button id="selectProductButton" onclick="showProductSelectionModal()">Seleccionar Producto</button>
-        </div>
-        <div class="product-form-group">
-          <label for="productNameSelected">Producto</label>
-          <input type="text" id="productNameSelected" placeholder="Producto" readonly>
-        </div>
-        <div class="product-form-group">
-          <label for="productPresentationSelected">Presentación</label>
-          <input type="text" id="productPresentationSelected" placeholder="Presentación" readonly>
-        </div>
-        <div class="product-form-group">
-          <label for="productQuantity">Cantidad Pedido</label>
-          <input type="number" id="productQuantity" placeholder="Cantidad Pedido">
-        </div>
-        <!-- Eliminado el grupo de "Stock Actual" y "N/A" -->
-        <div class="product-form-group">
-          <!-- Botón para agregar producto a la tabla -->
-          <button onclick="addProductToNewOrder()">Agregar</button>
-        </div>
-      </div>
-
       <div class="table-wrapper">
         <table id="newOrderTable">
           <thead>
@@ -91,17 +71,24 @@
               <th>Producto</th>
               <th>Presentación</th>
               <th>Cantidad Pedido</th>
-              <!-- <th>Stock</th> Eliminado -->
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
+      <!-- Botón Agregar Producto colocado debajo de la tabla y alineado a la derecha -->
+      <div class="add-product-button">
+        <button id="selectProductButton" onclick="showProductSelectionModal()">
+          <i class="fas fa-plus-circle"></i> Agregar Producto
+        </button>
+      </div>
     </div>
 
-    <!-- Botón para guardar el pedido -->
-    <button class="save-order-button" onclick="saveNewOrder()">Guardar Pedido</button>
+    <!-- Botón Guardar Pedido centrado debajo de la sección de productos -->
+    <div class="save-order-container">
+      <button class="save-order-button" onclick="saveNewOrder()">Guardar Pedido</button>
+    </div>
   </div>
 
   <!-- Modal para la selección de productos -->
@@ -114,7 +101,6 @@
           <tr>
             <th>Producto</th>
             <th>Presentación</th>
-            <!-- <th>Acción</th> Eliminado -->
           </tr>
           <tr>
             <th>
@@ -126,7 +112,6 @@
               >
             </th>
             <th></th>
-            <!-- <th></th> Eliminado -->
           </tr>
         </thead>
         <tbody></tbody>
@@ -172,7 +157,6 @@
             <th>Producto</th>
             <th>Presentación</th>
             <th>Cantidad</th>
-            <!-- <th>Stock</th> Eliminado -->
           </tr>
         </thead>
         <tbody id="imgProductsTableBody"></tbody>

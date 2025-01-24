@@ -33,10 +33,16 @@ select {
 
 button {
   cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  transition: background-color 0.3s ease;
+  color: white; /* Asegura que el texto de los botones sea visible */
 }
 
 button:hover {
   background-color: #ddd;
+  color: black; /* Cambiar el color del texto al pasar el cursor para mejor visibilidad */
 }
 
 /* Estilos para Modales */
@@ -112,38 +118,92 @@ th {
   color: white;
   border: none;
   border-radius: 5px;
-  padding: 10px 20px;
+  padding: 15px 25px; /* Aumenta el tamaño del botón */
+  font-size: 16px; /* Aumenta el tamaño de la fuente */
+  cursor: pointer;
   transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+#selectProductButton i {
+  margin-right: 8px; /* Espacio entre el ícono y el texto */
+  font-size: 18px; /* Aumenta el tamaño del ícono */
 }
 
 #selectProductButton:hover {
   background-color: #0056b3; /* Azul oscuro al pasar el cursor */
 }
 
-/* 2. Estilo para el Botón "Agregar" */
-.product-form-group button[onclick="addProductToNewOrder()"] {
-  background-color: #28a745; /* Verde */
-  color: white;
+/* 2. Estilo para Botones de Acción */
+.action-button {
   border: none;
   border-radius: 5px;
-  padding: 10px 20px;
+  padding: 8px 12px;
+  margin: 0 5px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color 0.3s ease;
+  color: white; /* Asegura que el ícono sea visible */
+  background-color: #6c757d; /* Color gris por defecto */
 }
 
-.product-form-group button[onclick="addProductToNewOrder()"]:hover {
-  background-color: #218838; /* Verde oscuro al pasar el cursor */
+.action-button:hover {
+  background-color: #5a6268; /* Color gris oscuro al pasar el cursor */
 }
 
-/* 3. Estilo para el Botón "Guardar Pedido" */
+.action-button.edit-button {
+  background-color: #ffc107; /* Amarillo */
+}
+
+.action-button.edit-button:hover {
+  background-color: #e0a800; /* Amarillo oscuro al pasar el cursor */
+}
+
+.action-button.delete-button {
+  background-color: #dc3545; /* Rojo */
+}
+
+.action-button.delete-button:hover {
+  background-color: #c82333; /* Rojo oscuro al pasar el cursor */
+}
+
+/* Asegurar que los íconos no intercepten los eventos de clic */
+.action-button i {
+  pointer-events: none; /* Permite que el clic se registre en el botón completo */
+}
+
+/* Ajustes opcionales para los íconos en los botones de acción */
+.action-button i {
+  font-size: 16px; /* Tamaño del ícono */
+  margin-right: 0; /* Eliminamos el margen si solo hay un ícono */
+}
+
+/* 3. Estilos para el Contenedor del Botón "Agregar Producto" */
+.add-product-button {
+  display: flex;
+  justify-content: flex-end; /* Alinea el botón a la derecha */
+  margin-top: 10px; /* Espacio entre la tabla y el botón */
+}
+
+/* 4. Estilos para el Contenedor del Botón "Guardar Pedido" */
+.save-order-container {
+  display: flex;
+  justify-content: center; /* Centra el botón horizontalmente */
+  margin-top: 20px; /* Espacio entre la sección de productos y el botón */
+}
+
+/* 5. Estilos para Botón Guardar Pedido */
 .save-order-button {
-  display: block;
-  margin-top: 20px;
-  margin-left: auto; /* Alinea el botón a la derecha */
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
   background-color: #28a745; /* Verde */
   color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 15px 35px; /* Aumenta el tamaño del botón */
+  font-size: 18px; /* Aumenta el tamaño de la fuente */
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
@@ -152,7 +212,7 @@ th {
   background-color: #218838; /* Verde oscuro al pasar el cursor */
 }
 
-/* 4. Centrando las Columnas Específicas en las Tablas */
+/* 6. Centrando las Columnas Específicas en las Tablas */
 
 /* Para la tabla de nuevos pedidos */
 #newOrderTable th:nth-child(1),
@@ -188,7 +248,7 @@ th {
   text-align: center;
 }
 
-/* Estilos para Botones */
+/* Estilos para Botones Principales */
 .buttons {
   margin-bottom: 20px;
   display: flex;
@@ -240,65 +300,17 @@ th {
 
 .product-form-and-table {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column; /* Cambiar a columna para alinear la tabla y el botón verticalmente */
+  justify-content: flex-start;
   margin-top: 20px;
-}
-
-.product-form-container {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 250px;
-  border: 1px solid #ddd;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 10px;
-}
-
-.product-form-group {
-  margin-bottom: 20px;
-  width: 100%;
-}
-
-.product-form-group label {
-  display: block;
-  margin-bottom: 5px;
-}
-
-.product-form-group input,
-.product-form-group select,
-.product-form-group button {
-  width: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-  border: 1px solid #ddd;
-  border-radius: 5px;
 }
 
 .table-wrapper {
   flex-grow: 1;
   border: 1px solid #ddd;
   padding: 20px;
-  margin-left: 20px;
   background-color: #f9f9f9;
   border-radius: 10px;
-}
-
-.save-order-button {
-  display: block;
-  margin-top: 20px;
-  margin-left: auto; /* Alinea el botón a la derecha */
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  background-color: #28a745; /* Verde */
-  color: white;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.save-order-button:hover {
-  background-color: #218838; /* Verde oscuro al pasar el cursor */
 }
 
 /* Estilos para Pestañas */
@@ -433,6 +445,7 @@ th {
   word-wrap: break-word;
 }
 
+/* Estilos para el Footer del Ticket */
 .ticket-footer {
   text-align: center;
   font-size: 12px;

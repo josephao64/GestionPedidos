@@ -11,6 +11,7 @@ let userSucursalId = null;      // ID de la sucursal a la que pertenece el usuar
 let userSucursalName = null;    // Nombre de la sucursal (para mostrar)
 let userRole = null;            // Rol del usuario (administrador / usuario)
 let currentOrderId = null;      // ID del pedido actual (nuevo o preguardado)
+let selectedProduct = null;     // Producto seleccionado desde el modal
 
 /**
  * ================================
@@ -44,8 +45,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('orderCreationContainer').style.display = 'none';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
-  // Ya no se necesita manejar el estado del botón "Seleccionar Producto" aquí
-  // porque ahora siempre estará habilitado y se verificará al hacer clic
+  // Inicializar el estado visual del botón "Agregar Producto"
+  updateSelectProductButton();
 });
 
 /**
@@ -89,7 +90,7 @@ async function obtenerSucursalDelUsuario() {
         userSucursalName = 'Sucursal No Encontrada';
       }
 
-      // Asignar automáticamente la sucursal en el formulario y deshabilitar el selector para usuarios normales
+      // Asignar automáticamente la sucursal en el formulario y gestionar el selector según el rol
       const selectSucursal = document.getElementById('newOrderSucursalSelect');
       if (selectSucursal) {
         selectSucursal.innerHTML = ''; // Limpia
@@ -135,17 +136,39 @@ async function obtenerSucursalDelUsuario() {
 
 /**
  * ================================
+ * Función para actualizar el estado visual del botón "Agregar Producto"
+ * ================================
+ */
+function updateSelectProductButton() {
+  const providerSelect = document.getElementById('newOrderProviderSelect');
+  const selectProductButton = document.getElementById('selectProductButton');
+
+  if (providerSelect.value) {
+    // Si se ha seleccionado un proveedor, habilitar visualmente el botón
+    selectProductButton.style.opacity = '1';
+    selectProductButton.style.cursor = 'pointer';
+    selectProductButton.classList.remove('disabled-button');
+  } else {
+    // Si no se ha seleccionado, mostrar el botón como "deshabilitado" visualmente
+    selectProductButton.style.opacity = '0.6';
+    selectProductButton.style.cursor = 'not-allowed';
+    selectProductButton.classList.add('disabled-button');
+  }
+}
+
+/**
+ * ================================
  * Función para mostrar el contenedor
  * de creación de nuevo pedido
  * ================================
  */
-async function showOrderCreationContainer() {
+async function showNewOrderForm() {
   // Mostrar contenedor de creación
   document.getElementById('orderCreationContainer').style.display = 'block';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
   // Cargar proveedores
-  loadNewOrderProviders();
+  await loadNewOrderProviders();
 
   // Colocar fecha de hoy (solo si el usuario es administrador)
   if (userRole === 'administrador') {
@@ -210,6 +233,7 @@ async function loadPreSavedOrders() {
     preSavedOrdersSnapshot.forEach(doc => {
       const order = doc.data();
       const row = preSavedOrdersTableBody.insertRow();
+      row.setAttribute('data-id', doc.id); // Opcional: para futuras referencias
 
       const cell1 = row.insertCell(0);
       const cell2 = row.insertCell(1);
@@ -222,8 +246,12 @@ async function loadPreSavedOrders() {
       cell3.textContent = order.sucursalName;
       cell4.textContent = order.orderDate;
       cell5.innerHTML = `
-        <button onclick="openPreSavedOrder('${doc.id}')">Abrir Pedido</button>
-        <button onclick="deletePreSavedOrder('${doc.id}')">Eliminar Pedido</button>
+        <button class="action-button edit-button" onclick="openPreSavedOrder('${doc.id}')">
+          <i class="fas fa-folder-open"></i>
+        </button>
+        <button class="action-button delete-button" onclick="deletePreSavedOrder('${doc.id}')">
+          <i class="fas fa-trash-alt"></i>
+        </button>
       `;
     });
 
@@ -293,6 +321,7 @@ async function openPreSavedOrder(orderDocId) {
       // Cargar productos del pedido en la tabla
       orderData.products.forEach(product => {
         const row = newOrderTableBody.insertRow();
+        row.setAttribute('data-id', product.id); // Asumiendo que cada producto tiene un campo 'id'
 
         const cell1 = row.insertCell(0);
         const cell2 = row.insertCell(1);
@@ -301,13 +330,25 @@ async function openPreSavedOrder(orderDocId) {
 
         cell1.textContent = product.name;
         cell2.textContent = product.presentation;
-        cell3.textContent = product.quantity;
-        // cell4.textContent = product.stock; // Eliminado
+        // Añadir un campo de entrada para la cantidad pedido con el valor existente
+        cell3.innerHTML = `<input type="number" value="${product.quantity}" min="1" placeholder="Ingrese cantidad">`;
         cell4.innerHTML = `
-          <button onclick="editNewOrderProduct(this)">Editar</button>
-          <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
+          <button class="action-button edit-button" onclick="editNewOrderProduct(this)" aria-label="Editar Producto">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="action-button delete-button" onclick="deleteNewOrderProduct(this)" aria-label="Eliminar Producto">
+            <i class="fas fa-trash-alt"></i>
+          </button>
         `;
       });
+
+      // Enfocar el primer campo de cantidad si hay productos
+      if (orderData.products.length > 0) {
+        const firstQuantityInput = newOrderTableBody.querySelector('input[type="number"]');
+        if (firstQuantityInput) {
+          firstQuantityInput.focus();
+        }
+      }
 
     } else {
       Swal.fire({
@@ -493,50 +534,93 @@ function selectProductFromRow(event) {
   const productName = row.getAttribute('data-name');
   const productPresentation = row.getAttribute('data-presentation');
 
-  // Verificar si un proveedor está seleccionado
-  const providerSelect = document.getElementById('newOrderProviderSelect');
-  const selectedProvider = providerSelect.value;
+  // Guardar el producto seleccionado
+  selectedProduct = {
+    id: productId,
+    name: productName,
+    presentation: productPresentation
+  };
 
-  if (!selectedProvider) {
-    // Si no hay proveedor seleccionado, mostrar notificación y cerrar modal
-    Swal.fire({
-      icon: 'warning',
-      title: 'Advertencia',
-      text: 'Debes seleccionar un proveedor primero.'
-    }).then(() => {
-      // Enfocar el selector de proveedor
-      providerSelect.focus();
-    });
+  // Cerrar el modal de selección de productos
+  closeProductSelectionModal();
 
-    closeProductSelectionModal();
-    return; // Salir de la función para evitar continuar
-  }
+  // Mostrar una notificación y añadir el producto a la tabla
+  Swal.fire({
+    icon: 'success',
+    title: 'Producto Seleccionado',
+    text: `Se ha añadido ${productName} a la tabla. Ingresa la cantidad pedido.`,
+    showConfirmButton: false,
+    timer: 1500
+  }).then(() => {
+    addSelectedProductToTable();
+  });
+}
 
-  if (productId && productName && productPresentation) {
-    // Asignar el nombre y presentación del producto seleccionado
-    document.getElementById('productNameSelected').value = productName;
-    document.getElementById('productPresentationSelected').value = productPresentation;
-    
-    // Dejar el campo de "Cantidad Pedido" vacío
-    document.getElementById('productQuantity').value = '';
+/**
+ * ================================
+ * Función para añadir el producto seleccionado a la tabla
+ * ================================
+ */
+function addSelectedProductToTable() {
+  if (selectedProduct) {
+    const newOrderTableBody = document
+      .getElementById('newOrderTable')
+      .getElementsByTagName('tbody')[0];
 
-    // Mostrar notificación emergente utilizando SweetAlert2
-    Swal.fire({
-      icon: 'info',
-      title: 'Producto seleccionado',
-      text: 'Ingrese la cantidad de pedido.'
-    }).then(() => {
-      // Enfocar automáticamente el campo de "Cantidad Pedido" después de cerrar la notificación
-      document.getElementById('productQuantity').focus();
-    });
+    // Verificar si el producto ya existe en la tabla
+    const existingRows = newOrderTableBody.getElementsByTagName('tr');
+    for (let i = 0; i < existingRows.length; i++) {
+      const row = existingRows[i];
+      const rowProductId = row.getAttribute('data-id');
+      if (rowProductId === selectedProduct.id) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Producto Duplicado',
+          text: 'Este producto ya ha sido agregado al pedido.'
+        });
+        return; // Salir de la función para no añadir el producto duplicado
+      }
+    }
 
-    // Cerrar el modal de selección de productos
-    closeProductSelectionModal();
+    // Si no es duplicado, añadir la fila
+    const row = newOrderTableBody.insertRow();
+    row.setAttribute('data-id', selectedProduct.id); // Guardar el ID del producto en el atributo data-id
+
+    const cell1 = row.insertCell(0);
+    const cell2 = row.insertCell(1);
+    const cell3 = row.insertCell(2);
+    const cell4 = row.insertCell(3); // Acciones
+
+    cell1.textContent = selectedProduct.name;
+    cell2.textContent = selectedProduct.presentation;
+    // Añadir un campo de entrada para la cantidad pedido (vacío)
+    cell3.innerHTML = `<input type="number" value="" min="1" placeholder="Ingrese cantidad">`;
+    cell4.innerHTML = `
+      <button class="action-button edit-button" onclick="editNewOrderProduct(this)" aria-label="Editar Producto">
+        <i class="fas fa-edit"></i>
+      </button>
+      <button class="action-button delete-button" onclick="deleteNewOrderProduct(this)" aria-label="Eliminar Producto">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+    `;
+
+    // Bloquear el selector de proveedor después de agregar el primer producto
+    // Nota: Si deseas que el usuario pueda cambiar de proveedor incluso después de agregar productos, puedes omitir esta línea
+    document.getElementById('newOrderProviderSelect').disabled = true;
+
+    // Limpiar el producto seleccionado
+    selectedProduct = null;
+
+    // Enfocar el campo de cantidad pedido recién agregado
+    const quantityInput = row.querySelector('input[type="number"]');
+    if (quantityInput) {
+      quantityInput.focus();
+    }
   } else {
     Swal.fire({
       icon: 'warning',
       title: 'Advertencia',
-      text: 'Debe seleccionar un producto.'
+      text: 'No se ha seleccionado ningún producto.'
     });
   }
 }
@@ -578,62 +662,15 @@ function closeProductSelectionModal() {
 
 /**
  * ================================
- * Añadir producto al nuevo pedido
- * ================================
- */
-function addProductToNewOrder() {
-  const productName = document.getElementById('productNameSelected').value;
-  const productPresentation = document.getElementById('productPresentationSelected').value;
-  const quantity = document.getElementById('productQuantity').value;
-
-  if (productName && productPresentation && quantity) {
-    const newOrderTableBody = document
-      .getElementById('newOrderTable')
-      .getElementsByTagName('tbody')[0];
-    const row = newOrderTableBody.insertRow();
-
-    const cell1 = row.insertCell(0);
-    const cell2 = row.insertCell(1);
-    const cell3 = row.insertCell(2);
-    const cell4 = row.insertCell(3); // Acciones
-
-    cell1.textContent = productName;
-    cell2.textContent = productPresentation;
-    cell3.textContent = quantity;
-    // cell4.textContent = 'N/A'; // Eliminado
-
-    cell4.innerHTML = `
-      <button onclick="editNewOrderProduct(this)">Editar</button>
-      <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
-    `;
-
-    // Limpiar campos
-    document.getElementById('productNameSelected').value = '';
-    document.getElementById('productPresentationSelected').value = '';
-    document.getElementById('productQuantity').value = '';
-
-    // Bloquear el selector de proveedor después de agregar el primer producto
-    document.getElementById('newOrderProviderSelect').disabled = true;
-  } else {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Advertencia',
-      text: 'Debe ingresar la cantidad de pedido.'
-    });
-  }
-}
-
-/**
- * ================================
  * Editar producto en la tabla
  * ================================
  */
 function editNewOrderProduct(button) {
   const row = button.parentNode.parentNode;
-  const cells = row.getElementsByTagName('td');
+  const quantityInput = row.getElementsByTagName('input')[0];
+  const currentQuantity = quantityInput.value;
 
-  // Cantidad
-  const newQuantity = prompt('Nueva cantidad:', cells[2].textContent);
+  const newQuantity = prompt('Nueva cantidad:', currentQuantity);
   if (newQuantity === null) return; 
   if (newQuantity.trim() === '' || isNaN(newQuantity) || Number(newQuantity) <= 0) {
     Swal.fire({
@@ -643,9 +680,7 @@ function editNewOrderProduct(button) {
     });
     return;
   }
-  cells[2].textContent = newQuantity;
-
-  // Dado que ya no hay stock, no es necesario actualizarlo
+  quantityInput.value = newQuantity;
 }
 
 /**
@@ -695,11 +730,23 @@ async function saveNewOrder() {
   const products = [];
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i].getElementsByTagName('td');
+    const quantityInput = rows[i].getElementsByTagName('input')[0];
+    const quantity = quantityInput ? quantityInput.value : '';
+
+    if (quantity.trim() === '' || isNaN(quantity) || Number(quantity) <= 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Cantidad Inválida',
+        text: `La cantidad para el producto "${cells[0].textContent}" es inválida. Por favor, ingresa un número positivo.`
+      });
+      return;
+    }
+
     products.push({
+      id: rows[i].getAttribute('data-id'), // Añadir el id del producto
       name: cells[0].textContent,
       presentation: cells[1].textContent,
-      quantity: cells[2].textContent
-      // stock: cells[3].textContent // Eliminado
+      quantity: quantity
     });
   }
 
@@ -844,7 +891,6 @@ function showOrderConfirmationModal(orderDetails) {
         <td>${escapeHtml(product.name)}</td>
         <td>${escapeHtml(product.presentation)}</td>
         <td>${product.quantity}</td>
-        <!-- <td>${product.stock}</td> Eliminado -->
       </tr>
     `;
   });
@@ -865,7 +911,6 @@ function showOrderConfirmationModal(orderDetails) {
           <th>Producto</th>
           <th>Presentación</th>
           <th>Cantidad</th>
-          <!-- <th>Stock</th> Eliminado -->
         </tr>
         ${productsRows}
       </table>
@@ -931,11 +976,9 @@ function exportOrderAsImage(orderDetails) {
       const cell1 = row.insertCell(0);
       const cell2 = row.insertCell(1);
       const cell3 = row.insertCell(2);
-      // const cell4 = row.insertCell(3); // Eliminado
       cell1.textContent = product.name;
       cell2.textContent = product.presentation;
       cell3.textContent = product.quantity;
-      // cell4.textContent = product.stock; // Eliminado
     });
   
     const orderDetailsElement = document.getElementById('orderDetailsForImage');
@@ -972,7 +1015,7 @@ function exportOrderAsImage(orderDetails) {
             });
           }
         }, 'image/jpeg', 0.95);
-  
+
         orderDetailsElement.style.display = 'none';
         orderDetailsElement.style.left = '-9999px';
       })
@@ -1002,7 +1045,7 @@ function showOrders() {
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
   // Cargar y mostrar el formulario de creación de pedidos
-  showOrderCreationContainer();
+  showNewOrderForm();
 
   // No hay más secciones que mostrar
 }
