@@ -514,7 +514,7 @@ function filterProducts() {
   const table = document.getElementById('productSelectionTable');
   const tr = table.getElementsByTagName('tr');
 
-  for (let i = 2; i < tr.length; i++) { // Iniciar desde 2 para omitir el campo de búsqueda
+  for (let i = 2; i < tr.length; i++) { // Iniciar desde 2 para omitir los encabezados
     const td = tr[i].getElementsByTagName('td')[0];
     if (td) {
       const txtValue = td.textContent || td.innerText;
@@ -544,16 +544,8 @@ function selectProductFromRow(event) {
   // Cerrar el modal de selección de productos
   closeProductSelectionModal();
 
-  // Mostrar una notificación y añadir el producto a la tabla
-  Swal.fire({
-    icon: 'success',
-    title: 'Producto Seleccionado',
-    text: `Se ha añadido ${productName} a la tabla. Ingresa la cantidad pedido.`,
-    showConfirmButton: false,
-    timer: 1500
-  }).then(() => {
-    addSelectedProductToTable();
-  });
+  // Añadir el producto a la tabla sin mostrar una alerta
+  addSelectedProductToTable();
 }
 
 /**
@@ -939,8 +931,7 @@ function showOrderConfirmationModal(orderDetails) {
       }).then((result2) => {
         if (result2.isConfirmed) {
           exportOrderAsImage(orderDetails).then(() => {
-            // Después de exportar como imagen, limpiar el formulario para un nuevo pedido
-            limpiarFormulario();
+            // Después de exportar como imagen, el sistema se reinicia dentro de la función exportOrderAsImage
           }).catch((error) => {
             console.error('Error al exportar como imagen:', error);
           });
@@ -997,12 +988,21 @@ function exportOrderAsImage(orderDetails) {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-  
+
             Swal.fire({
               icon: 'success',
               title: 'Imagen Exportada',
               text: 'El pedido ha sido exportado como imagen exitosamente.'
             }).then(() => {
+              limpiarFormulario(); // Limpiar el formulario después de exportar
+              // Opción 2: Manipular el DOM para reiniciar sin recargar la página
+              document.getElementById('orderCreationContainer').style.display = 'none';
+              // Opcional: Mostrar una notificación de reinicio exitoso
+              Swal.fire({
+                icon: 'success',
+                title: 'Pedido Completado',
+                text: 'El sistema ha sido reiniciado para un nuevo pedido.'
+              });
               resolve(); // Resolución de la promesa
             });
           } else {
