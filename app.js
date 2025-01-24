@@ -265,6 +265,9 @@ async function openPreSavedOrder(orderDocId) {
       document.getElementById('orderCreationContainer').style.display = 'block';
       document.getElementById('preSavedOrdersContainer').style.display = 'none';
 
+      // Cargar proveedores y esperar a que termine
+      await loadNewOrderProviders();
+
       // Cargar datos del pedido en el formulario
       document.getElementById('newOrderProviderSelect').value = orderData.providerId;
       document.getElementById('newOrderSucursalSelect').value = orderData.sucursalId;
@@ -305,9 +308,6 @@ async function openPreSavedOrder(orderDocId) {
           <button onclick="deleteNewOrderProduct(this)">Eliminar</button>
         `;
       });
-
-      // Cargar proveedores (para asegurar que el proveedor seleccionado esté disponible)
-      loadNewOrderProviders();
 
     } else {
       Swal.fire({
@@ -763,12 +763,6 @@ async function saveNewOrder() {
           products
         });
 
-        // Resetear formulario
-        closeOrderCreationContainer();
-        // if (document.getElementById('pendingOrdersAdminCards')) {
-        //   loadPendingOrdersAdmin();
-        // }
-
       } catch (error) {
         console.error('Error al guardar el pedido:', error);
         Swal.fire({
@@ -814,11 +808,7 @@ async function saveNewOrder() {
         });
 
         // Resetear formulario
-        closeOrderCreationContainer();
-        // Actualizar la lista de pedidos preguardados si está visible
-        // if (document.getElementById('preSavedOrdersContainer').style.display === 'block') {
-        //   loadPreSavedOrders();
-        // }
+        limpiarFormulario();
 
       } catch (error) {
         console.error('Error al preguardar el pedido:', error);
@@ -837,20 +827,6 @@ async function saveNewOrder() {
       });
     }
   });
-}
-
-/**
- * ================================
- * Cerrar contenedor de creación
- * ================================
- */
-function closeOrderCreationContainer() {
-  document.getElementById('orderCreationContainer').style.display = 'none';
-  document.getElementById('preSavedOrdersContainer').style.display = 'none';
-
-  // Desbloquear el selector de proveedor y limpiar la tabla
-  document.getElementById('newOrderProviderSelect').disabled = false;
-  document.getElementById('newOrderTable').getElementsByTagName('tbody')[0].innerHTML = '';
 }
 
 /**
@@ -904,26 +880,31 @@ function showOrderConfirmationModal(orderDetails) {
     cancelButtonText: 'Cerrar',
     width: '600px',
     focusConfirm: false,
-    preConfirm: () => 'compartir'
+    icon: 'info'
   }).then((result) => {
     if (result.isConfirmed) {
-      // Mostrar opciones para compartir: Exportar como Imagen o PDF
+      // Mostrar opción para compartir: Solo Exportar como Imagen
       Swal.fire({
         title: 'Compartir Pedido',
         text: '¿Cómo deseas compartir tu pedido?',
         icon: 'question',
         showCancelButton: true,
-        showDenyButton: true,
         confirmButtonText: 'Exportar como Imagen',
-        denyButtonText: `Exportar como PDF`,
         cancelButtonText: 'Cancelar'
       }).then((result2) => {
         if (result2.isConfirmed) {
-          exportOrderAsImage(orderDetails);
-        } else if (result2.isDenied) {
-          exportOrderAsPDF(orderDetails);
+          exportOrderAsImage(orderDetails).then(() => {
+            // Después de exportar como imagen, limpiar el formulario para un nuevo pedido
+            limpiarFormulario();
+          }).catch((error) => {
+            console.error('Error al exportar como imagen:', error);
+          });
         }
+        // Si el usuario cancela, simplemente cierra el modal y deja el formulario abierto
       });
+    } else {
+      // Si el usuario elige "Cerrar", simplemente cierra el modal y deja el formulario abierto
+      // No es necesario hacer nada adicional aquí
     }
   });
 }
@@ -934,156 +915,80 @@ function showOrderConfirmationModal(orderDetails) {
  * ================================
  */
 function exportOrderAsImage(orderDetails) {
-  // Llenar contenedor oculto
-  document.getElementById('imgOrderId').textContent = orderDetails.orderId;
-  document.getElementById('imgProviderName').textContent = orderDetails.providerName;
-  document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
-  document.getElementById('imgOrderDate').textContent = orderDetails.orderDate;
+  return new Promise((resolve, reject) => {
+    // Llenar contenedor oculto
+    document.getElementById('imgOrderId').textContent = orderDetails.orderId;
+    document.getElementById('imgProviderName').textContent = orderDetails.providerName;
+    document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
+    document.getElementById('imgOrderDate').textContent = orderDetails.orderDate;
+  
+    // Limpiar tabla de productos en el contenedor
+    const imgProductsTableBody = document.getElementById('imgProductsTableBody');
+    imgProductsTableBody.innerHTML = '';
 
-  // Limpiar tabla de productos en el contenedor
-  const imgProductsTableBody = document.getElementById('imgProductsTableBody');
-  imgProductsTableBody.innerHTML = '';
-
-  orderDetails.products.forEach(product => {
-    const row = imgProductsTableBody.insertRow();
-    const cell1 = row.insertCell(0);
-    const cell2 = row.insertCell(1);
-    const cell3 = row.insertCell(2);
-    // const cell4 = row.insertCell(3); // Eliminado
-    cell1.textContent = product.name;
-    cell2.textContent = product.presentation;
-    cell3.textContent = product.quantity;
-    // cell4.textContent = product.stock; // Eliminado
-  });
-
-  const orderDetailsElement = document.getElementById('orderDetailsForImage');
-  orderDetailsElement.style.display = 'block';
-  orderDetailsElement.style.left = '50%';
-  orderDetailsElement.style.transform = 'translateX(-50%)';
-
-  html2canvas(orderDetailsElement, { scale: 2 })
-    .then(canvas => {
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const imgData = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = imgData;
-          link.download = `Pedido_${orderDetails.orderId}.jpg`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          Swal.fire({
-            icon: 'success',
-            title: 'Imagen Exportada',
-            text: 'El pedido ha sido exportado como imagen exitosamente.'
-          });
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error al generar la imagen del pedido.'
-          });
-        }
-      }, 'image/jpeg', 0.95);
-
-      orderDetailsElement.style.display = 'none';
-      orderDetailsElement.style.left = '-9999px';
-    })
-    .catch(error => {
-      console.error('Error al exportar la imagen:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Error al exportar la imagen del pedido.'
-      });
-      orderDetailsElement.style.display = 'none';
-      orderDetailsElement.style.left = '-9999px';
+    orderDetails.products.forEach(product => {
+      const row = imgProductsTableBody.insertRow();
+      const cell1 = row.insertCell(0);
+      const cell2 = row.insertCell(1);
+      const cell3 = row.insertCell(2);
+      // const cell4 = row.insertCell(3); // Eliminado
+      cell1.textContent = product.name;
+      cell2.textContent = product.presentation;
+      cell3.textContent = product.quantity;
+      // cell4.textContent = product.stock; // Eliminado
     });
-}
-
-/**
- * ================================
- * Exportar pedido como PDF
- * ================================
- */
-function exportOrderAsPDF(orderDetails) {
-  // Rellenar contenedor oculto
-  document.getElementById('imgOrderId').textContent = orderDetails.orderId;
-  document.getElementById('imgProviderName').textContent = orderDetails.providerName;
-  document.getElementById('imgSucursalName').textContent = orderDetails.sucursalName;
-  document.getElementById('imgOrderDate').textContent = orderDetails.orderDate;
-
-  const imgProductsTableBody = document.getElementById('imgProductsTableBody');
-  imgProductsTableBody.innerHTML = '';
-
-  orderDetails.products.forEach(product => {
-    const row = imgProductsTableBody.insertRow();
-    row.insertCell(0).textContent = product.name;
-    row.insertCell(1).textContent = product.presentation;
-    row.insertCell(2).textContent = product.quantity;
-    // row.insertCell(3).textContent = product.stock; // Eliminado
-  });
-
-  const orderDetailsElement = document.getElementById('orderDetailsForImage');
-  orderDetailsElement.style.display = 'block';
-  orderDetailsElement.style.left = '50%';
-  orderDetailsElement.style.transform = 'translateX(-50%)';
-
-  html2canvas(orderDetailsElement, { scale: 2 })
-    .then(canvas => {
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const imgData = URL.createObjectURL(blob);
-
-          // Crear pdf
-          const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'px',
-            format: [
-              orderDetailsElement.offsetWidth,
-              orderDetailsElement.offsetHeight
-            ]
-          });
-          pdf.addImage(
-            imgData,
-            'JPEG',
-            0,
-            0,
-            orderDetailsElement.offsetWidth,
-            orderDetailsElement.offsetHeight
-          );
-
-          // Descargar
-          pdf.save(`Pedido_${orderDetails.orderId}.pdf`);
-
-          Swal.fire({
-            icon: 'success',
-            title: 'PDF Exportado',
-            text: 'El pedido ha sido exportado como PDF exitosamente.'
-          });
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error al generar el PDF del pedido.'
-          });
-        }
-      }, 'image/jpeg', 0.95);
-
-      orderDetailsElement.style.display = 'none';
-      orderDetailsElement.style.left = '-9999px';
-    })
-    .catch(error => {
-      console.error('Error al exportar el PDF:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Error al exportar el PDF del pedido.'
+  
+    const orderDetailsElement = document.getElementById('orderDetailsForImage');
+    orderDetailsElement.style.display = 'block';
+    orderDetailsElement.style.left = '50%';
+    orderDetailsElement.style.transform = 'translateX(-50%)';
+  
+    html2canvas(orderDetailsElement, { scale: 2 })
+      .then(canvas => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const imgData = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = imgData;
+            link.download = `Pedido_${orderDetails.orderId}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+  
+            Swal.fire({
+              icon: 'success',
+              title: 'Imagen Exportada',
+              text: 'El pedido ha sido exportado como imagen exitosamente.'
+            }).then(() => {
+              resolve(); // Resolución de la promesa
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Error al generar la imagen del pedido.'
+            }).then(() => {
+              reject('Error al generar la imagen del pedido.');
+            });
+          }
+        }, 'image/jpeg', 0.95);
+  
+        orderDetailsElement.style.display = 'none';
+        orderDetailsElement.style.left = '-9999px';
+      })
+      .catch(error => {
+        console.error('Error al exportar la imagen:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Error al exportar la imagen del pedido.'
+        }).then(() => {
+          reject(error);
+        });
+        orderDetailsElement.style.display = 'none';
+        orderDetailsElement.style.left = '-9999px';
       });
-      orderDetailsElement.style.display = 'none';
-      orderDetailsElement.style.left = '-9999px';
-    });
+  });
 }
 
 /**
