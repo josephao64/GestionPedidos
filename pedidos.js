@@ -32,9 +32,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadSucursalesForAdmin();
     loadProvidersForAdmin();
   }
-  loadInProcessOrders();
-  loadCompletedOrders();
   loadLogo();
+  setupRealTimeInProcessListener();
+  setupRealTimeCompletedListener();
 });
 
 /**********************************************************
@@ -82,7 +82,7 @@ async function initUserAndSucursal() {
 }
 
 /**********************************************************
- * loadSucursalesForAdmin / loadProvidersForAdmin / reloadOrders
+ * loadSucursalesForAdmin / loadProvidersForAdmin
  **********************************************************/
 async function loadSucursalesForAdmin() {
   const sel = document.getElementById("sucursalFilter");
@@ -122,11 +122,6 @@ async function loadProvidersForAdmin() {
   } catch (error) {
     Swal.fire({ icon: "error", title: "Error", text: error.message });
   }
-}
-
-function reloadOrders() {
-  loadInProcessOrders();
-  loadCompletedOrders();
 }
 
 /**********************************************************
@@ -170,10 +165,37 @@ function goToMainMenu() {
 }
 
 /**********************************************************
- * Estados según destino
+ * Real-Time Listeners
  **********************************************************/
+function setupRealTimeInProcessListener() {
+  const inProcessStatuses = [
+    "pending",
+    "pedidoTomado",
+    "pedidoEnBodega",
+    "bodegaEnvioPedido",
+    "caminoATienda"
+  ];
+  let query = db.collection("orders").where("status", "in", inProcessStatuses);
+  if (userRole !== "administrador") {
+    query = query.where("sucursalId", "==", userSucursalId);
+  }
+  query.onSnapshot(() => {
+    loadInProcessOrders();
+  });
+}
+
+function setupRealTimeCompletedListener() {
+  let query = db.collection("orders").where("status", "==", "sucursalRecibioPedido");
+  if (userRole !== "administrador") {
+    query = query.where("sucursalId", "==", userSucursalId);
+  }
+  query.onSnapshot(() => {
+    loadCompletedOrders();
+  });
+}
+
 /**********************************************************
- * loadInProcessOrders
+ * Cargar Pedidos en Proceso
  **********************************************************/
 async function loadInProcessOrders() {
   try {
@@ -225,7 +247,7 @@ async function loadInProcessOrders() {
 }
 
 /**********************************************************
- * loadCompletedOrders
+ * Cargar Pedidos Completados
  **********************************************************/
 async function loadCompletedOrders() {
   try {
@@ -273,7 +295,7 @@ async function loadCompletedOrders() {
 }
 
 /**********************************************************
- * createOrderCard
+ * Crear Tarjeta del Pedido
  **********************************************************/
 function createOrderCard(orderDocId, order) {
   const card = document.createElement("div");
@@ -319,7 +341,7 @@ function createOrderCard(orderDocId, order) {
 }
 
 /**********************************************************
- * generateProgressBar
+ * Generar Barra de Progreso
  **********************************************************/
 function generateProgressBar(order) {
   const dest = order.destination || "Bodega";
@@ -379,7 +401,6 @@ async function markOrderAsTaken(orderId) {
       try {
         await db.collection("orders").doc(orderId).update({ status: "pedidoTomado" });
         Swal.fire({ icon: "success", title: "Pedido Tomado" });
-        reloadOrders();
       } catch (err) {
         Swal.fire({ icon: "error", title: "Error", text: err.message });
       }
@@ -403,7 +424,6 @@ async function deleteOrder(orderId) {
       try {
         await db.collection("orders").doc(orderId).delete();
         Swal.fire({ icon: "success", title: "Pedido eliminado" });
-        reloadOrders();
       } catch (err) {
         Swal.fire({ icon: "error", title: "Error", text: err.message });
       }
@@ -500,7 +520,6 @@ function editOrder(orderId) {
         <input type="hidden" id="editOrderId" value="${orderId}">
         <p><strong>ID Pedido:</strong> ${order.orderId}</p>
         <p><strong>Destino:</strong> ${order.destination || "No definido"}</p>
-        <p><strong>Productos:</strong></p>
       `;
       document.getElementById("editOrderDetails").innerHTML = formHTML;
       document.getElementById("editOrderModal").style.display = "block";
@@ -516,7 +535,7 @@ function closeEditOrderModal() {
 }
 
 /**********************************************************
- * Exportar Pedido (Imagen, Excel)
+ * exportOrder (Imagen, Excel)
  **********************************************************/
 function exportOrder(orderId) {
   document.getElementById("exportModal").style.display = "block";
@@ -774,9 +793,6 @@ function closeConfirmOrderModal() {
   document.getElementById("confirmOrderModal").style.display = "none";
 }
 
-/**********************************************************
- * saveConfirmedOrder
- **********************************************************/
 async function saveConfirmedOrder() {
   try {
     const orderId = document.getElementById("confirmOrderId").value;
@@ -875,7 +891,6 @@ async function saveConfirmedOrder() {
         text: `El pedido se mantiene en proceso. Total Factura: Q${invoiceTotalValue}`
       });
       closeConfirmOrderModal();
-      reloadOrders();
       return;
     }
     await db.collection("orders").doc(orderId).update({
@@ -897,7 +912,6 @@ async function saveConfirmedOrder() {
       document.getElementById("exportReceptionButtonContainer").style.display = "block";
     }
     closeConfirmOrderModal();
-    reloadOrders();
   } catch (error) {
     Swal.fire({ icon: "error", title: "Error", text: error.message });
   }
@@ -1028,7 +1042,6 @@ function exportAsReceptionImage(order, fileName) {
   const exportReceptionLastEditHidden = document.getElementById("exportReceptionLastEditHidden");
   const exportReceptionLogoImg = document.getElementById("exportReceptionLogo");
   const exportReceptionTBody = document.getElementById("exportReceptionProductsTableBody");
-
   if (!exportReceptionOrderIdHidden ||
       !exportReceptionProviderHidden ||
       !exportReceptionSucursalHidden ||
