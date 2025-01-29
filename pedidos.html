@@ -2,36 +2,39 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gestión de Pedidos</title>
 
-  <!-- Archivo de estilos CSS -->
+  <!-- Archivo de estilos CSS (ajusta el nombre si difiere) -->
   <link rel="stylesheet" href="stylesPedidos.css" />
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
 
-  <!-- Librerías para exportar (Imagen, Excel) -->
+  <!-- Librería para exportar imagen (html2canvas) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Librería para exportar Excel (xlsx) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- Archivo JavaScript principal (pedidos.js) -->
+  <!-- Archivo JavaScript principal (pedidos.js) con la lógica -->
   <script defer src="pedidos.js"></script>
 </head>
 <body>
   <!-- Encabezado -->
   <div class="header">
     <h1>Gestión de Pedidos</h1>
-    <!-- Aquí se mostrará el usuario que inició sesión -->
+    <!-- Mostrar usuario logueado -->
     <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
+    <!-- Botón para volver a menú principal -->
     <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
   </div>
 
-  <!-- Contenedor de Filtro para el ADMIN (se muestra solo si userRole = 'administrador') -->
+  <!-- Contenedor de filtros (sólo visible si userRole = 'administrador') -->
   <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
     <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
     <select id="sucursalFilter" onchange="reloadOrders()"></select>
@@ -55,32 +58,25 @@
     />
   </div>
 
-  <!-- Contenedor de Pestañas -->
+  <!-- Contenedor de pestañas -->
   <div class="tab-container" id="tabContainer">
-    <button class="tab-button active" onclick="openTab(event, 'pendingOrdersContainer')">
-      Pedidos Pendientes
-    </button>
-    <button class="tab-button" onclick="openTab(event, 'inProcessOrdersContainer')">
+    <!-- Pestaña Pedidos en Proceso -->
+    <button class="tab-button active" onclick="openTab(event, 'inProcessOrdersContainer')">
       Pedidos en Proceso
     </button>
+    <!-- Pestaña Pedidos Completados -->
     <button class="tab-button" onclick="openTab(event, 'completedOrdersContainer')">
       Pedidos Completados
     </button>
   </div>
 
-  <!-- Contenedor de Pedidos Pendientes -->
-  <div id="pendingOrdersContainer" class="container">
-    <h2>Pedidos Pendientes</h2>
-    <div id="pendingOrdersAdminCards" class="order-cards-container"></div>
-  </div>
-
-  <!-- Contenedor de Pedidos en Proceso -->
-  <div id="inProcessOrdersContainer" class="container" style="display: none;">
+  <!-- Pedidos en Proceso (incluye pending, pedidoTomado, etc.) -->
+  <div id="inProcessOrdersContainer" class="container">
     <h2>Pedidos en Proceso</h2>
     <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
   </div>
 
-  <!-- Contenedor de Pedidos Completados -->
+  <!-- Pedidos Completados (sucursalRecibioPedido) -->
   <div id="completedOrdersContainer" class="container" style="display: none;">
     <h2>Pedidos Completados</h2>
     <div id="completedOrdersAdminCards" class="order-cards-container"></div>
@@ -92,9 +88,11 @@
       <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
       <h2>Detalles del Pedido</h2>
       <div id="orderDetails"></div>
-      <input type="hidden" id="exportOrderId" />
-      <!-- Botón para Exportar Pedido como Imagen -->
-      <button id="exportOrderImageButton" onclick="" style="margin-top: 1rem;">Exportar Pedido como Imagen</button>
+
+      <!-- Botón que también se usa para exportar a imagen (se configura por JS) -->
+      <button id="exportOrderImageButton" style="margin-top: 1rem;">
+        Exportar Pedido como Imagen
+      </button>
     </div>
   </div>
 
@@ -118,14 +116,16 @@
     </div>
   </div>
 
-  <!-- Modal para Confirmar Recepción de Pedido (Cantidades Recibidas) -->
+  <!-- Modal para Confirmar Recepción (Cantidades Recibidas) -->
   <div id="confirmOrderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
       <h2>Ingresar Cantidades Recibidas</h2>
 
-      <!-- Campos de Factura -->
+      <!-- Campos ocultos/auxiliares -->
       <input type="hidden" id="confirmOrderId" value="" />
+
+      <!-- Datos de Factura -->
       <div id="invoiceDetails">
         <label for="invoiceNumber"><strong>Número de Factura:</strong></label>
         <input type="number" id="invoiceNumber" name="invoiceNumber" /><br /><br />
@@ -133,14 +133,13 @@
         <label for="invoiceDate"><strong>Fecha de Factura:</strong></label>
         <input type="date" id="invoiceDate" name="invoiceDate" /><br /><br />
 
-        <!-- Checkbox "No se ingresó factura" -->
         <label style="display: inline-flex; align-items: center;">
           <input type="checkbox" id="noInvoiceCheckbox" style="margin-right: 8px;" />
           No se ingresó la factura
         </label>
       </div>
 
-      <!-- Detalles del Pedido -->
+      <!-- Info de Pedido -->
       <div id="orderInfo">
         <p><strong>ID Pedido:</strong> <span id="orderIdDisplay"></span></p>
         <p><strong>Proveedor:</strong> <span id="providerNameDisplay"></span></p>
@@ -148,7 +147,7 @@
         <p><strong>Fecha de Pedido:</strong> <span id="orderDateDisplay"></span></p>
       </div>
 
-      <!-- Tabla para Ingresar Cantidades Recibidas, Precio por Unidad y Comentarios -->
+      <!-- Tabla para Ingresar Cantidades, Precio, Comentarios -->
       <table>
         <thead>
           <tr>
@@ -169,49 +168,58 @@
         <p>Total de la Factura: Q<span id="invoiceTotal">0.00</span></p>
       </div>
 
-      <!-- Botón para Exportar Recepción de Pedido (Visible para Usuarios Normales después de guardar) -->
+      <!-- Botón Exportar Recepción (sólo visible para usuario normal tras guardar) -->
       <div id="exportReceptionButtonContainer" style="margin-top: 1rem; display: none;">
-        <button onclick="exportAsReceivedOrderImage(document.getElementById('confirmOrderId').value)">Exportar Cantidades Recibidas</button>
+        <button onclick="exportAsReceivedOrderImage(document.getElementById('confirmOrderId').value)">
+          Exportar Cantidades Recibidas
+        </button>
       </div>
 
       <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
     </div>
   </div>
 
-  <!-- Modal para Mostrar Pedido Recibido (Completed) -->
+  <!-- Modal para Mostrar Pedido Recibido (Completado) -->
   <div id="receivedOrderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
       <h2>Detalles del Pedido Recibido</h2>
       <div id="receivedOrderDetails"></div>
 
-      <!-- Botón para Exportar Pedido Recibido como Imagen (Visible para Usuarios Normales) -->
       <div id="exportReceivedOrderImageButtonContainer" style="margin-top: 1rem; display: none;">
-        <button onclick="">Exportar Pedido Recibido como Imagen</button>
+        <button>Exportar Pedido Recibido como Imagen</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal para Cambiar Estado del Pedido -->
-  <div id="changeStatusModal" class="modal">
+  <!-- Modal para Cambiar Estado del Pedido (Opcional) -->
+  <div id="changeStatusModal" class="modal" style="display: none;">
     <div class="modal-content">
       <span class="close" onclick="closeChangeStatusModal()">&times;</span>
       <h2>Cambiar Estado del Pedido</h2>
       <p>Selecciona el nuevo estado para este pedido:</p>
-
-      <!-- 7 estados principales -->
+      <!-- Ejemplo de botones (ajusta según tu necesidad) -->
       <button onclick="changeOrderStatusManually('pending')">Pendiente</button>
       <button onclick="changeOrderStatusManually('pedidoTomado')">Pedido Tomado</button>
-      <button onclick="changeOrderStatusManually('caminoABodega')">Camino a Bodega</button>
       <button onclick="changeOrderStatusManually('pedidoEnBodega')">Pedido en Bodega</button>
+      <button onclick="changeOrderStatusManually('bodegaEnvioPedido')">Bodega Envío Pedido</button>
       <button onclick="changeOrderStatusManually('caminoATienda')">Camino a Tienda</button>
-      <button onclick="changeOrderStatusManually('enTiendaIncompleto')">En Tienda (Incompleto)</button>
-      <button onclick="changeOrderStatusManually('completed')">Completado</button>
+      <button onclick="changeOrderStatusManually('sucursalRecibioPedido')">Sucursal Recibió Pedido</button>
     </div>
   </div>
 
-  <!-- Contenedor oculto para exportar como Imagen con "¡Gracias por su pedido!" -->
-  <div id="exportHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 400px;">
+  <!-- Contenedor oculto para exportar Pedido como Imagen -->
+  <div 
+    id="exportHiddenContainer"
+    style="
+      display: none;
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      background: #ffffff;
+      padding: 20px;
+      width: 400px;"
+  >
     <!-- Logo -->
     <img id="exportLogo" src="logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
 
@@ -221,7 +229,6 @@
     <p><strong>Sucursal:</strong> <span id="exportSucursalHidden"></span></p>
     <p><strong>Fecha:</strong> <span id="exportFechaHidden"></span></p>
 
-    <!-- Fecha y Hora de Edición -->
     <p id="exportLastEditHidden" style="color: green; font-weight: bold;"></p>
 
     <table border="1" style="width: 100%; margin-top: 10px; border-collapse: collapse;">
@@ -240,8 +247,18 @@
     </div>
   </div>
 
-  <!-- Contenedor oculto para exportar Recepción de Pedido como Imagen -->
-  <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 500px;">
+  <!-- Contenedor oculto para exportar Recepción como Imagen -->
+  <div 
+    id="exportReceptionHiddenContainer"
+    style="
+      display: none;
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      background: #ffffff;
+      padding: 20px;
+      width: 500px;"
+  >
     <!-- Logo -->
     <img id="exportReceptionLogo" src="logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
 
@@ -250,6 +267,7 @@
     <p><strong>Proveedor:</strong> <span id="exportReceptionProviderHidden"></span></p>
     <p><strong>Sucursal:</strong> <span id="exportReceptionSucursalHidden"></span></p>
     <p><strong>Fecha de Pedido:</strong> <span id="exportReceptionOrderDateHidden"></span></p>
+
     <p><strong>Número de Factura:</strong> <span id="exportReceptionInvoiceNumberHidden"></span></p>
     <p><strong>Fecha de Factura:</strong> <span id="exportReceptionInvoiceDateHidden"></span></p>
     <p><strong>Total de la Factura:</strong> Q<span id="exportReceptionInvoiceTotalHidden"></span></p>

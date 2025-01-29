@@ -1,68 +1,74 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Realizar Pedido</title>
-  
-  <!-- Firebase SDK -->
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-  
+
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  
+
   <!-- html2canvas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  
+
   <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
-  <!-- FontAwesome para íconos (sin atributo integrity) -->
+
+  <!-- FontAwesome -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
   />
-  
-  <!-- Tus estilos -->
-  <link rel="stylesheet" href="styles.css">
-  
-  <!-- Tu archivo JS con la lógica -->
+
+  <!-- Estilos (Asegúrate de que el archivo css se llame styles.css o ajusta según tu proyecto) -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- JS Principal -->
   <script defer src="app.js"></script>
 </head>
 <body>
-
-  <!-- Barra de botones principales -->
   <div class="buttons">
     <button onclick="showNewOrderForm()">Realizar Nuevo Pedido</button>
     <button onclick="showPreSavedOrders()">Pedidos Preguardados</button>
     <button class="right" onclick="window.location.href='index.html'">Volver a Principal</button>
   </div>
 
-  <!-- Contenedor del formulario de creación de pedido (inicialmente oculto) -->
-  <div id="orderCreationContainer" class="container" style="display:none;">
-    
-    <!-- Formulario de datos generales del pedido -->
-    <div class="order-form">
-      <div class="form-group">
-        <label for="newOrderProviderSelect">Seleccione Proveedor</label>
-        <select id="newOrderProviderSelect" onchange="updateSelectProductButton()"></select>
+  <!-- Contenedor principal de creación de pedidos -->
+  <div id="orderCreationContainer" class="container" style="display: none;">
+    <div class="order-form" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+      <!-- Parte Izquierda: Proveedor, Fecha, ID -->
+      <div style="flex: 1; min-width: 250px;">
+        <div class="form-group">
+          <label for="newOrderProviderSelect">Seleccione Proveedor</label>
+          <select id="newOrderProviderSelect"></select>
+        </div>
+
+        <div class="form-group">
+          <label for="orderDate">Fecha de Pedido</label>
+          <input type="date" id="orderDate" style="display: none;" />
+          <span id="orderDateText" style="display: none;"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="orderId">ID Pedido</label>
+          <input type="text" id="orderId" placeholder="ID Pedido" readonly style="display: none;" />
+          <span id="orderIdText" style="display: none;"></span>
+        </div>
+
+        <!-- Sucursal oculta (solo para lógica interna) -->
+        <select id="newOrderSucursalSelect" style="display:none;"></select>
+        <span id="newOrderSucursalText" style="display:none;"></span>
       </div>
-      <div class="form-group">
-        <label for="newOrderSucursalSelect">Sucursal</label>
-        <select id="newOrderSucursalSelect"></select>
-      </div>
-      <div class="form-group">
-        <label for="orderDate">Fecha de Pedido</label>
-        <input type="date" id="orderDate">
-      </div>
-      <div class="form-group">
-        <label for="orderId">ID Pedido</label>
-        <input type="text" id="orderId" placeholder="ID Pedido" readonly>
-      </div>
+
+      <!-- Parte Derecha: Logo -->
+      <img src="logo.png" alt="Logo" />
     </div>
 
-    <!-- Sección para añadir productos al pedido con disposición Flexbox -->
+    <!-- Tabla de productos -->
     <div class="product-form-and-table">
       <div class="table-wrapper">
         <table id="newOrderTable">
@@ -70,28 +76,27 @@
             <tr>
               <th>Producto</th>
               <th>Presentación</th>
-              <th>Cantidad Pedido</th>
+              <th>Cantidad</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
-      <!-- Botón Agregar Producto colocado debajo de la tabla y alineado a la derecha -->
-      <div class="add-product-button">
+      <!-- Botón Seleccionar Producto abajo, lado izquierdo -->
+      <div style="margin-top: 10px; text-align: left;">
         <button id="selectProductButton" onclick="showProductSelectionModal()">
-          <i class="fas fa-plus-circle"></i> Agregar Producto
+          <i class="fas fa-plus-circle"></i> Seleccionar Producto
         </button>
       </div>
     </div>
 
-    <!-- Botón Guardar Pedido centrado debajo de la sección de productos -->
     <div class="save-order-container">
       <button class="save-order-button" onclick="saveNewOrder()">Guardar Pedido</button>
     </div>
   </div>
 
-  <!-- Modal para la selección de productos -->
+  <!-- Modal para selección de productos -->
   <div id="productSelectionModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeProductSelectionModal()">&times;</span>
@@ -104,12 +109,12 @@
           </tr>
           <tr>
             <th>
-              <input 
-                type="text" 
-                id="productSearch" 
-                onkeyup="filterProducts()" 
+              <input
+                type="text"
+                id="productSearch"
+                onkeyup="filterProducts()"
                 placeholder="Buscar Producto..."
-              >
+              />
             </th>
             <th></th>
           </tr>
@@ -119,8 +124,8 @@
     </div>
   </div>
 
-  <!-- Contenedor para Pedidos Preguardados -->
-  <div id="preSavedOrdersContainer" class="container" style="display:none;">
+  <!-- Pedidos preguardados -->
+  <div id="preSavedOrdersContainer" class="container" style="display: none;">
     <h2>Pedidos Preguardados</h2>
     <table id="preSavedOrdersTable">
       <thead>
@@ -132,24 +137,29 @@
           <th>Acciones</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- Los pedidos preguardados se insertarán aquí dinámicamente -->
-      </tbody>
+      <tbody></tbody>
     </table>
   </div>
 
-  <!-- Contenedor oculto para generar la imagen/ticket del pedido -->
-  <div id="orderDetailsForImage" class="ticket" style="display:none; position: absolute; left: -9999px;">
+  <!-- Ticket oculto -->
+  <div
+    id="orderDetailsForImage"
+    class="ticket"
+    style="display: none; position: absolute; left: -9999px;"
+  >
     <div class="ticket-header">
-      <!-- Agregar el logo aquí -->
-      <img src="logo.png" alt="Logo" style="width: 150px; height: auto; margin-bottom: 10px;">
+      <img
+        src="logo.png"
+        alt="Logo"
+      />
       <h1>Pedido</h1>
       <h2>ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
     </div>
     <div class="ticket-body">
       <p><strong>Proveedor:</strong> <span id="imgProviderName"></span></p>
       <p><strong>Sucursal:</strong> <span id="imgSucursalName"></span></p>
-      <p><strong>Fecha de Pedido:</strong> <span id="imgOrderDate"></span></p>
+      <p><strong>Entrega en:</strong> <span id="imgDestination"></span></p>
+      <p><strong>Fecha de Registro:</strong> <span id="imgSaveDate"></span></p>
       <h3>Productos:</h3>
       <table class="products-table">
         <thead>
@@ -166,6 +176,5 @@
       <p>Gracias por su pedido.</p>
     </div>
   </div>
-
 </body>
 </html>
