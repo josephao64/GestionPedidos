@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Generar Recibos</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- FontAwesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- JS Principal -->
+  <script defer src="recibos.js"></script>
+</head>
+<body>
+  <div class="buttons">
+    <button onclick="initNewReceipt()">Generar Nuevo Recibo</button>
+    <button onclick="showSavedReceipts()">Recibos Guardados</button>
+    <button class="right" onclick="window.location.href='index.html'">Volver a Principal</button>
+  </div>
+
+  <!-- Contenedor principal de creación de recibos -->
+  <div id="receiptCreationContainer" class="container" style="display: none;">
+    <div class="receipt-form">
+      <div class="receipt-header">
+        <img src="logo.png" alt="Logo" class="logo" />
+        <h1>Recibo</h1>
+      </div>
+
+      <!-- No. Recibo -->
+      <div class="form-group">
+        <label>No. Recibo</label>
+        <span id="receiptId" style="margin-left: 10px; font-weight: bold;">Generando...</span>
+      </div>
+
+      <!-- Botón para seleccionar Sucursal -->
+      <div class="form-group">
+        <label>Sucursal</label>
+        <button class="select-sucursal-button" onclick="selectSucursal()">Seleccionar Sucursal</button>
+        <span id="selectedSucursal" style="margin-left: 10px; font-weight: bold;"></span>
+      </div>
+
+      <!-- Tabla de productos -->
+      <div class="product-form-and-table">
+        <div class="table-wrapper">
+          <table id="receiptTable">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Medida</th>
+                <th>Precio Unitario (Q)</th>
+                <th>Cantidad</th>
+                <th>Total (Q)</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <!-- Botón Agregar Producto -->
+        <div style="margin-top: 10px; text-align: left;">
+          <button id="addProductButton" onclick="addProduct()"> 
+            <i class="fas fa-plus-circle"></i> Agregar Producto
+          </button>
+        </div>
+      </div>
+
+      <!-- Total -->
+      <div class="totals">
+        <p><strong>Total:</strong> Q<span id="total">0.00</span></p>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="action-buttons">
+        <button class="save-receipt-button" onclick="saveNewReceipt()">Guardar Recibo</button>
+        <button class="generate-pdf-button" onclick="generatePDF()">Generar PDF</button>
+        <button class="generate-image-button" onclick="generateImage()">Generar Imagen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recibos guardados -->
+  <div id="savedReceiptsContainer" class="container" style="display: none;">
+    <h2>Recibos Guardados</h2>
+    <table id="savedReceiptsTable">
+      <thead>
+        <tr>
+          <th>ID Recibo</th>
+          <th>Sucursal</th>
+          <th>Fecha</th>
+          <th>Total (Q)</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Ticket oculto para generar imagen del recibo -->
+  <div
+    id="receiptDetailsForImage"
+    class="ticket"
+    style="display: none; position: absolute; left: -9999px;"
+  >
+    <div class="ticket-header">
+      <img src="logo.png" alt="Logo" class="logo" />
+      <h1>Recibo</h1>
+      <h2>No. Recibo: <span id="imgReceiptId" class="receipt-id"></span></h2>
+    </div>
+    <div class="ticket-body">
+      <p><strong>Sucursal:</strong> <span id="imgSucursalName"></span></p>
+      <p><strong>Fecha:</strong> <span id="imgReceiptDate"></span></p>
+      <h3>Productos:</h3>
+      <table class="products-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Medida</th>
+            <th>Precio Unitario (Q)</th>
+            <th>Cantidad</th>
+            <th>Total (Q)</th>
+          </tr>
+        </thead>
+        <tbody id="imgProductsTableBody"></tbody>
+      </table>
+      <p style="text-align: right;"><strong>Total:</strong> Q<span id="imgTotal"></span></p>
+    </div>
+    <!-- Se elimina la sección de footer con "Gracias por su compra" -->
+  </div>
+</body>
+</html>
