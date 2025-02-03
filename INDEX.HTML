@@ -128,6 +128,13 @@
       background-color: #da190b;
     }
     /* =====================================
+       Elementos exclusivos para administradores
+       (ocultos por defecto)
+       ===================================== */
+    .admin-only {
+      display: none;
+    }
+    /* =====================================
        Responsividad para dispositivos móviles
        ===================================== */
     @media (max-width: 768px) {
@@ -175,7 +182,7 @@
   </div>
 
   <!-- Mensaje central "MENU PRINCIPAL" -->
-  <div class="menu-principal"></div>
+  <div class="menu-principal">MENU PRINCIPAL</div>
 
   <!-- Contenedor de navegación -->
   <div class="navigation">
@@ -184,6 +191,7 @@
       <li><a href="gestionPedidos/pedidos.html">Gestión de Pedidos</a></li>
     </ul>
     <div class="right-menu">
+      <!-- Botón "Empresa" (exclusivo para administradores) -->
       <button class="menu-button admin-only" id="empresa-button" onclick="window.location.href='empresa/empresaMenu.html'">Empresa</button>
       <button class="menu-button" id="logout-button">Cerrar Sesión</button>
     </div>
@@ -201,11 +209,27 @@
     const empresaButton = document.getElementById('empresa-button');
     const logoutButton = document.getElementById('logout-button');
 
+    // Función para ajustar el menú según el rol del usuario
     function ajustarMenuSegunRol(rol) {
-      // No hay botón de Gestión de Facturas en esta versión
-      // Ajusta otros elementos si es necesario
+      const adminElements = document.querySelectorAll('.admin-only');
+      if (rol === 'administrador') {
+        adminElements.forEach(element => {
+          // Si es un botón, mostrar como inline-block; de lo contrario, block
+          if (element.tagName.toLowerCase() === 'button') {
+            element.style.display = 'inline-block';
+          } else {
+            element.style.display = 'block';
+          }
+        });
+      } else {
+        // Si es usuario normal, se asegura que los elementos admin sigan ocultos
+        adminElements.forEach(element => {
+          element.style.display = 'none';
+        });
+      }
     }
 
+    // Función para verificar el usuario logueado y su rol
     function verificarUsuario() {
       const usuarioLogueado = localStorage.getItem('usuarioLogueado');
       if (usuarioLogueado) {
@@ -230,6 +254,7 @@
       }
     }
 
+    // Función para manejar el cierre de sesión
     function cerrarSesion() {
       localStorage.removeItem('usuarioLogueado');
       window.location.href = 'login.html';
