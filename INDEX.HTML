@@ -1,4 +1,3 @@
-<!-- Archivo: index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -129,12 +128,6 @@
       background-color: #da190b;
     }
     /* =====================================
-       Ocultar elementos exclusivos para administradores
-       ===================================== */
-    .admin-only {
-      display: none;
-    }
-    /* =====================================
        Responsividad para dispositivos móviles
        ===================================== */
     @media (max-width: 768px) {
@@ -189,7 +182,6 @@
     <ul class="oe_menu">
       <li><a href="realizarPedido/realizadPedido.html">Realizar pedidos</a></li>
       <li><a href="gestionPedidos/pedidos.html">Gestión de Pedidos</a></li>
-      <li id="gestion-facturas" class="admin-only"><a href="gestionFacturas.html">Gestión de facturas</a></li>
     </ul>
     <div class="right-menu">
       <button class="menu-button admin-only" id="empresa-button" onclick="window.location.href='empresa/empresaMenu.html'">Empresa</button>
@@ -206,17 +198,12 @@
   <script>
     // Referencias a elementos del DOM
     const welcomeMessage = document.getElementById('welcome-message');
-    const gestionFacturas = document.getElementById('gestion-facturas');
     const empresaButton = document.getElementById('empresa-button');
     const logoutButton = document.getElementById('logout-button');
 
     function ajustarMenuSegunRol(rol) {
-      const adminElements = document.querySelectorAll('.admin-only');
-      if (rol === 'administrador') {
-        adminElements.forEach(element => {
-          element.style.display = (element.tagName.toLowerCase() === 'button') ? 'inline-block' : 'block';
-        });
-      }
+      // No hay botón de Gestión de Facturas en esta versión
+      // Ajusta otros elementos si es necesario
     }
 
     function verificarUsuario() {
