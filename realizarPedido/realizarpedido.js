@@ -1,7 +1,9 @@
+// Archivo: realizarpedido.js
+
 // Importar jsPDF desde el objeto global
 const { jsPDF } = window.jspdf;
 
-let db;
+// Variables globales (No se redeclara "db" ya que se declara en connection.js)
 let userSucursalId = null;
 let userSucursalName = null;
 let userRole = null;
@@ -10,17 +12,8 @@ let selectedProduct = null;
 let orderAlreadySaved = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const firebaseConfig = {
-    apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
-    authDomain: "logisticdb-2e63c.firebaseapp.com",
-    projectId: "logisticdb-2e63c",
-    storageBucket: "logisticdb-2e63c",
-    messagingSenderId: "917523682093",
-    appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
-  };
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-
+  // La conexión a Firebase ya se realizó en database/connection.js
+  // db ya está definido.
   await obtenerSucursalDelUsuario();
   document.getElementById('orderCreationContainer').style.display = 'none';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
@@ -35,13 +28,12 @@ async function obtenerSucursalDelUsuario() {
       title: 'No Autenticado',
       text: 'No has iniciado sesión. Por favor, inicia sesión para continuar.'
     }).then(() => {
-      window.location.href = 'login.html';
+      window.location.href = '../login.html';
     });
     return;
   }
   try {
-    const userSnapshot = await db
-      .collection('usuarios')
+    const userSnapshot = await db.collection('usuarios')
       .where('username', '==', usuarioLogueado)
       .limit(1)
       .get();
@@ -78,7 +70,7 @@ async function obtenerSucursalDelUsuario() {
         title: 'Usuario No Encontrado',
         text: 'No se encontró información del usuario.'
       }).then(() => {
-        window.location.href = 'login.html';
+        window.location.href = '../login.html';
       });
     }
   } catch (error) {
@@ -97,7 +89,6 @@ function setupInitialProductTable() {
   orderAlreadySaved = false;
 }
 
-/* Mostrar la sección de nuevo pedido */
 function showNewOrderForm() {
   document.getElementById('orderCreationContainer').style.display = 'block';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
@@ -113,7 +104,6 @@ function showNewOrderForm() {
   });
 }
 
-/* Mostrar la sección de pedidos preguardados */
 function showPreSavedOrders() {
   document.getElementById('orderCreationContainer').style.display = 'none';
   document.getElementById('preSavedOrdersContainer').style.display = 'block';
@@ -123,9 +113,7 @@ function showPreSavedOrders() {
 async function loadPreSavedOrders() {
   try {
     const snap = await db.collection('orders').where('status', '==', 'preSaved').get();
-    const tbody = document
-      .getElementById('preSavedOrdersTable')
-      .getElementsByTagName('tbody')[0];
+    const tbody = document.getElementById('preSavedOrdersTable').getElementsByTagName('tbody')[0];
     tbody.innerHTML = '';
     snap.forEach(doc => {
       const data = doc.data();
@@ -293,13 +281,8 @@ function closeProductSelectionModal() {
 
 async function loadProductsForProvider(providerId) {
   try {
-    const snap = await db
-      .collection('products')
-      .where('providerId', '==', providerId)
-      .get();
-    const tbody = document
-      .getElementById('productSelectionTable')
-      .getElementsByTagName('tbody')[0];
+    const snap = await db.collection('products').where('providerId', '==', providerId).get();
+    const tbody = document.getElementById('productSelectionTable').getElementsByTagName('tbody')[0];
     tbody.innerHTML = '';
     snap.forEach(doc => {
       const prod = doc.data();
@@ -347,10 +330,10 @@ function filterProducts() {
 
 function addSelectedProductToTable() {
   const tbody = document.getElementById('newOrderTable').querySelector('tbody');
-  if(tbody.rows.length > 0) {
+  if (tbody.rows.length > 0) {
     const lastRow = tbody.rows[tbody.rows.length - 1];
     const qtyInput = lastRow.querySelector('input[type="number"]');
-    if(!qtyInput.value || isNaN(qtyInput.value) || Number(qtyInput.value) <= 0) {
+    if (!qtyInput.value || isNaN(qtyInput.value) || Number(qtyInput.value) <= 0) {
       Swal.fire({
         icon: 'warning',
         title: 'Advertencia',
@@ -381,7 +364,6 @@ function addSelectedProductToTable() {
   }
   const row = tbody.insertRow();
   row.setAttribute('data-id', selectedProduct.id);
-
   const cell1 = row.insertCell(0);
   const cell2 = row.insertCell(1);
   const cell3 = row.insertCell(2);
@@ -422,7 +404,6 @@ function editNewOrderProduct(button) {
 function deleteNewOrderProduct(button) {
   const row = button.parentNode.parentNode;
   row.parentNode.removeChild(row);
-
   const tbody = document.getElementById('newOrderTable').querySelector('tbody');
   if (tbody.rows.length === 0) {
     document.getElementById('newOrderProviderSelect').disabled = false;
@@ -430,20 +411,14 @@ function deleteNewOrderProduct(button) {
 }
 
 async function saveNewOrder() {
-  if(orderAlreadySaved) return;
+  if (orderAlreadySaved) return;
   const providerId = document.getElementById('newOrderProviderSelect').value;
-  const providerName =
-    document.getElementById('newOrderProviderSelect').options[
-      document.getElementById('newOrderProviderSelect').selectedIndex
-    ]?.text || '';
+  const providerName = document.getElementById('newOrderProviderSelect').options[document.getElementById('newOrderProviderSelect').selectedIndex]?.text || '';
 
   let sucursalId, sucursalName, orderDate, orderIdValue;
   if (userRole === 'administrador') {
     sucursalId = document.getElementById('newOrderSucursalSelect').value;
-    sucursalName =
-      document.getElementById('newOrderSucursalSelect').options[
-        document.getElementById('newOrderSucursalSelect').selectedIndex
-      ]?.text || '';
+    sucursalName = document.getElementById('newOrderSucursalSelect').options[document.getElementById('newOrderSucursalSelect').selectedIndex]?.text || '';
     orderDate = document.getElementById('orderDate').value;
     orderIdValue = document.getElementById('orderId').value;
   } else {
@@ -547,7 +522,7 @@ async function saveNewOrder() {
         if (destResult.isConfirmed || destResult.isDenied) {
           let destination = destResult.isConfirmed ? 'Bodega' : 'Tienda';
           details.destination = destination;
-          // Paso 3: Seleccionar si guardar o preguardar (botones a la izquierda y derecha, con X en la esquina)
+          // Paso 3: Seleccionar si guardar o preguardar
           Swal.fire({
             title: 'Guardar Pedido',
             text: 'Seleccione una opción',

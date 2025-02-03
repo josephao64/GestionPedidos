@@ -4,12 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gestión de Pedidos</title>
-  <link rel="stylesheet" href="stylesPedidos.css" />
+  <link rel="stylesheet" href="pedidos.css" />
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Archivo de conexión a la base de datos (ubicado en la carpeta database en el directorio raíz) -->
+  <script src="../database/connection.js"></script>
   <script defer src="pedidos.js"></script>
 </head>
 <body>
@@ -54,7 +56,7 @@
       <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
       <h2>Detalles del Pedido</h2>
       <div id="orderDetails"></div>
-      <!-- Un único botón de exportar pedido como imagen -->
+      <!-- Botón de exportar pedido como imagen -->
       <button id="exportOrderImageButton" style="margin-top: 1rem;">Exportar Pedido como Imagen</button>
     </div>
   </div>
@@ -176,7 +178,7 @@
   </div>
 
   <div id="exportHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 400px;">
-    <img id="exportLogo" src="logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
+    <img id="exportLogo" src="../resources/images/logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
     <h2>Detalles del Pedido</h2>
     <p><strong>ID Pedido:</strong> <span id="exportOrderIdHidden"></span></p>
     <p><strong>Proveedor:</strong> <span id="exportProviderHidden"></span></p>
@@ -197,7 +199,7 @@
   </div>
 
   <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 500px;">
-    <img id="exportReceptionLogo" src="logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
+    <img id="exportReceptionLogo" src="../resources/images/logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
     <h2>Recepción de Pedido</h2>
     <p><strong>ID Pedido:</strong> <span id="exportReceptionOrderIdHidden"></span></p>
     <p><strong>Proveedor:</strong> <span id="exportReceptionProviderHidden"></span></p>

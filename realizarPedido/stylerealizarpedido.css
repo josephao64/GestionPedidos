@@ -1,0 +1,426 @@
+body {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    background-color: #ffffff;
+    color: #333333;
+    margin: 0;
+    padding: 0;
+  }
+  
+  h1, h2, h3 {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+  }
+  
+  h1 {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 26px;
+  }
+  
+  h2 {
+    margin-bottom: 10px;
+    font-size: 22px;
+    text-align: center;
+  }
+  
+  h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 20px;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 16px;
+    color: #333;
+    background-color: #fafafa;
+  }
+  
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    transition: background-color 0.3s ease;
+    font-family: inherit;
+    font-size: 16px;
+    color: #fff;
+    background-color: #007BFF;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  
+  .container {
+    display: none;
+    margin: 20px auto;
+    width: 90%;
+    max-width: 800px;
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow-x: hidden;
+  }
+  
+  .buttons {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    flex-wrap: wrap;
+  }
+  
+  .buttons button {
+    margin: 5px 0;
+    font-size: 16px;
+    background-color: #007BFF;
+    color: #fff;
+  }
+  
+  .buttons button.right {
+    margin-left: auto;
+  }
+  
+  .order-form {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  
+  .order-form .form-group {
+    width: 48%;
+    margin-bottom: 10px;
+  }
+  
+  .order-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  /* Ajuste del Logo (agrandado y responsive) */
+  .order-form img {
+    width: 300px;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    display: block;
+  }
+  
+  .product-form-and-table {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .table-wrapper {
+    width: 100%;
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fafafa;
+    padding: 10px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+    font-size: 16px;
+  }
+  table, th, td {
+    border: 1px solid #ddd;
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+    word-wrap: break-word;
+    vertical-align: middle;
+  }
+  
+  /* Centrar celdas clave */
+  #newOrderTable th,
+  #newOrderTable td,
+  #preSavedOrdersTable th,
+  #preSavedOrdersTable td {
+    text-align: center;
+  }
+  
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+    padding-top: 60px;
+  }
+  .modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 700px;
+    border-radius: 8px;
+  }
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  .close:hover,
+  .close:focus {
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  
+  /* Botón Seleccionar Producto */
+  #selectProductButton {
+    background-color: #007BFF;
+    color: white;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    margin-top: 10px;
+  }
+  #selectProductButton i {
+    margin-right: 8px;
+  }
+  
+  /* Botones de Acción */
+  .action-button {
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 0 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #fff;
+    background-color: #6c757d;
+    transition: background-color 0.3s ease;
+  }
+  .action-button:hover {
+    background-color: #5a6268;
+  }
+  .action-button.edit-button {
+    background-color: #ffc107;
+  }
+  .action-button.edit-button:hover {
+    background-color: #e0a800;
+  }
+  .action-button.delete-button {
+    background-color: #dc3545;
+  }
+  .action-button.delete-button:hover {
+    background-color: #c82333;
+  }
+  .action-button i {
+    pointer-events: none;
+    font-size: 16px;
+  }
+  
+  /* Contenedor Botón Guardar */
+  .save-order-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .save-order-button {
+    background-color: #28a745;
+    padding: 14px 40px;
+    font-size: 18px;
+    border-radius: 4px;
+    color: #fff;
+  }
+  .save-order-button:hover {
+    background-color: #218838;
+  }
+  
+  /* Pedidos Preguardados */
+  #preSavedOrdersContainer {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  
+  /* Ticket */
+  .ticket {
+    width: 550px;
+    padding: 20px 15px;
+    border: 1px solid #ddd;
+    background-color: #ffffff;
+    color: #333333;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    margin: 20px auto;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+  }
+  
+  .ticket-header {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  /* Ajuste del Logo en el Ticket (agrandado y responsive) */
+  .ticket-header img {
+    width: 300px;
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 10px;
+  }
+  
+  .ticket-header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #333333;
+  }
+  
+  .ticket-header h2 {
+    margin: 5px 0 0;
+    font-size: 18px;
+    color: #666666;
+  }
+  
+  .order-id {
+    font-size: 20px;
+    font-weight: bold;
+    color: #FF5733;
+  }
+  
+  .ticket-body {
+    margin-bottom: 10px;
+  }
+  
+  .ticket-body p {
+    margin: 6px 0;
+    line-height: 1.4;
+  }
+  
+  .products-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    table-layout: fixed;
+    font-size: 16px;
+  }
+  .products-table th,
+  .products-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+  .products-table th {
+    text-align: center;
+    white-space: nowrap;
+  }
+  .products-table td {
+    text-align: left;
+    word-wrap: break-word;
+  }
+  
+  .ticket-footer {
+    text-align: center;
+    font-size: 14px;
+    color: #777777;
+    margin-top: 10px;
+  }
+  
+  /* Responsive Styles for Phones */
+  @media (max-width: 600px) {
+    body {
+      font-size: 14px;
+    }
+  
+    .container {
+      width: 95%;
+      padding: 15px;
+    }
+  
+    .buttons {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  
+    .buttons button {
+      width: 100%;
+      margin: 5px 0;
+    }
+  
+    .order-form {
+      flex-direction: column;
+    }
+    
+    .order-form .form-group {
+      width: 100%;
+    }
+    
+    .order-form img {
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    .table-wrapper {
+      padding: 5px;
+    }
+    
+    table {
+      font-size: 14px;
+    }
+    
+    .save-order-button {
+      padding: 12px 30px;
+      font-size: 16px;
+    }
+    
+    /* Responsive adjustments for ticket */
+    .ticket {
+      width: 90%;
+      padding: 15px 10px;
+      font-size: 14px;
+    }
+    .ticket-header img {
+      width: 100%;
+    }
+    .ticket-header h1 {
+      font-size: 20px;
+    }
+    .ticket-header h2 {
+      font-size: 16px;
+    }
+    .order-id {
+      font-size: 18px;
+    }
+    .products-table th,
+    .products-table td {
+      padding: 6px;
+      font-size: 12px;
+    }
+  }
+  

@@ -19,22 +19,22 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- FontAwesome -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="stylerealizarpedido.css" />
+
+  <!-- Archivo de conexión a Firebase (ubicado en la carpeta database) -->
+  <script src="../database/connection.js"></script>
 
   <!-- JS Principal -->
-  <script defer src="app.js"></script>
+  <script defer src="realizarpedido.js"></script>
 </head>
 <body>
   <div class="buttons">
     <button onclick="showNewOrderForm()">Realizar Nuevo Pedido</button>
     <button onclick="showPreSavedOrders()">Pedidos Preguardados</button>
-    <button class="right" onclick="window.location.href='index.html'">Volver a Principal</button>
+    <button class="right" onclick="window.location.href='../index.html'">Volver a Principal</button>
   </div>
 
   <!-- Contenedor principal de creación de pedidos -->
@@ -65,7 +65,7 @@
       </div>
 
       <!-- Parte Derecha: Logo -->
-      <img src="logo.png" alt="Logo" />
+      <img src="../resources/images/logo.png" alt="Logo" />
     </div>
 
     <!-- Tabla de productos -->
@@ -109,12 +109,7 @@
           </tr>
           <tr>
             <th>
-              <input
-                type="text"
-                id="productSearch"
-                onkeyup="filterProducts()"
-                placeholder="Buscar Producto..."
-              />
+              <input type="text" id="productSearch" onkeyup="filterProducts()" placeholder="Buscar Producto..." />
             </th>
             <th></th>
           </tr>
@@ -142,13 +137,9 @@
   </div>
 
   <!-- Ticket oculto -->
-  <div
-    id="orderDetailsForImage"
-    class="ticket"
-    style="display: none; position: absolute; left: -9999px;"
-  >
+  <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
     <div class="ticket-header">
-      <img src="logo.png" alt="Logo" />
+      <img src="../resources/images/logo.png" alt="Logo" />
       <h1>Pedido</h1>
       <h2>ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
     </div>

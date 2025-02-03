@@ -1,3 +1,4 @@
+<!-- Archivo: index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -42,7 +43,7 @@
       padding: 20px 0;
     }
     .logo-container img {
-      max-width: 200px; /* Tamaño reducido para escritorio */
+      max-width: 200px;
       width: 100%;
       height: auto;
     }
@@ -68,7 +69,7 @@
       flex-direction: column;
       align-items: flex-start;
       justify-content: flex-start;
-      padding-left: 20px; /* Espacio a la izquierda para los botones */
+      padding-left: 20px;
       position: relative;
     }
     /* =====================================
@@ -82,20 +83,19 @@
       flex-direction: column;
       align-items: flex-start;
       position: fixed;
-      top: 50%; /* Centra verticalmente el menú */
-      left: 20px; /* Posición fija en el lado izquierdo */
+      top: 50%;
+      left: 20px;
       transform: translateY(-50%);
       z-index: 600;
     }
     .oe_menu li {
       margin: 10px 0;
     }
-    /* Estilos para enlaces y botones del menú */
     .oe_menu a, .menu-button {
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 150px; /* Tamaño fijo del botón para escritorio */
+      width: 150px;
       height: 150px;
       font-size: 18px;
       text-align: center;
@@ -122,11 +122,6 @@
       gap: 10px;
       z-index: 600;
     }
-    /* Estilos específicos para el botón "Empresa" */
-    .menu-button#empresa-button {
-      /* Personaliza si lo deseas */
-    }
-    /* Estilos específicos para el botón "Cerrar Sesión" */
     .menu-button#logout-button {
       background-color: #f44336;
     }
@@ -182,7 +177,8 @@
 
   <!-- Contenedor para el logo centrado -->
   <div class="logo-container">
-    <img src="logo.png" alt="Logo de la aplicación">
+    <!-- El logo se encuentra en: resources/images/logo.png -->
+    <img src="resources/images/logo.png" alt="Logo de la aplicación">
   </div>
 
   <!-- Mensaje central "MENU PRINCIPAL" -->
@@ -191,68 +187,45 @@
   <!-- Contenedor de navegación -->
   <div class="navigation">
     <ul class="oe_menu">
-      <li><a href="realizadPedido.html">Realizar pedidos</a></li>
-      <li><a href="pedidos.html">Gestión de Pedidos</a></li>
-      <!-- Elemento exclusivo para administradores -->
+      <li><a href="realizarPedido/realizadPedido.html">Realizar pedidos</a></li>
+      <li><a href="gestionPedidos/pedidos.html">Gestión de Pedidos</a></li>
       <li id="gestion-facturas" class="admin-only"><a href="gestionFacturas.html">Gestión de facturas</a></li>
     </ul>
     <div class="right-menu">
-      <!-- Botón Empresa exclusivo para administradores -->
-      <button class="menu-button admin-only" id="empresa-button" onclick="window.location.href='empresaMenu.html'">Empresa</button>
+      <button class="menu-button admin-only" id="empresa-button" onclick="window.location.href='empresa/empresaMenu.html'">Empresa</button>
       <button class="menu-button" id="logout-button">Cerrar Sesión</button>
     </div>
   </div>
 
-  <!-- Scripts JavaScript Integrados -->
   <!-- Firebase SDK v8.6.8 -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-  <!-- Biblioteca CryptoJS para Hashing de Contraseñas (opcional pero recomendado) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-
+  <!-- Archivo de conexión a la base de datos (ubicado en la carpeta database) -->
+  <script src="database/connection.js"></script>
   <script>
-    // Configuración de Firebase
-    var firebaseConfig = {
-      apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
-      authDomain: "logisticdb-2e63c.firebaseapp.com",
-      projectId: "logisticdb-2e63c",
-      storageBucket: "logisticdb-2e63c.appspot.com",
-      messagingSenderId: "917523682093",
-      appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
-    };
-    // Inicializar Firebase
-    firebase.initializeApp(firebaseConfig);
-    var db = firebase.firestore();
-
     // Referencias a elementos del DOM
     const welcomeMessage = document.getElementById('welcome-message');
     const gestionFacturas = document.getElementById('gestion-facturas');
     const empresaButton = document.getElementById('empresa-button');
     const logoutButton = document.getElementById('logout-button');
 
-    // Función para mostrar u ocultar elementos según el rol
     function ajustarMenuSegunRol(rol) {
       const adminElements = document.querySelectorAll('.admin-only');
       if (rol === 'administrador') {
         adminElements.forEach(element => {
-          if (element.tagName.toLowerCase() === 'button') {
-            element.style.display = 'inline-block';
-          } else {
-            element.style.display = 'block';
-          }
+          element.style.display = (element.tagName.toLowerCase() === 'button') ? 'inline-block' : 'block';
         });
       }
     }
 
-    // Función para verificar el usuario logueado y su rol
     function verificarUsuario() {
       const usuarioLogueado = localStorage.getItem('usuarioLogueado');
       if (usuarioLogueado) {
         db.collection('usuarios').where('username', '==', usuarioLogueado).limit(1).get()
-          .then((querySnapshot) => {
+          .then(querySnapshot => {
             if (!querySnapshot.empty) {
-              const userDoc = querySnapshot.docs[0];
-              const userData = userDoc.data();
+              const userData = querySnapshot.docs[0].data();
               ajustarMenuSegunRol(userData.rol);
               welcomeMessage.textContent = `Bienvenido, ${userData.username}!`;
             } else {
@@ -260,7 +233,7 @@
               window.location.href = 'login.html';
             }
           })
-          .catch((error) => {
+          .catch(error => {
             console.error("Error al verificar el usuario: ", error);
             alert('Error al verificar el usuario. Por favor, intenta nuevamente.');
             window.location.href = 'login.html';
@@ -270,19 +243,16 @@
       }
     }
 
-    // Función para manejar el cierre de sesión
     function cerrarSesion() {
       localStorage.removeItem('usuarioLogueado');
       window.location.href = 'login.html';
     }
 
-    // Asignar eventos a los botones
     logoutButton.addEventListener('click', cerrarSesion);
     empresaButton.addEventListener('click', function() {
-      window.location.href = 'empresaMenu.html';
+      window.location.href = 'empresa/empresaMenu.html';
     });
 
-    // Ejecutar la verificación al cargar la página
     window.onload = verificarUsuario;
   </script>
 </body>

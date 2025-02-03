@@ -1,28 +1,16 @@
 /**********************************************************
- * CONFIGURACIÓN DE FIREBASE
- **********************************************************/
-const firebaseConfig = {
-  apiKey: "AIzaSyBNalk...",
-  authDomain: "logisticdb-2e63c",
-  projectId: "logisticdb-2e63c",
-  storageBucket: "logisticdb-2e63c.appspot.com",
-  messagingSenderId: "917523682093",
-  appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-/**********************************************************
- * VARIABLES GLOBALES
+ * VARIABLES GLOBALES (Se asume que la conexión Firebase ya
+ * se realizó en ../database/connection.js)
  **********************************************************/
 let userSucursalId = null;
 let loggedInUsername = null;
 let userRole = null;
 let userPermissions = {};
-let logoBase64 = "";
+let logoBase64 = ""; // Se cargará el logo en base64
 
 /**********************************************************
- * DOMContentLoaded: Cargar automáticamente pedidos en proceso
+ * DOMContentLoaded: Inicializa la carga de pedidos y otros
+ * datos al cargar la página
  **********************************************************/
 document.addEventListener("DOMContentLoaded", async () => {
   await initUserAndSucursal();
@@ -68,6 +56,24 @@ async function initUserAndSucursal() {
 }
 
 /**********************************************************
+ * loadLogo: Carga el logo y lo convierte a base64
+ **********************************************************/
+function loadLogo() {
+  const img = new Image();
+  img.src = "../resources/images/logo.png";
+  img.crossOrigin = "Anonymous";
+  img.onload = function () {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width; 
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    logoBase64 = canvas.toDataURL("image/png");
+  };
+  img.onerror = function () { console.error("No se pudo cargar ../resources/images/logo.png"); };
+}
+
+/**********************************************************
  * loadSucursalesForAdmin / loadProvidersForAdmin
  **********************************************************/
 async function loadSucursalesForAdmin() {
@@ -105,23 +111,6 @@ async function loadProvidersForAdmin() {
 }
 
 /**********************************************************
- * loadLogo
- **********************************************************/
-function loadLogo() {
-  const img = new Image();
-  img.src = "logo.png";
-  img.crossOrigin = "Anonymous";
-  img.onload = function () {
-    const canvas = document.createElement("canvas");
-    canvas.width = img.width; canvas.height = img.height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    logoBase64 = canvas.toDataURL("image/png");
-  };
-  img.onerror = function () { console.error("No se pudo cargar el logo.png"); };
-}
-
-/**********************************************************
  * Navegación y Tabs
  **********************************************************/
 function openTab(evt, tabName) {
@@ -132,7 +121,7 @@ function openTab(evt, tabName) {
   document.getElementById(tabName).style.display = "block";
   evt.currentTarget.className += " active";
 }
-function goToMainMenu() { window.location.href = "INDEX.html"; }
+function goToMainMenu() { window.location.href = "../index.html"; }
 
 /**********************************************************
  * Real-Time Listeners
@@ -201,7 +190,6 @@ async function loadCompletedOrders() {
     snap.forEach(doc => {
       const order = doc.data();
       if (order.status === "sucursalRecibioPedido") {
-        // Se muestran mensajes de pendiente o incompleto si existen, igual que en in process
         const card = createOrderCard(doc.id, order);
         cont.appendChild(card);
       }
@@ -223,7 +211,6 @@ function createOrderCard(orderDocId, order) {
     <p><strong>Destino:</strong> ${order.destination || "No definido"}</p>
     <div class="order-status">${generateProgressBar(order)}</div>
   `;
-  // Mostrar mensaje de factura pendiente o producto incompleto en ambas pestañas
   if (order.pendingInvoice || order.mismatchedQuantities) {
     if (order.mismatchComment) {
       let prefix = (order.commentSource === "admin") ? "Comentario del Admin:" : "Comentario de Encargado:";
@@ -426,7 +413,6 @@ function showOrderDetails(orderId) {
         });
         html += `</tbody></table>`;
       }
-      // Agregar botón de Exportar Pedido
       html += `<button onclick="exportOrder('${orderId}')">Exportar Pedido</button>`;
       if (order.status === "pending") { html += `<button onclick="editOrder('${docSnap.id}')">Editar Pedido</button>`; }
       document.getElementById("orderDetails").innerHTML = html;
@@ -564,7 +550,8 @@ function exportAsImage(order, fileName) {
     const editDate = new Date(order.lastEditTimestamp.toDate());
     exportLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()} por: ${order.lastEditedBy || "N/A"}`;
   } else { exportLastEditHidden.textContent = ""; }
-  exportLogoImg.src = logoBase64 || "logo.png";
+  // Actualizado para utilizar la ruta correcta en la carpeta resources/images
+  exportLogoImg.src = logoBase64 || "../resources/images/logo.png";
   tBody.innerHTML = "";
   if (order.products) {
     order.products.forEach(prod => {
@@ -901,7 +888,8 @@ function exportAsReceptionImage(order, fileName) {
     const editDate = new Date(order.lastEditTimestamp.toDate());
     exportReceptionLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()} por: ${order.lastEditedBy || "N/A"}`;
   } else { exportReceptionLastEditHidden.textContent = ""; }
-  exportReceptionLogoImg.src = logoBase64 || "logo.png";
+  // Actualizar la ruta del logo
+  exportReceptionLogoImg.src = logoBase64 || "../resources/images/logo.png";
   exportReceptionTBody.innerHTML = "";
   if (order.receivedProducts) {
     order.receivedProducts.forEach(prod => {
@@ -957,4 +945,21 @@ function exportAsReceivedOrderImage(orderId) {
       exportAsReceptionImage(order, fileName);
     })
     .catch(error => { Swal.fire({ icon: "error", title: "Error al exportar", text: error.message }); });
+}
+  
+/**********************************************************
+ * Otras funciones (deleteOrder, changeStatus, etc.)
+ **********************************************************/
+// Las demás funciones se mantienen sin cambios...
+// (deleteOrder, markOrderAsTaken, forceCompleteOrder, etc.)
+  
+function escapeHtml(str) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return str.replace(/[&<>"']/g, m => map[m]);
 }
