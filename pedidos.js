@@ -1,4 +1,4 @@
-/********************************************************** 
+/**********************************************************
  * CONFIGURACIÓN DE FIREBASE
  **********************************************************/
 const firebaseConfig = {
@@ -9,7 +9,6 @@ const firebaseConfig = {
   messagingSenderId: "917523682093",
   appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -18,12 +17,12 @@ const db = firebase.firestore();
  **********************************************************/
 let userSucursalId = null;
 let loggedInUsername = null;
-let userRole = null;  
+let userRole = null;
 let userPermissions = {};
 let logoBase64 = "";
 
 /**********************************************************
- * DOMContentLoaded
+ * DOMContentLoaded: Cargar automáticamente pedidos en proceso
  **********************************************************/
 document.addEventListener("DOMContentLoaded", async () => {
   await initUserAndSucursal();
@@ -35,6 +34,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadLogo();
   setupRealTimeInProcessListener();
   setupRealTimeCompletedListener();
+  // Carga automática de pedidos en proceso al entrar
+  loadInProcessOrders();
 });
 
 /**********************************************************
@@ -43,38 +44,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function initUserAndSucursal() {
   loggedInUsername = localStorage.getItem("usuarioLogueado");
   if (!loggedInUsername) {
-    Swal.fire({
-      icon: "warning",
-      title: "No hay usuario logueado",
-      text: "Redirigiendo a login..."
-    }).then(() => {
-      window.location.href = "login.html";
-    });
+    Swal.fire({ icon: "warning", title: "No hay usuario logueado", text: "Redirigiendo a login..." })
+      .then(() => { window.location.href = "login.html"; });
     return;
   }
   const loggedInUserDiv = document.getElementById("loggedInUser");
-  if (loggedInUserDiv) {
-    loggedInUserDiv.textContent = "Usuario: " + loggedInUsername;
-  }
+  if (loggedInUserDiv) { loggedInUserDiv.textContent = "Usuario: " + loggedInUsername; }
   try {
-    const snap = await db
-      .collection("usuarios")
-      .where("username", "==", loggedInUsername)
-      .limit(1)
-      .get();
+    const snap = await db.collection("usuarios")
+      .where("username", "==", loggedInUsername).limit(1).get();
     if (snap.empty) {
-      Swal.fire({
-        icon: "error",
-        title: "Usuario no encontrado",
-        text: "Inicia sesión nuevamente."
-      }).then(() => {
-        window.location.href = "login.html";
-      });
+      Swal.fire({ icon: "error", title: "Usuario no encontrado", text: "Inicia sesión nuevamente." })
+        .then(() => { window.location.href = "login.html"; });
       return;
     }
     const userData = snap.docs[0].data();
     userSucursalId = userData.sucursalId;
-    userRole = userData.rol;  
+    userRole = userData.rol;
     userPermissions = userData.permisos || {};
   } catch (error) {
     Swal.fire({ icon: "error", title: "Error", text: error.message });
@@ -100,19 +86,13 @@ async function loadSucursalesForAdmin() {
     Swal.fire({ icon: "error", title: "Error", text: error.message });
   }
 }
-
 async function loadProvidersForAdmin() {
   const sel = document.getElementById("providerFilter");
   sel.innerHTML = `<option value="all">Todos los Proveedores</option>`;
   try {
     const ordersSnap = await db.collection("orders").get();
     const uniqueProviders = new Set();
-    ordersSnap.forEach(doc => {
-      const data = doc.data();
-      if (data.providerName) {
-        uniqueProviders.add(data.providerName);
-      }
-    });
+    ordersSnap.forEach(doc => { if (doc.data().providerName) uniqueProviders.add(doc.data().providerName); });
     uniqueProviders.forEach(provider => {
       const opt = document.createElement("option");
       opt.value = provider;
@@ -133,15 +113,12 @@ function loadLogo() {
   img.crossOrigin = "Anonymous";
   img.onload = function () {
     const canvas = document.createElement("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
+    canvas.width = img.width; canvas.height = img.height;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0);
     logoBase64 = canvas.toDataURL("image/png");
   };
-  img.onerror = function () {
-    console.error("No se pudo cargar el logo.png");
-  };
+  img.onerror = function () { console.error("No se pudo cargar el logo.png"); };
 }
 
 /**********************************************************
@@ -149,49 +126,27 @@ function loadLogo() {
  **********************************************************/
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("container");
-  for (let i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].style.display = "none";
-  }
+  for (let el of tabcontent) { el.style.display = "none"; }
   const tablinks = document.getElementsByClassName("tab-button");
-  for (let i = 0; i < tablinks.length; i++) {
-    tablinks[i].className = tablinks[i].className.replace(" active", "");
-  }
+  for (let el of tablinks) { el.className = el.className.replace(" active", ""); }
   document.getElementById(tabName).style.display = "block";
   evt.currentTarget.className += " active";
 }
-
-function goToMainMenu() {
-  window.location.href = "INDEX.html";
-}
+function goToMainMenu() { window.location.href = "INDEX.html"; }
 
 /**********************************************************
  * Real-Time Listeners
  **********************************************************/
 function setupRealTimeInProcessListener() {
-  const inProcessStatuses = [
-    "pending",
-    "pedidoTomado",
-    "pedidoEnBodega",
-    "bodegaEnvioPedido",
-    "caminoATienda"
-  ];
-  let query = db.collection("orders").where("status", "in", inProcessStatuses);
-  if (userRole !== "administrador") {
-    query = query.where("sucursalId", "==", userSucursalId);
-  }
-  query.onSnapshot(() => {
-    loadInProcessOrders();
-  });
+  const statuses = ["pending", "pedidoTomado", "pedidoEnBodega", "bodegaEnvioPedido", "caminoATienda"];
+  let query = db.collection("orders").where("status", "in", statuses);
+  if (userRole !== "administrador") { query = query.where("sucursalId", "==", userSucursalId); }
+  query.onSnapshot(() => { loadInProcessOrders(); });
 }
-
 function setupRealTimeCompletedListener() {
   let query = db.collection("orders").where("status", "==", "sucursalRecibioPedido");
-  if (userRole !== "administrador") {
-    query = query.where("sucursalId", "==", userSucursalId);
-  }
-  query.onSnapshot(() => {
-    loadCompletedOrders();
-  });
+  if (userRole !== "administrador") { query = query.where("sucursalId", "==", userSucursalId); }
+  query.onSnapshot(() => { loadCompletedOrders(); });
 }
 
 /**********************************************************
@@ -202,48 +157,26 @@ async function loadInProcessOrders() {
     const cont = document.getElementById("inProcessOrdersAdminCards");
     cont.innerHTML = "";
     const idSearch = document.getElementById("idSearchInput")?.value?.trim();
-    const inProcessStatuses = [
-      "pending",
-      "pedidoTomado",
-      "pedidoEnBodega",
-      "bodegaEnvioPedido",
-      "caminoATienda"
-    ];
-    let query;
-    if (idSearch) {
-      query = db.collection("orders").where("orderId", "==", idSearch);
-    } else {
-      query = db.collection("orders").where("status", "in", inProcessStatuses);
-    }
+    const statuses = ["pending", "pedidoTomado", "pedidoEnBodega", "bodegaEnvioPedido", "caminoATienda"];
+    let query = idSearch ? db.collection("orders").where("orderId", "==", idSearch)
+                         : db.collection("orders").where("status", "in", statuses);
     if (userRole === "administrador") {
       const selSuc = document.getElementById("sucursalFilter").value;
-      if (selSuc !== "all") {
-        query = query.where("sucursalId", "==", selSuc);
-      }
+      if (selSuc !== "all") query = query.where("sucursalId", "==", selSuc);
       const selProv = document.getElementById("providerFilter").value;
-      if (selProv !== "all") {
-        query = query.where("providerName", "==", selProv);
-      }
-    } else {
-      query = query.where("sucursalId", "==", userSucursalId);
-    }
+      if (selProv !== "all") query = query.where("providerName", "==", selProv);
+    } else { query = query.where("sucursalId", "==", userSucursalId); }
     const sortValue = document.getElementById("sortOrder")?.value || "masReciente";
-    if (sortValue === "masReciente") {
-      query = query.orderBy("timestamp", "desc");
-    } else {
-      query = query.orderBy("timestamp", "asc");
-    }
+    query = sortValue === "masReciente" ? query.orderBy("timestamp", "desc") : query.orderBy("timestamp", "asc");
     const snap = await query.get();
     snap.forEach(doc => {
       const order = doc.data();
-      if (inProcessStatuses.includes(order.status)) {
+      if (statuses.includes(order.status)) {
         const card = createOrderCard(doc.id, order);
         cont.appendChild(card);
       }
     });
-  } catch (error) {
-    Swal.fire({ icon: "error", title: "Error", text: error.message });
-  }
+  } catch (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); }
 }
 
 /**********************************************************
@@ -251,46 +184,29 @@ async function loadInProcessOrders() {
  **********************************************************/
 async function loadCompletedOrders() {
   try {
-    const contCards = document.getElementById("completedOrdersAdminCards");
-    if (contCards) contCards.innerHTML = "";
+    const cont = document.getElementById("completedOrdersAdminCards");
+    if (cont) cont.innerHTML = "";
     const idSearch = document.getElementById("idSearchInput")?.value?.trim();
-    let query;
-    if (idSearch) {
-      query = db.collection("orders")
-        .where("status", "==", "sucursalRecibioPedido")
-        .where("orderId", "==", idSearch);
-    } else {
-      query = db.collection("orders").where("status", "==", "sucursalRecibioPedido");
-    }
+    let query = idSearch ? db.collection("orders").where("status", "==", "sucursalRecibioPedido").where("orderId", "==", idSearch)
+                         : db.collection("orders").where("status", "==", "sucursalRecibioPedido");
     if (userRole === "administrador") {
       const selSuc = document.getElementById("sucursalFilter").value;
-      if (selSuc !== "all") {
-        query = query.where("sucursalId", "==", selSuc);
-      }
+      if (selSuc !== "all") query = query.where("sucursalId", "==", selSuc);
       const selProv = document.getElementById("providerFilter").value;
-      if (selProv !== "all") {
-        query = query.where("providerName", "==", selProv);
-      }
-    } else {
-      query = query.where("sucursalId", "==", userSucursalId);
-    }
+      if (selProv !== "all") query = query.where("providerName", "==", selProv);
+    } else { query = query.where("sucursalId", "==", userSucursalId); }
     const sortValue = document.getElementById("sortOrder")?.value || "masReciente";
-    if (sortValue === "masReciente") {
-      query = query.orderBy("timestamp", "desc");
-    } else {
-      query = query.orderBy("timestamp", "asc");
-    }
+    query = sortValue === "masReciente" ? query.orderBy("timestamp", "desc") : query.orderBy("timestamp", "asc");
     const snap = await query.get();
     snap.forEach(doc => {
       const order = doc.data();
       if (order.status === "sucursalRecibioPedido") {
+        // Se muestran mensajes de pendiente o incompleto si existen, igual que en in process
         const card = createOrderCard(doc.id, order);
-        contCards.appendChild(card);
+        cont.appendChild(card);
       }
     });
-  } catch (error) {
-    Swal.fire({ icon: "error", title: "Error", text: error.message });
-  }
+  } catch (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); }
 }
 
 /**********************************************************
@@ -299,7 +215,6 @@ async function loadCompletedOrders() {
 function createOrderCard(orderDocId, order) {
   const card = document.createElement("div");
   card.className = "order-card";
-
   let html = `
     <h3>Pedido ID: ${order.orderId}</h3>
     <p>Proveedor: ${order.providerName}</p>
@@ -307,72 +222,52 @@ function createOrderCard(orderDocId, order) {
     <p>Fecha: ${order.orderDate}</p>
     <p><strong>Destino:</strong> ${order.destination || "No definido"}</p>
     <div class="order-status">${generateProgressBar(order)}</div>
-    <button onclick="showOrderDetails('${orderDocId}')">Mostrar Pedido</button>
   `;
-
-  if (order.status === "pending" && userRole !== "administrador") {
-    html += `<h2 style="color: red;">El pedido aún no ha sido tomado por el proveedor</h2>`;
+  // Mostrar mensaje de factura pendiente o producto incompleto en ambas pestañas
+  if (order.pendingInvoice || order.mismatchedQuantities) {
+    if (order.mismatchComment) {
+      let prefix = (order.commentSource === "admin") ? "Comentario del Admin:" : "Comentario de Encargado:";
+      html += `<p style="color: red;">${prefix} ${order.mismatchComment}</p>`;
+    } else {
+      if (order.pendingInvoice) html += `<p style="color: red;">Pendiente de factura</p>`;
+      if (order.mismatchedQuantities) html += `<p style="color: red;">Producto incompleto</p>`;
+    }
   }
-
+  html += `<button onclick="showOrderDetails('${orderDocId}')">Mostrar Pedido</button>`;
+  if (order.status === "pending") { html += `<button onclick="editOrder('${orderDocId}')">Editar Pedido</button>`; }
   if (order.status === "pending" && userRole === "administrador") {
-    html += `
-      <button onclick="markOrderAsTaken('${orderDocId}')">Pedido Tomado por Proveedor</button>
-      <button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>
-    `;
+    html += `<button onclick="markOrderAsTaken('${orderDocId}')">Pedido Tomado por Proveedor</button>
+             <button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>`;
   }
-
-  if (userRole === "administrador" || userPermissions.canEditOrder) {
-    html += `<button onclick="editOrder('${orderDocId}')">Editar Pedido</button>`;
-  }
-  if (userRole === "administrador") {
-    html += `<button onclick="exportOrder('${orderDocId}')">Exportar Pedido</button>`;
-  }
-  if (userRole === "administrador" || userPermissions.canDeleteOrder) {
-    html += `<button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>`;
-  }
-
-  // Si destino = Bodega
-  // Botones para ADMIN cada estado:
+  if (userRole === "administrador" || userPermissions.canEditOrder) { html += `<button onclick="editOrder('${orderDocId}')">Editar Pedido</button>`; }
+  if (userRole === "administrador") { html += `<button onclick="exportOrder('${orderDocId}')">Exportar Pedido</button>`; }
+  if (userRole === "administrador" || userPermissions.canDeleteOrder) { html += `<button onclick="deleteOrder('${orderDocId}')">Eliminar Pedido</button>`; }
   if (order.destination === "Bodega" && userRole === "administrador") {
     if (order.status === "pedidoTomado") {
-      html += `
-        <button onclick="updateStatus('${orderDocId}','pedidoEnBodega')">Pedido en Bodega</button>
-        <button onclick="updateStatus('${orderDocId}','bodegaEnvioPedido')">Bodega Envío Pedido</button>
-      `;
+      html += `<button onclick="updateStatus('${orderDocId}','pedidoEnBodega')">Pedido en Bodega</button>
+               <button onclick="updateStatus('${orderDocId}','bodegaEnvioPedido')">Bodega Envío Pedido</button>`;
     }
-    if (order.status === "pedidoEnBodega") {
-      html += `
-        <button onclick="updateStatus('${orderDocId}','bodegaEnvioPedido')">Bodega Envío Pedido</button>
-      `;
-    }
-    if (order.status === "bodegaEnvioPedido") {
-      html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades</button>`;
-    }
+    if (order.status === "pedidoEnBodega") { html += `<button onclick="updateStatus('${orderDocId}','bodegaEnvioPedido')">Bodega Envío Pedido</button>`; }
+    if (order.status === "bodegaEnvioPedido") { html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades</button>`; }
   }
-
-  // Si destino = Tienda
-  // Botones para ADMIN cada estado:
   if (order.destination === "Tienda" && userRole === "administrador") {
-    if (order.status === "pedidoTomado") {
-      html += `
-        <button onclick="updateStatus('${orderDocId}','caminoATienda')">Camino a Tienda</button>
-      `;
-    }
-    if (order.status === "caminoATienda") {
-      html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades</button>`;
-    }
+    if (order.status === "pedidoTomado") { html += `<button onclick="updateStatus('${orderDocId}','caminoATienda')">Camino a Tienda</button>`; }
+    if (order.status === "caminoATienda") { html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades</button>`; }
   }
-
-  if (order.status === "sucursalRecibioPedido") {
-    html += `<button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>`;
+  if (userRole !== "administrador") {
+    if (order.destination === "Bodega" && order.status === "bodegaEnvioPedido") { html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades</button>`; }
+    if (order.destination === "Tienda" && order.status === "caminoATienda") { html += `<button onclick="confirmOrder('${orderDocId}')">Ingresar Cantidades</button>`; }
   }
-
+  if (order.status === "sucursalRecibioPedido") { html += `<button onclick="showReceivedOrder('${orderDocId}')">Mostrar Pedido Recibido</button>`; }
+  if (userRole === "administrador" && (order.pendingInvoice || order.mismatchedQuantities)) {
+    html += `<button onclick="forceCompleteOrder('${orderDocId}')">Forzar a Completar (Excepción)</button>`;
+  }
   card.innerHTML = html;
   return card;
 }
 
 /**********************************************************
- * updateStatus: Actualizar estado genérico
+ * updateStatus
  **********************************************************/
 function updateStatus(orderDocId, newStatus) {
   Swal.fire({
@@ -381,43 +276,64 @@ function updateStatus(orderDocId, newStatus) {
     showCancelButton: true,
     confirmButtonText: "Sí",
     cancelButtonText: "Cancelar"
-  }).then(async (res) => {
+  }).then(async res => {
     if (res.isConfirmed) {
       try {
         await db.collection("orders").doc(orderDocId).update({ status: newStatus });
         Swal.fire({ icon: "success", title: `Estado cambiado a '${newStatus}'` });
-      } catch (err) {
-        Swal.fire({ icon: "error", title: "Error", text: err.message });
-      }
+      } catch (err) { Swal.fire({ icon: "error", title: "Error", text: err.message }); }
     }
   });
 }
 
 /**********************************************************
- * generateProgressBar
+ * forceCompleteOrder (Forzar completado con comentario)
+ **********************************************************/
+function forceCompleteOrder(orderDocId) {
+  Swal.fire({
+    title: "Forzar a completar pedido",
+    input: "text",
+    inputLabel: "Motivo de la excepción:",
+    inputPlaceholder: "Ingresa el motivo...",
+    showCancelButton: true,
+    confirmButtonText: "Forzar completar",
+    cancelButtonText: "Cancelar",
+    inputValidator: value => { return !value ? "Por favor ingresa un motivo" : null; }
+  }).then(async result => {
+    if (result.isConfirmed) {
+      try {
+        await db.collection("orders").doc(orderDocId).update({
+          status: "sucursalRecibioPedido",
+          mismatchComment: result.value,
+          commentSource: "admin",
+          pendingInvoice: false,
+          mismatchedQuantities: false
+        });
+        Swal.fire({ icon: "success", title: "Pedido completado con excepción" });
+      } catch (err) { Swal.fire({ icon: "error", title: "Error", text: err.message }); }
+    }
+  });
+}
+
+/**********************************************************
+ * generateProgressBar & createProgressBarHTML
  **********************************************************/
 function generateProgressBar(order) {
   const dest = order.destination || "Bodega";
-  if (dest === "Tienda") {
-    const tiendaFlow = [
-      { key: "pending",            label: "Pendiente" },
-      { key: "pedidoTomado",       label: "Pedido Tomado" },
-      { key: "caminoATienda",      label: "En Camino a Tienda" },
-      { key: "sucursalRecibioPedido", label: "Sucursal Recibió Pedido" }
-    ];
-    return createProgressBarHTML(tiendaFlow, order.status);
-  } else {
-    const bodegaFlow = [
-      { key: "pending",            label: "Pendiente" },
-      { key: "pedidoTomado",       label: "Pedido Tomado" },
-      { key: "pedidoEnBodega",     label: "Pedido en Bodega" },
-      { key: "bodegaEnvioPedido",  label: "Bodega Envío Pedido" },
-      { key: "sucursalRecibioPedido", label: "Sucursal Recibió Pedido" }
-    ];
-    return createProgressBarHTML(bodegaFlow, order.status);
-  }
+  const flow = dest === "Tienda" ? [
+    { key: "pending", label: "Pendiente" },
+    { key: "pedidoTomado", label: "Pedido Tomado" },
+    { key: "caminoATienda", label: "En Camino a Tienda" },
+    { key: "sucursalRecibioPedido", label: "Sucursal Recibió Pedido" }
+  ] : [
+    { key: "pending", label: "Pendiente" },
+    { key: "pedidoTomado", label: "Pedido Tomado" },
+    { key: "pedidoEnBodega", label: "Pedido en Bodega" },
+    { key: "bodegaEnvioPedido", label: "Bodega Envío Pedido" },
+    { key: "sucursalRecibioPedido", label: "Sucursal Recibió Pedido" }
+  ];
+  return createProgressBarHTML(flow, order.status);
 }
-
 function createProgressBarHTML(flowArray, currentStatus) {
   const currentIndex = flowArray.findIndex(s => s.key === currentStatus);
   let progressHTML = `<div class="progress-container">`;
@@ -454,9 +370,7 @@ async function markOrderAsTaken(orderId) {
       try {
         await db.collection("orders").doc(orderId).update({ status: "pedidoTomado" });
         Swal.fire({ icon: "success", title: "Pedido Tomado" });
-      } catch (err) {
-        Swal.fire({ icon: "error", title: "Error", text: err.message });
-      }
+      } catch (err) { Swal.fire({ icon: "error", title: "Error", text: err.message }); }
     }
   });
 }
@@ -477,23 +391,18 @@ async function deleteOrder(orderId) {
       try {
         await db.collection("orders").doc(orderId).delete();
         Swal.fire({ icon: "success", title: "Pedido eliminado" });
-      } catch (err) {
-        Swal.fire({ icon: "error", title: "Error", text: err.message });
-      }
+      } catch (err) { Swal.fire({ icon: "error", title: "Error", text: err.message }); }
     }
   });
 }
 
 /**********************************************************
- * showOrderDetails
+ * showOrderDetails (con botón de Exportar Pedido)
  **********************************************************/
 function showOrderDetails(orderId) {
   db.collection("orders").doc(orderId).get()
     .then(docSnap => {
-      if (!docSnap.exists) {
-        Swal.fire({ icon: "error", title: "No encontrado" });
-        return;
-      }
+      if (!docSnap.exists) { Swal.fire({ icon: "error", title: "No encontrado" }); return; }
       const order = docSnap.data();
       let html = `
         <p><strong>ID Pedido:</strong> ${order.orderId}</p>
@@ -502,92 +411,101 @@ function showOrderDetails(orderId) {
         <p><strong>Fecha de Pedido:</strong> ${order.orderDate}</p>
         <p><strong>Destino:</strong> ${order.destination || "No definido"}</p>
       `;
-
       if (order.products) {
-        html += `
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Presentación</th>
-                <th>Cantidad</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
+        html += `<table><thead><tr>
+                   <th>Producto</th>
+                   <th>Presentación</th>
+                   <th>Cantidad</th>
+                 </tr></thead><tbody>`;
         order.products.forEach(prod => {
-          html += `
-            <tr>
-              <td>${prod.name}</td>
-              <td>${prod.presentation}</td>
-              <td>${prod.quantity}</td>
-            </tr>
-          `;
+          html += `<tr>
+                     <td>${prod.name}</td>
+                     <td>${prod.presentation}</td>
+                     <td>${prod.quantity}</td>
+                   </tr>`;
         });
         html += `</tbody></table>`;
       }
-
-      if (order.status === "pending" && userRole === "administrador") {
-        html += `
-          <button onclick="editOrder('${orderId}')">Editar Pedido</button>
-          <button onclick="exportOrder('${orderId}')">Exportar Pedido</button>
-        `;
-      }
-
-      html += `
-        <button onclick="exportAsImageDirect('${orderId}')">Exportar Pedido como Imagen</button>
-      `;
-
-      if (order.receivedProducts && order.receivedProducts.length > 0) {
-        html += `
-          <button onclick="exportReception('${orderId}')">Exportar Recepción de Pedido</button>
-        `;
-      }
-
+      // Agregar botón de Exportar Pedido
+      html += `<button onclick="exportOrder('${orderId}')">Exportar Pedido</button>`;
+      if (order.status === "pending") { html += `<button onclick="editOrder('${docSnap.id}')">Editar Pedido</button>`; }
       document.getElementById("orderDetails").innerHTML = html;
       document.getElementById("orderDetailsModal").style.display = "block";
-
       const exportImageButton = document.getElementById("exportOrderImageButton");
-      if (exportImageButton) {
-        exportImageButton.onclick = function() {
-          exportAsImageDirect(orderId);
-        };
-      }
+      if (exportImageButton) { exportImageButton.onclick = () => { exportAsImageDirect(orderId); }; }
     })
-    .catch(err => {
-      Swal.fire({ icon: "error", title: "Error", text: err.message });
-    });
+    .catch(err => { Swal.fire({ icon: "error", title: "Error", text: err.message }); });
 }
-
 function closeOrderDetailsModal() {
   document.getElementById("orderDetails").innerHTML = "";
   document.getElementById("orderDetailsModal").style.display = "none";
 }
 
 /**********************************************************
- * editOrder / closeEditOrderModal
+ * editOrder (CRUD: Editar, Agregar y Eliminar Productos)
  **********************************************************/
-function editOrder(orderId) {
-  db.collection("orders").doc(orderId).get()
+function editOrder(orderDocId) {
+  db.collection("orders").doc(orderDocId).get()
     .then(docSnap => {
-      if (!docSnap.exists) {
-        Swal.fire({ icon: "error", title: "Pedido no encontrado" });
-        return;
-      }
+      if (!docSnap.exists) { Swal.fire({ icon: "error", title: "Pedido no encontrado" }); return; }
       const order = docSnap.data();
-      let formHTML = `
-        <input type="hidden" id="editOrderId" value="${orderId}">
-        <p><strong>ID Pedido:</strong> ${order.orderId}</p>
-        <p><strong>Destino:</strong> ${order.destination || "No definido"}</p>
-      `;
-      document.getElementById("editOrderDetails").innerHTML = formHTML;
+      document.getElementById("editOrderDocId").value = orderDocId;
+      document.getElementById("editOrderIdDisplay").textContent = order.orderId;
+      document.getElementById("editOrderDestination").value = order.destination || "";
+      const tbody = document.getElementById("editOrderProducts");
+      tbody.innerHTML = "";
+      if (order.products && order.products.length > 0) {
+        order.products.forEach((prod, index) => {
+          tbody.insertAdjacentHTML("beforeend", `
+            <tr>
+              <td><input type="text" value="${prod.name}" class="editProdName"/></td>
+              <td><input type="text" value="${prod.presentation}" class="editProdPresentation"/></td>
+              <td><input type="number" value="${prod.quantity}" min="0" class="editProdQuantity"/></td>
+              <td><button type="button" onclick="removeProductRow(this)">Eliminar</button></td>
+            </tr>
+          `);
+        });
+      }
       document.getElementById("editOrderModal").style.display = "block";
     })
-    .catch(err => {
-      Swal.fire({ icon: "error", title: "Error", text: err.message });
-    });
+    .catch(err => { Swal.fire({ icon: "error", title: "Error", text: err.message }); });
 }
-
+function addProductRow() {
+  const tbody = document.getElementById("editOrderProducts");
+  const newRow = document.createElement("tr");
+  newRow.innerHTML = `
+    <td><input type="text" placeholder="Nombre del producto" class="editProdName"/></td>
+    <td><input type="text" placeholder="Presentación" class="editProdPresentation"/></td>
+    <td><input type="number" placeholder="Cantidad" min="0" class="editProdQuantity"/></td>
+    <td><button type="button" onclick="removeProductRow(this)">Eliminar</button></td>
+  `;
+  tbody.appendChild(newRow);
+}
+function removeProductRow(btn) {
+  const row = btn.parentNode.parentNode;
+  row.parentNode.removeChild(row);
+}
+async function saveEditedOrder() {
+  try {
+    const orderDocId = document.getElementById("editOrderDocId").value;
+    const destination = document.getElementById("editOrderDestination").value;
+    const prodNames = Array.from(document.getElementsByClassName("editProdName")).map(input => input.value);
+    const prodPresentations = Array.from(document.getElementsByClassName("editProdPresentation")).map(input => input.value);
+    const prodQuantities = Array.from(document.getElementsByClassName("editProdQuantity")).map(input => parseFloat(input.value) || 0);
+    let products = [];
+    for (let i = 0; i < prodNames.length; i++) {
+      products.push({ name: prodNames[i], presentation: prodPresentations[i], quantity: prodQuantities[i] });
+    }
+    await db.collection("orders").doc(orderDocId).update({
+      destination: destination,
+      products: products,
+      lastEditTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      lastEditedBy: loggedInUsername
+    });
+    Swal.fire({ icon: "success", title: "Pedido editado", text: "Se han guardado los cambios." });
+    closeEditOrderModal();
+  } catch (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); }
+}
 function closeEditOrderModal() {
   document.getElementById("editOrderDetails").innerHTML = "";
   document.getElementById("editOrderModal").style.display = "none";
@@ -600,50 +518,30 @@ function exportOrder(orderId) {
   document.getElementById("exportModal").style.display = "block";
   document.getElementById("exportModal").dataset.orderId = orderId;
 }
-
-function closeExportModal() {
-  document.getElementById("exportModal").style.display = "none";
-}
-
+function closeExportModal() { document.getElementById("exportModal").style.display = "none"; }
 async function exportAs(format) {
   const modal = document.getElementById("exportModal");
   const orderId = modal.dataset.orderId;
   try {
     const docRef = await db.collection("orders").doc(orderId).get();
-    if (!docRef.exists) {
-      Swal.fire({ icon: "error", title: "Pedido no encontrado" });
-      return;
-    }
+    if (!docRef.exists) { Swal.fire({ icon: "error", title: "Pedido no encontrado" }); return; }
     const order = docRef.data();
     const fileName = `Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
-    if (format === "image") {
-      exportAsImage(order, fileName);
-    } else if (format === "pdf") {
-      Swal.fire({ icon: "warning", title: "Deshabilitado", text: "Exportar a PDF no disponible." });
-    } else if (format === "excel") {
-      exportAsExcel(order, fileName);
-    }
-  } catch (error) {
-    Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
-  }
+    if (format === "image") { exportAsImage(order, fileName); }
+    else if (format === "pdf") { Swal.fire({ icon: "warning", title: "Deshabilitado", text: "Exportar a PDF no disponible." }); }
+    else if (format === "excel") { exportAsExcel(order, fileName); }
+  } catch (error) { Swal.fire({ icon: "error", title: "Error al exportar", text: error.message }); }
   closeExportModal();
 }
-
 async function exportAsImageDirect(orderId) {
   try {
     const docSnap = await db.collection("orders").doc(orderId).get();
-    if (!docSnap.exists) {
-      Swal.fire({ icon: "error", title: "Pedido no encontrado" });
-      return;
-    }
+    if (!docSnap.exists) { Swal.fire({ icon: "error", title: "Pedido no encontrado" }); return; }
     const order = docSnap.data();
     const fileName = `Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
     exportAsImage(order, fileName);
-  } catch (error) {
-    Swal.fire({ icon: "error", title: "Error", text: error.message });
-  }
+  } catch (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); }
 }
-
 function exportAsImage(order, fileName) {
   const hiddenDiv = document.getElementById("exportHiddenContainer");
   const exportOrderIdHidden = document.getElementById("exportOrderIdHidden");
@@ -653,42 +551,20 @@ function exportAsImage(order, fileName) {
   const exportLastEditHidden = document.getElementById("exportLastEditHidden");
   const exportLogoImg = document.getElementById("exportLogo");
   const tBody = document.getElementById("exportProductsTableBody");
-
-  if (
-    !exportOrderIdHidden ||
-    !exportProviderHidden ||
-    !exportSucursalHidden ||
-    !exportFechaHidden ||
-    !exportLastEditHidden ||
-    !exportLogoImg ||
-    !tBody
-  ) {
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: "Elementos de exportación no encontrados."
-    });
+  if (!exportOrderIdHidden || !exportProviderHidden || !exportSucursalHidden ||
+      !exportFechaHidden || !exportLastEditHidden || !exportLogoImg || !tBody) {
+    Swal.fire({ icon: "error", title: "Error", text: "Elementos de exportación no encontrados." });
     return;
   }
-
   exportOrderIdHidden.textContent = order.orderId;
   exportProviderHidden.textContent = order.providerName;
   exportSucursalHidden.textContent = order.sucursalName;
   exportFechaHidden.textContent = order.orderDate;
-
   if (order.lastEditTimestamp) {
     const editDate = new Date(order.lastEditTimestamp.toDate());
-    exportLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()}`;
-  } else {
-    exportLastEditHidden.textContent = "";
-  }
-
-  if (logoBase64) {
-    exportLogoImg.src = logoBase64;
-  } else {
-    exportLogoImg.src = "logo.png";
-  }
-
+    exportLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()} por: ${order.lastEditedBy || "N/A"}`;
+  } else { exportLastEditHidden.textContent = ""; }
+  exportLogoImg.src = logoBase64 || "logo.png";
   tBody.innerHTML = "";
   if (order.products) {
     order.products.forEach(prod => {
@@ -705,12 +581,10 @@ function exportAsImage(order, fileName) {
       tBody.appendChild(row);
     });
   }
-
   hiddenDiv.style.display = "block";
   hiddenDiv.style.left = "50%";
   hiddenDiv.style.top = "50%";
   hiddenDiv.style.transform = "translate(-50%, -50%)";
-
   html2canvas(hiddenDiv, { scale: 2 })
     .then(canvas => {
       const imgData = canvas.toDataURL("image/png");
@@ -719,13 +593,7 @@ function exportAsImage(order, fileName) {
       link.download = `${fileName}.png`;
       link.click();
     })
-    .catch(err => {
-      Swal.fire({
-        icon: "error",
-        title: "Error al exportar",
-        text: "No se pudo exportar la imagen"
-      });
-    })
+    .catch(err => { Swal.fire({ icon: "error", title: "Error al exportar", text: "No se pudo exportar la imagen" }); })
     .finally(() => {
       hiddenDiv.style.display = "none";
       hiddenDiv.style.left = "-9999px";
@@ -733,7 +601,6 @@ function exportAsImage(order, fileName) {
       hiddenDiv.style.transform = "none";
     });
 }
-
 function exportAsExcel(order, fileName) {
   const wb = XLSX.utils.book_new();
   const ws_data = [
@@ -743,21 +610,15 @@ function exportAsExcel(order, fileName) {
     ["Fecha", order.orderDate],
     []
   ];
-
   if (order.lastEditTimestamp) {
     const editDate = new Date(order.lastEditTimestamp.toDate()).toLocaleString();
-    ws_data.push(["Última Edición", editDate]);
+    ws_data.push(["Última Edición", editDate + " por: " + (order.lastEditedBy || "N/A")]);
     ws_data.push([]);
   }
-
   ws_data.push(["Producto", "Presentación", "Cantidad"]);
-
   if (order.products) {
-    order.products.forEach((prod) => {
-      ws_data.push([prod.name, prod.presentation, prod.quantity]);
-    });
+    order.products.forEach(prod => { ws_data.push([prod.name, prod.presentation, prod.quantity]); });
   }
-
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
   XLSX.utils.book_append_sheet(wb, ws, "Pedido");
   XLSX.writeFile(wb, `${fileName}.xlsx`);
@@ -769,11 +630,7 @@ function exportAsExcel(order, fileName) {
 async function confirmOrder(orderId) {
   try {
     const docSnap = await db.collection("orders").doc(orderId).get();
-    if (!docSnap.exists) {
-      Swal.fire({ icon: "error", title: "Pedido no encontrado" });
-      return;
-    }
-
+    if (!docSnap.exists) { Swal.fire({ icon: "error", title: "Pedido no encontrado" }); return; }
     const order = docSnap.data();
     document.getElementById("confirmOrderId").value = orderId;
     document.getElementById("invoiceNumber").value = order.invoiceNumber || "";
@@ -783,16 +640,14 @@ async function confirmOrder(orderId) {
     document.getElementById("providerNameDisplay").textContent = order.providerName;
     document.getElementById("sucursalNameDisplay").textContent = order.sucursalName;
     document.getElementById("orderDateDisplay").textContent = order.orderDate;
-
     const tBody = document.getElementById("confirmOrderProducts");
     tBody.innerHTML = "";
     const receivedArr = order.receivedProducts || [];
-
     if (order.products) {
       order.products.forEach((prod, i) => {
         const rData = receivedArr[i] || {};
-        const receivedQty = rData.receivedQuantity || 0;
-        const priceVal = rData.unitPrice || 0;
+        const receivedQty = rData.receivedQuantity === 0 ? "" : rData.receivedQuantity;
+        const priceVal = rData.unitPrice === 0 ? "" : rData.unitPrice;
         const totalVal = rData.totalPerProduct || 0;
         const commentsVal = rData.comments || "";
         tBody.insertAdjacentHTML("beforeend", `
@@ -801,46 +656,23 @@ async function confirmOrder(orderId) {
             <td>${prod.presentation}</td>
             <td>${prod.quantity}</td>
             <td>
-              <input
-                type="number"
-                id="receivedQuantity${i}"
-                min="0"
-                max="${prod.quantity}"
-                value="${receivedQty}"
-                onchange="updateTotalPerProduct(${i}, ${prod.quantity})"
-              />
+              <input type="number" id="receivedQuantity${i}" min="0" value="${receivedQty}" onchange="updateTotalPerProduct(${i}, ${prod.quantity})" />
             </td>
             <td>
-              <input
-                type="number"
-                id="unitPrice${i}"
-                step="0.01"
-                min="0"
-                value="${priceVal}"
-                onchange="updateTotalPerProduct(${i}, ${prod.quantity})"
-              />
+              <input type="number" id="unitPrice${i}" step="0.01" min="0" value="${priceVal}" onchange="updateTotalPerProduct(${i}, ${prod.quantity})" />
             </td>
             <td>Q<span id="totalPerProduct${i}">${Number(totalVal).toFixed(2)}</span></td>
             <td>
-              <input
-                type="text"
-                id="productComments${i}"
-                value="${commentsVal}"
-                placeholder="Comentarios"
-              />
+              <input type="text" id="productComments${i}" value="${commentsVal}" placeholder="Comentarios" />
             </td>
           </tr>
         `);
       });
     }
-
     calculateInvoiceTotal();
     document.getElementById("confirmOrderModal").style.display = "block";
-  } catch (error) {
-    Swal.fire({ icon: "error", title: "Error", text: error.message });
-  }
+  } catch (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); }
 }
-
 function updateTotalPerProduct(i, maxQty) {
   const qtyInput = document.getElementById(`receivedQuantity${i}`);
   const priceInput = document.getElementById(`unitPrice${i}`);
@@ -848,7 +680,6 @@ function updateTotalPerProduct(i, maxQty) {
   let q = parseFloat(qtyInput.value) || 0;
   let p = parseFloat(priceInput.value) || 0;
   if (q < 0) q = 0;
-  if (q > maxQty) q = maxQty;
   if (p < 0) p = 0;
   qtyInput.value = q;
   priceInput.value = p;
@@ -856,7 +687,6 @@ function updateTotalPerProduct(i, maxQty) {
   totalSpan.textContent = total.toFixed(2);
   calculateInvoiceTotal();
 }
-
 function calculateInvoiceTotal() {
   let grandTotal = 0;
   const rows = document.querySelectorAll("#confirmOrderProducts tr");
@@ -866,7 +696,6 @@ function calculateInvoiceTotal() {
   });
   document.getElementById("invoiceTotal").textContent = grandTotal.toFixed(2);
 }
-
 function closeConfirmOrderModal() {
   document.getElementById("confirmOrderId").value = "";
   document.getElementById("invoiceNumber").value = "";
@@ -881,40 +710,24 @@ function closeConfirmOrderModal() {
   document.getElementById("exportReceptionButtonContainer").style.display = "none";
   document.getElementById("confirmOrderModal").style.display = "none";
 }
-
 async function saveConfirmedOrder() {
   try {
     const orderId = document.getElementById("confirmOrderId").value;
-    if (!orderId) {
-      Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido." });
-      return;
-    }
+    if (!orderId) { Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido." }); return; }
     const invoiceNumberField = document.getElementById("invoiceNumber").value.trim();
     const invoiceDateField = document.getElementById("invoiceDate").value.trim();
     const noInvoice = document.getElementById("noInvoiceCheckbox").checked;
-
-    if (!noInvoice) {
-      if (!invoiceNumberField || !invoiceDateField) {
-        Swal.fire({
-          icon: "warning",
-          title: "Faltan datos de factura",
-          text: "Ingresa la factura o marca 'No se ingresó la factura'."
-        });
-        return;
-      }
-    }
-
-    const orderDoc = await db.collection("orders").doc(orderId).get();
-    if (!orderDoc.exists) {
-      Swal.fire({ icon: "error", title: "Error", text: "Pedido no existe en DB" });
+    if (!noInvoice && (!invoiceNumberField || !invoiceDateField)) {
+      Swal.fire({ icon: "warning", title: "Faltan datos de factura", text: "Ingresa la factura o marca 'No se ingresó la factura'." });
       return;
     }
+    const orderDoc = await db.collection("orders").doc(orderId).get();
+    if (!orderDoc.exists) { Swal.fire({ icon: "error", title: "Error", text: "Pedido no existe en DB" }); return; }
     const orderData = orderDoc.data();
     const tRows = document.querySelectorAll("#confirmOrderProducts tr");
     let mismatchedQuantities = false;
     let totalFactura = 0;
     let receivedProducts = [];
-
     for (let i = 0; i < tRows.length; i++) {
       const originalProd = orderData.products[i];
       const qPedida = parseFloat(originalProd.quantity) || 0;
@@ -922,18 +735,7 @@ async function saveConfirmedOrder() {
       const pUnit = parseFloat(document.getElementById(`unitPrice${i}`).value) || 0;
       const totalCell = parseFloat(document.getElementById(`totalPerProduct${i}`).textContent) || 0;
       const commentsVal = document.getElementById(`productComments${i}`).value.trim();
-
-      if (qRecibida > qPedida) {
-        Swal.fire({
-          icon: "error",
-          title: "Cantidad inválida",
-          text: `No puedes recibir más de lo pedido para el producto: ${originalProd.name}`
-        });
-        return;
-      }
-      if (qRecibida < qPedida) {
-        mismatchedQuantities = true;
-      }
+      if (qRecibida !== qPedida) { mismatchedQuantities = true; }
       totalFactura += totalCell;
       receivedProducts.push({
         name: originalProd.name,
@@ -945,33 +747,20 @@ async function saveConfirmedOrder() {
         comments: commentsVal
       });
     }
-
-    let pendingInvoice = false;
-    if (noInvoice) {
-      pendingInvoice = true;
-    }
+    let pendingInvoice = noInvoice;
     const invoiceTotalValue = Number(totalFactura.toFixed(2));
-
     if (mismatchedQuantities || pendingInvoice) {
       const { value: reason } = await Swal.fire({
         title: "Motivo del faltante o no factura",
         input: "text",
         inputLabel: "Comentario:",
-        inputPlaceholder: "Ej. 'No llegó factura', 'No vino todo el producto'...",
+        inputPlaceholder: "Ej. 'No llegó factura', 'Producto incompleto'...",
         showCancelButton: true,
         cancelButtonText: "Cancelar",
         confirmButtonText: "Guardar",
-        inputValidator: (value) => {
-          if (!value) {
-            return "Por favor, ingresa un comentario.";
-          }
-          return null;
-        }
+        inputValidator: value => { return !value ? "Por favor ingresa un comentario." : null; }
       });
-      if (!reason) {
-        return; 
-      }
-
+      if (!reason) return;
       await db.collection("orders").doc(orderId).update({
         invoiceNumber: pendingInvoice ? "" : invoiceNumberField,
         invoiceDate: pendingInvoice ? "" : invoiceDateField,
@@ -979,19 +768,13 @@ async function saveConfirmedOrder() {
         receivedProducts,
         invoiceTotal: invoiceTotalValue,
         mismatchedQuantities,
-        mismatchComment: reason
+        mismatchComment: reason,
+        commentSource: "encargado"
       });
-
-      Swal.fire({
-        icon: "success",
-        title: "Recepción Guardada con Faltantes/Comentario",
-        text: `El pedido se mantiene en proceso. Total Factura: Q${invoiceTotalValue}`
-      });
-
+      Swal.fire({ icon: "success", title: "Recepción Guardada con Faltantes/Comentario", text: pendingInvoice ? "Esperando factura" : "Producto faltante. Total Factura: Q" + invoiceTotalValue });
       closeConfirmOrderModal();
       return;
     }
-
     await db.collection("orders").doc(orderId).update({
       invoiceNumber: invoiceNumberField,
       invoiceDate: invoiceDateField,
@@ -1002,35 +785,20 @@ async function saveConfirmedOrder() {
       mismatchComment: "",
       status: "sucursalRecibioPedido"
     });
-
-    Swal.fire({
-      icon: "success",
-      title: "Recepción Guardada",
-      text: `Todo coincide y se ingresó factura. Total Factura: Q${invoiceTotalValue}`
-    });
-
-    if (userRole !== "administrador") {
-      document.getElementById("exportReceptionButtonContainer").style.display = "block";
-    }
-
+    Swal.fire({ icon: "success", title: "Recepción Guardada", text: "Todo coincide y se ingresó factura. Total Factura: Q" + invoiceTotalValue });
+    if (userRole !== "administrador") { document.getElementById("exportReceptionButtonContainer").style.display = "block"; }
     closeConfirmOrderModal();
-  } catch (error) {
-    Swal.fire({ icon: "error", title: "Error", text: error.message });
-  }
+  } catch (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); }
 }
 
 /**********************************************************
- * showReceivedOrder / closeReceivedOrderModal
+ * showReceivedOrder
  **********************************************************/
 function showReceivedOrder(orderId) {
   db.collection("orders").doc(orderId).get()
-    .then(docRef => {
-      if (!docRef.exists) {
-        Swal.fire({ icon: "error", title: "Pedido no encontrado" });
-        return;
-      }
-
-      const order = docRef.data();
+    .then(docSnap => {
+      if (!docSnap.exists) { Swal.fire({ icon: "error", title: "Pedido no encontrado" }); return; }
+      const order = docSnap.data();
       let html = `
         <p><strong>ID Pedido:</strong> ${order.orderId}</p>
         <p><strong>Proveedor:</strong> ${order.providerName}</p>
@@ -1040,64 +808,43 @@ function showReceivedOrder(orderId) {
         <p><strong>Fecha de Factura:</strong> ${order.invoiceDate || "No ingresada"}</p>
         <p><strong>Total de la Factura:</strong> Q${order.invoiceTotal || 0}</p>
       `;
-
       if (order.mismatchComment) {
-        html += `<p style="color:#d9534f;"><strong>Comentario:</strong> ${order.mismatchComment}</p>`;
+        let prefix = (order.commentSource === "admin") ? "Comentario del Admin:" : "Comentario de Encargado:";
+        html += `<p style="color:red;"><strong>${prefix}</strong> ${order.mismatchComment}</p>`;
       }
-
-      html += `
-        <table>
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Presentación</th>
-              <th>Cant. Pedida</th>
-              <th>Cant. Recibida</th>
-              <th>Precio Unitario</th>
-              <th>Total</th>
-              <th>Comentarios</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
+      html += `<table><thead><tr>
+                 <th>Producto</th>
+                 <th>Presentación</th>
+                 <th>Cant. Pedida</th>
+                 <th>Cant. Recibida</th>
+                 <th>Precio Unitario</th>
+                 <th>Total</th>
+                 <th>Comentarios</th>
+               </tr></thead><tbody>`;
       if (order.receivedProducts) {
-        order.receivedProducts.forEach((rp) => {
-          html += `
-            <tr>
-              <td>${rp.name}</td>
-              <td>${rp.presentation}</td>
-              <td>${rp.quantity}</td>
-              <td>${rp.receivedQuantity}</td>
-              <td>Q${rp.unitPrice}</td>
-              <td>Q${rp.totalPerProduct}</td>
-              <td>${rp.comments || ""}</td>
-            </tr>
-          `;
+        order.receivedProducts.forEach(rp => {
+          html += `<tr>
+                     <td>${rp.name}</td>
+                     <td>${rp.presentation}</td>
+                     <td>${rp.quantity}</td>
+                     <td>${rp.receivedQuantity}</td>
+                     <td>Q${rp.unitPrice}</td>
+                     <td>Q${rp.totalPerProduct}</td>
+                     <td>${rp.comments || ""}</td>
+                   </tr>`;
         });
       }
-
       html += `</tbody></table>`;
-
       document.getElementById("receivedOrderDetails").innerHTML = html;
-
       if (userRole !== "administrador") {
         document.getElementById("exportReceivedOrderImageButtonContainer").style.display = "block";
         const exportButton = document.querySelector("#exportReceivedOrderImageButtonContainer button");
-        if (exportButton) {
-          exportButton.onclick = function() {
-            exportAsReceivedOrderImage(orderId);
-          };
-        }
+        if (exportButton) { exportButton.onclick = () => { exportAsReceivedOrderImage(orderId); }; }
       }
-
       document.getElementById("receivedOrderModal").style.display = "block";
     })
-    .catch(err => {
-      Swal.fire({ icon: "error", title: "Error", text: err.message });
-    });
+    .catch(err => { Swal.fire({ icon: "error", title: "Error", text: err.message }); });
 }
-
 function closeReceivedOrderModal() {
   document.getElementById("receivedOrderDetails").innerHTML = "";
   document.getElementById("receivedOrderModal").style.display = "none";
@@ -1105,46 +852,26 @@ function closeReceivedOrderModal() {
 }
 
 /**********************************************************
- * exportReception / exportReceptionAsImage / ...
+ * exportReception & Related Functions
  **********************************************************/
 async function exportReception(orderId) {
   try {
     const docRef = await db.collection("orders").doc(orderId).get();
-    if (!docRef.exists) {
-      Swal.fire({ icon: "error", title: "Pedido no encontrado" });
-      return;
-    }
+    if (!docRef.exists) { Swal.fire({ icon: "error", title: "Pedido no encontrado" }); return; }
     const order = docRef.data();
     const fileName = `Recepcion_Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
     exportReceptionAsImage(orderId, fileName);
-  } catch (error) {
-    Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
-  }
+  } catch (error) { Swal.fire({ icon: "error", title: "Error al exportar", text: error.message }); }
 }
-
 async function exportReceptionAsImage(orderId, fileName) {
-  if (!orderId) {
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: "No se encontró el pedido para exportar."
-    });
-    return;
-  }
-
+  if (!orderId) { Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido para exportar." }); return; }
   try {
     const docRef = await db.collection("orders").doc(orderId).get();
-    if (!docRef.exists) {
-      Swal.fire({ icon: "error", title: "Pedido no encontrado" });
-      return;
-    }
+    if (!docRef.exists) { Swal.fire({ icon: "error", title: "Pedido no encontrado" }); return; }
     const order = docRef.data();
     exportAsReceptionImage(order, fileName);
-  } catch (error) {
-    Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
-  }
+  } catch (error) { Swal.fire({ icon: "error", title: "Error al exportar", text: error.message }); }
 }
-
 function exportAsReceptionImage(order, fileName) {
   const hiddenDiv = document.getElementById("exportReceptionHiddenContainer");
   const exportReceptionOrderIdHidden = document.getElementById("exportReceptionOrderIdHidden");
@@ -1157,27 +884,12 @@ function exportAsReceptionImage(order, fileName) {
   const exportReceptionLastEditHidden = document.getElementById("exportReceptionLastEditHidden");
   const exportReceptionLogoImg = document.getElementById("exportReceptionLogo");
   const exportReceptionTBody = document.getElementById("exportReceptionProductsTableBody");
-
-  if (
-    !exportReceptionOrderIdHidden ||
-    !exportReceptionProviderHidden ||
-    !exportReceptionSucursalHidden ||
-    !exportReceptionOrderDateHidden ||
-    !exportReceptionInvoiceNumberHidden ||
-    !exportReceptionInvoiceDateHidden ||
-    !exportReceptionInvoiceTotalHidden ||
-    !exportReceptionLastEditHidden ||
-    !exportReceptionLogoImg ||
-    !exportReceptionTBody
-  ) {
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: "Elementos de exportación no encontrados."
-    });
+  if (!exportReceptionOrderIdHidden || !exportReceptionProviderHidden || !exportReceptionSucursalHidden ||
+      !exportReceptionOrderDateHidden || !exportReceptionInvoiceNumberHidden || !exportReceptionInvoiceDateHidden ||
+      !exportReceptionInvoiceTotalHidden || !exportReceptionLastEditHidden || !exportReceptionLogoImg || !exportReceptionTBody) {
+    Swal.fire({ icon: "error", title: "Error", text: "Elementos de exportación no encontrados." });
     return;
   }
-
   exportReceptionOrderIdHidden.textContent = order.orderId;
   exportReceptionProviderHidden.textContent = order.providerName;
   exportReceptionSucursalHidden.textContent = order.sucursalName;
@@ -1185,20 +897,11 @@ function exportAsReceptionImage(order, fileName) {
   exportReceptionInvoiceNumberHidden.textContent = order.invoiceNumber || "No ingresado";
   exportReceptionInvoiceDateHidden.textContent = order.invoiceDate || "No ingresada";
   exportReceptionInvoiceTotalHidden.textContent = order.invoiceTotal ? `Q${order.invoiceTotal}` : "Q0.00";
-
   if (order.lastEditTimestamp) {
     const editDate = new Date(order.lastEditTimestamp.toDate());
-    exportReceptionLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()}`;
-  } else {
-    exportReceptionLastEditHidden.textContent = "";
-  }
-
-  if (logoBase64) {
-    exportReceptionLogoImg.src = logoBase64;
-  } else {
-    exportReceptionLogoImg.src = "logo.png";
-  }
-
+    exportReceptionLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()} por: ${order.lastEditedBy || "N/A"}`;
+  } else { exportReceptionLastEditHidden.textContent = ""; }
+  exportReceptionLogoImg.src = logoBase64 || "logo.png";
   exportReceptionTBody.innerHTML = "";
   if (order.receivedProducts) {
     order.receivedProducts.forEach(prod => {
@@ -1209,16 +912,12 @@ function exportAsReceptionImage(order, fileName) {
       const tdQtyRec = document.createElement("td");
       const tdAdver = document.createElement("td");
       const tdComm = document.createElement("td");
-
       tdName.textContent = prod.name;
       tdPres.textContent = prod.presentation;
       tdQtyPed.textContent = prod.quantity;
       tdQtyRec.textContent = prod.receivedQuantity;
-      tdAdver.textContent = prod.receivedQuantity < prod.quantity
-        ? "Cantidad recibida menor a la pedida."
-        : "—";
+      tdAdver.textContent = prod.receivedQuantity < prod.quantity ? "Cantidad recibida menor a la pedida." : "—";
       tdComm.textContent = prod.comments || "—";
-
       row.appendChild(tdName);
       row.appendChild(tdPres);
       row.appendChild(tdQtyPed);
@@ -1228,12 +927,10 @@ function exportAsReceptionImage(order, fileName) {
       exportReceptionTBody.appendChild(row);
     });
   }
-
   hiddenDiv.style.display = "block";
   hiddenDiv.style.left = "50%";
   hiddenDiv.style.top = "50%";
   hiddenDiv.style.transform = "translate(-50%, -50%)";
-
   html2canvas(hiddenDiv, { scale: 2 })
     .then(canvas => {
       const imgData = canvas.toDataURL("image/png");
@@ -1242,13 +939,7 @@ function exportAsReceptionImage(order, fileName) {
       link.download = `${fileName}.png`;
       link.click();
     })
-    .catch(err => {
-      Swal.fire({
-        icon: "error",
-        title: "Error al exportar",
-        text: "No se pudo exportar la imagen"
-      });
-    })
+    .catch(err => { Swal.fire({ icon: "error", title: "Error al exportar", text: "No se pudo exportar la imagen" }); })
     .finally(() => {
       hiddenDiv.style.display = "none";
       hiddenDiv.style.left = "-9999px";
@@ -1256,30 +947,14 @@ function exportAsReceptionImage(order, fileName) {
       hiddenDiv.style.transform = "none";
     });
 }
-
 function exportAsReceivedOrderImage(orderId) {
-  if (!orderId) {
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: "No se encontró el pedido para exportar."
-    });
-    return;
-  }
+  if (!orderId) { Swal.fire({ icon: "error", title: "Error", text: "No se encontró el pedido para exportar." }); return; }
   db.collection("orders").doc(orderId).get()
     .then(docRef => {
-      if (!docRef.exists) {
-        Swal.fire({
-          icon: "error",
-          title: "Pedido no encontrado"
-        });
-        return;
-      }
+      if (!docRef.exists) { Swal.fire({ icon: "error", title: "Pedido no encontrado" }); return; }
       const order = docRef.data();
       const fileName = `Recepcion_Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
       exportAsReceptionImage(order, fileName);
     })
-    .catch(error => {
-      Swal.fire({ icon: "error", title: "Error al exportar", text: error.message });
-    });
+    .catch(error => { Swal.fire({ icon: "error", title: "Error al exportar", text: error.message }); });
 }
