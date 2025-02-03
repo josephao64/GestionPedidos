@@ -7,13 +7,14 @@ let userSucursalName = null;
 let userRole = null;
 let currentOrderId = null;
 let selectedProduct = null;
+let orderAlreadySaved = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const firebaseConfig = {
     apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
     authDomain: "logisticdb-2e63c.firebaseapp.com",
     projectId: "logisticdb-2e63c",
-    storageBucket: "logisticdb-2e63c.appspot.com",
+    storageBucket: "logisticdb-2e63c",
     messagingSenderId: "917523682093",
     appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
   };
@@ -23,8 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await obtenerSucursalDelUsuario();
   document.getElementById('orderCreationContainer').style.display = 'none';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
-
-  // Inicializa la tabla de productos
   setupInitialProductTable();
 });
 
@@ -94,6 +93,8 @@ async function obtenerSucursalDelUsuario() {
 function setupInitialProductTable() {
   const tbody = document.getElementById('newOrderTable').querySelector('tbody');
   tbody.innerHTML = '';
+  document.getElementById('newOrderProviderSelect').disabled = false;
+  orderAlreadySaved = false;
 }
 
 /* Mostrar la sección de nuevo pedido */
@@ -345,6 +346,19 @@ function filterProducts() {
 }
 
 function addSelectedProductToTable() {
+  const tbody = document.getElementById('newOrderTable').querySelector('tbody');
+  if(tbody.rows.length > 0) {
+    const lastRow = tbody.rows[tbody.rows.length - 1];
+    const qtyInput = lastRow.querySelector('input[type="number"]');
+    if(!qtyInput.value || isNaN(qtyInput.value) || Number(qtyInput.value) <= 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Advertencia',
+        text: 'Debe ingresar la cantidad para el producto anterior antes de agregar otro.'
+      });
+      return;
+    }
+  }
   if (!selectedProduct) {
     Swal.fire({
       icon: 'warning',
@@ -353,7 +367,6 @@ function addSelectedProductToTable() {
     });
     return;
   }
-  const tbody = document.getElementById('newOrderTable').getElementsByTagName('tbody')[0];
   const existingRows = tbody.getElementsByTagName('tr');
   for (let i = 0; i < existingRows.length; i++) {
     if (existingRows[i].getAttribute('data-id') === selectedProduct.id) {
@@ -410,13 +423,14 @@ function deleteNewOrderProduct(button) {
   const row = button.parentNode.parentNode;
   row.parentNode.removeChild(row);
 
-  const tbody = document.getElementById('newOrderTable').getElementsByTagName('tbody')[0];
+  const tbody = document.getElementById('newOrderTable').querySelector('tbody');
   if (tbody.rows.length === 0) {
     document.getElementById('newOrderProviderSelect').disabled = false;
   }
 }
 
 async function saveNewOrder() {
+  if(orderAlreadySaved) return;
   const providerId = document.getElementById('newOrderProviderSelect').value;
   const providerName =
     document.getElementById('newOrderProviderSelect').options[
@@ -468,139 +482,139 @@ async function saveNewOrder() {
 
   const saveDate = new Date().toISOString().split('T')[0];
 
-  // *** MODIFICACIÓN: Destino de Pedido sin botón Cancelar, con X en la esquina ***
-  const destResult = await Swal.fire({
-    title: 'Destino del Pedido',
-    text: '¿El pedido se enviará a Bodega o directamente a Tienda?',
-    icon: 'question',
-    showDenyButton: true,
-    showCancelButton: false,       // Quitar el botón de cancelar
-    showCloseButton: true,         // Mostrar la "X" en la esquina
-    confirmButtonText: 'Bodega',
-    denyButtonText: 'Tienda'
+  let details = {
+    orderId: orderIdValue,
+    providerName,
+    sucursalName,
+    orderDate,
+    savedDate: saveDate,
+    products
+  };
+
+  let rowsHtml = '';
+  details.products.forEach(p => {
+    rowsHtml += `
+      <tr>
+        <td>${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(p.presentation)}</td>
+        <td>${p.quantity}</td>
+      </tr>
+    `;
   });
+  const htmlTxt = `
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h2>Pedido Confirmado</h2>
+    </div>
+    <div style="text-align: left;">
+      <p><strong>ID Pedido:</strong> <span style="font-weight: bold;">${escapeHtml(details.orderId)}</span></p>
+      <p><strong>Proveedor:</strong> ${escapeHtml(details.providerName)}</p>
+      <p><strong>Sucursal:</strong> ${escapeHtml(details.sucursalName)}</p>
+      <p><strong>Fecha de Pedido:</strong> ${escapeHtml(details.orderDate)}</p>
+      <p><strong>Fecha de Registro:</strong> ${escapeHtml(details.savedDate)}</p>
+      <h3>Productos:</h3>
+      <table border="1" style="width: 100%; text-align: left;">
+        <tr>
+          <th>Producto</th>
+          <th>Presentación</th>
+          <th>Cantidad</th>
+        </tr>
+        ${rowsHtml}
+      </table>
+    </div>
+  `;
 
-  let destination = null;
-  if (destResult.isConfirmed) {
-    destination = 'Bodega';
-  } else if (destResult.isDenied) {
-    destination = 'Tienda';
-  } else {
-    // Si cierra con la X, simplemente regresa
-    Swal.fire({
-      icon: 'info',
-      title: 'Operación Cancelada',
-      text: 'Puedes seguir editando tu pedido.'
-    });
-    return;
-  }
-
+  // Paso 1: Confirmar pedido
   Swal.fire({
-    title: 'Guardar Pedido',
-    text: '¿Cómo deseas guardar tu pedido?',
-    icon: 'question',
+    title: 'Confirmar Pedido',
+    html: htmlTxt,
+    icon: 'info',
     showCancelButton: true,
-    showDenyButton: true,
-    confirmButtonText: 'Guardar',
-    denyButtonText: 'Preguardar',
     cancelButtonText: 'Cancelar',
-    reverseButtons: true
-  }).then(async (result) => {
+    confirmButtonText: 'Confirmar'
+  }).then(result => {
     if (result.isConfirmed) {
-      try {
-        if (currentOrderId) {
-          await db.collection('orders').doc(currentOrderId).update({
-            providerId,
-            providerName,
-            sucursalId,
-            sucursalName,
-            orderDate,
-            orderId: orderIdValue,
-            products,
-            destination,
-            savedDate: saveDate,
-            status: 'pending',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } else {
-          await db.collection('orders').add({
-            providerId,
-            providerName,
-            sucursalId,
-            sucursalName,
-            orderDate,
-            orderId: orderIdValue,
-            products,
-            destination,
-            savedDate: saveDate,
-            status: 'pending',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        showOrderConfirmationModal({
-          orderId: orderIdValue,
-          providerName,
-          sucursalName,
-          destination,
-          savedDate: saveDate,
-          products
-        });
-      } catch (err) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: err.message
-        });
-      }
-    } else if (result.isDenied) {
-      try {
-        if (currentOrderId) {
-          await db.collection('orders').doc(currentOrderId).update({
-            providerId,
-            providerName,
-            sucursalId,
-            sucursalName,
-            orderDate,
-            orderId: orderIdValue,
-            products,
-            destination,
-            savedDate: saveDate,
-            status: 'preSaved',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        } else {
-          await db.collection('orders').add({
-            providerId,
-            providerName,
-            sucursalId,
-            sucursalName,
-            orderDate,
-            orderId: orderIdValue,
-            products,
-            destination,
-            savedDate: saveDate,
-            status: 'preSaved',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        Swal.fire({
-          icon: 'success',
-          title: 'Pedido Preguardado',
-          text: 'El pedido se ha preguardado exitosamente.'
-        });
-        setupInitialProductTable();
-      } catch (err) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: err.message
-        });
-      }
-    } else {
+      // Paso 2: Seleccionar destino con botones "Bodega" y "Tienda"
       Swal.fire({
-        icon: 'info',
-        title: 'Operación Cancelada',
-        text: 'Puedes seguir editando tu pedido.'
+        title: 'Destino del Pedido',
+        text: 'Seleccione el destino',
+        icon: 'question',
+        showCloseButton: true,
+        showCancelButton: false,
+        confirmButtonText: 'Bodega',
+        denyButtonText: 'Tienda',
+        showDenyButton: true
+      }).then(destResult => {
+        if (destResult.isConfirmed || destResult.isDenied) {
+          let destination = destResult.isConfirmed ? 'Bodega' : 'Tienda';
+          details.destination = destination;
+          // Paso 3: Seleccionar si guardar o preguardar (botones a la izquierda y derecha, con X en la esquina)
+          Swal.fire({
+            title: 'Guardar Pedido',
+            text: 'Seleccione una opción',
+            icon: 'question',
+            showCloseButton: true,
+            showCancelButton: false,
+            confirmButtonText: 'Guardar',
+            denyButtonText: 'Preguardar',
+            showDenyButton: true,
+            reverseButtons: true
+          }).then(async finalRes => {
+            if (finalRes.isConfirmed || finalRes.isDenied) {
+              let status = finalRes.isConfirmed ? 'pending' : 'preSaved';
+              try {
+                if (currentOrderId) {
+                  await db.collection('orders').doc(currentOrderId).update({
+                    providerId,
+                    providerName,
+                    sucursalId,
+                    sucursalName,
+                    orderDate,
+                    orderId: orderIdValue,
+                    products,
+                    destination,
+                    savedDate: saveDate,
+                    status,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                  });
+                } else {
+                  await db.collection('orders').add({
+                    providerId,
+                    providerName,
+                    sucursalId,
+                    sucursalName,
+                    orderDate,
+                    orderId: orderIdValue,
+                    products,
+                    destination,
+                    savedDate: saveDate,
+                    status,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                  });
+                }
+                orderAlreadySaved = true;
+                showOrderConfirmationModal(details);
+              } catch (err) {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: err.message
+                });
+              }
+            } else {
+              Swal.fire({
+                icon: 'info',
+                title: 'Operación Cancelada',
+                text: 'Puedes seguir editando tu pedido.'
+              });
+            }
+          });
+        } else {
+          Swal.fire({
+            icon: 'info',
+            title: 'Operación Cancelada',
+            text: 'Puedes seguir editando tu pedido.'
+          });
+        }
       });
     }
   });
@@ -619,14 +633,15 @@ function showOrderConfirmationModal(det) {
   });
   const htmlTxt = `
     <div style="text-align: center; margin-bottom: 20px;">
-      <h2>Pedido Confirmado</h2>
+      <h2>Pedido Guardado</h2>
     </div>
     <div style="text-align: left;">
       <p><strong>ID Pedido:</strong> <span style="font-weight: bold;">${escapeHtml(det.orderId)}</span></p>
       <p><strong>Proveedor:</strong> ${escapeHtml(det.providerName)}</p>
       <p><strong>Sucursal:</strong> ${escapeHtml(det.sucursalName)}</p>
-      <p><strong>Entrega en:</strong> ${escapeHtml(det.destination)}</p>
+      <p><strong>Fecha de Pedido:</strong> ${escapeHtml(det.orderDate)}</p>
       <p><strong>Fecha de Registro:</strong> ${escapeHtml(det.savedDate)}</p>
+      <p><strong>Destino:</strong> ${escapeHtml(det.destination)}</p>
       <h3>Productos:</h3>
       <table border="1" style="width: 100%; text-align: left;">
         <tr>
@@ -639,28 +654,17 @@ function showOrderConfirmationModal(det) {
     </div>
   `;
   Swal.fire({
-    title: 'Confirme su Pedido',
+    title: 'Pedido Guardado',
     html: htmlTxt,
-    icon: 'info',
-    showCancelButton: true,
-    confirmButtonText: 'Compartir Pedido',
-    cancelButtonText: 'Cerrar',
-    width: '600px'
+    icon: 'success',
+    showCloseButton: true,
+    confirmButtonText: 'Compartir Pedido'
   }).then(r => {
     if (r.isConfirmed) {
-      Swal.fire({
-        title: 'Compartir Pedido',
-        text: '¿Cómo deseas compartir tu pedido?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Exportar como Imagen',
-        cancelButtonText: 'Cancelar'
-      }).then(r2 => {
-        if (r2.isConfirmed) {
-          exportOrderAsImage(det).catch(e => console.error(e));
-        }
-      });
+      exportOrderAsImage(det).catch(e => console.error(e));
     }
+    setupInitialProductTable();
+    document.getElementById('orderCreationContainer').style.display = 'none';
   });
 }
 

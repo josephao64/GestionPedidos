@@ -80,10 +80,11 @@ button:hover {
   justify-content: space-between;
   align-items: center;
   padding: 0 10px;
+  flex-wrap: wrap;
 }
 
 .buttons button {
-  margin-right: 10px;
+  margin: 5px 0;
   font-size: 16px;
   background-color: #007BFF;
   color: #fff;
@@ -351,15 +352,61 @@ th, td {
   margin-top: 10px;
 }
 
-/* Responsividad del Ticket */
-@media (max-width: 550px) {
+/* Responsive Styles for Phones */
+@media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+
+  .container {
+    width: 95%;
+    padding: 15px;
+  }
+
+  .buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .buttons button {
+    width: 100%;
+    margin: 5px 0;
+  }
+
+  .order-form {
+    flex-direction: column;
+  }
+  
+  .order-form .form-group {
+    width: 100%;
+  }
+  
+  .order-form img {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .table-wrapper {
+    padding: 5px;
+  }
+  
+  table {
+    font-size: 14px;
+  }
+  
+  .save-order-button {
+    padding: 12px 30px;
+    font-size: 16px;
+  }
+  
+  /* Responsive adjustments for ticket */
   .ticket {
     width: 90%;
     padding: 15px 10px;
+    font-size: 14px;
   }
   .ticket-header img {
     width: 100%;
-    height: auto;
   }
   .ticket-header h1 {
     font-size: 20px;
@@ -373,9 +420,6 @@ th, td {
   .products-table th,
   .products-table td {
     padding: 6px;
-    font-size: 14px;
-  }
-  .products-table th {
-    white-space: nowrap;
+    font-size: 12px;
   }
 }
