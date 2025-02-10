@@ -121,6 +121,11 @@
       gap: 10px;
       z-index: 600;
     }
+    /* Botón exclusivo para administradores: Empresa, Bodega y Reportes */
+    .menu-button.admin-only {
+      display: none;
+    }
+    /* Estilos específicos para el botón de Cerrar Sesión */
     .menu-button#logout-button {
       background-color: #f44336;
     }
@@ -129,7 +134,7 @@
     }
     /* =====================================
        Elementos exclusivos para administradores
-       (ocultos por defecto)
+       (se mostrarán mediante JavaScript si el rol es 'administrador')
        ===================================== */
     .admin-only {
       display: none;
@@ -193,15 +198,53 @@
     <div class="right-menu">
       <!-- Botón "Empresa" (exclusivo para administradores) -->
       <button class="menu-button admin-only" id="empresa-button" onclick="window.location.href='empresa/empresaMenu.html'">Empresa</button>
+      <!-- Botón "Bodega" (exclusivo para administradores) -->
+      <button class="menu-button admin-only" id="bodega-button" onclick="window.location.href='InventarioBodega/inventory.html'">Bodega</button>
+      <!-- Botón "Reportes" (exclusivo para administradores) -->
+      <button class="menu-button admin-only" id="reportes-button" onclick="window.location.href='reportes/reportes.html'">Reportes</button>
       <button class="menu-button" id="logout-button">Cerrar Sesión</button>
     </div>
   </div>
 
-  <!-- Firebase SDK v8.6.8 -->
+  <!-- Resto de tu contenido y modales (para productos, movimientos, facturas, etc.) se mantiene igual -->
+  <!-- … (código completo de modales y demás se deja sin cambios) … -->
+
+  <!-- Contenedor oculto para exportar el diseño de factura -->
+  <div id="exportInvoiceContainer" style="display:none; padding:20px; border:1px solid #ccc; max-width:600px; margin:20px auto; font-family: Arial, sans-serif;">
+    <h2 style="text-align:center; margin-bottom:20px;">Factura</h2>
+    <div style="margin-bottom:10px;">
+      <strong>Número:</strong> <span id="exportInvoiceNum"></span>
+    </div>
+    <div style="margin-bottom:10px;">
+      <strong>Fecha:</strong> <span id="exportInvoiceDate"></span>
+    </div>
+    <div style="margin-bottom:10px;">
+      <strong>Proveedor:</strong> <span id="exportInvoiceSupplier"></span>
+    </div>
+    <div style="margin-bottom:10px;">
+      <strong>Producto:</strong> <span id="exportInvoiceProduct"></span>
+    </div>
+    <div style="margin-bottom:10px;">
+      <strong>Cantidad:</strong> <span id="exportInvoiceQuantity"></span>
+    </div>
+    <div style="margin-bottom:10px;">
+      <strong>Precio Unitario:</strong> Q.<span id="exportInvoiceUnitPrice"></span>
+    </div>
+    <div style="margin-bottom:10px;">
+      <strong>Total:</strong> Q.<span id="exportInvoiceTotal"></span>
+    </div>
+    <div style="text-align:center; margin-top:20px;">
+      <em>Gracias por su compra</em>
+    </div>
+  </div>
+
+  <!-- Se omiten aquí los modales de productos, movimientos, reajustes, catálogo, facturas y reportes (mantén el código existente) -->
+  <!-- … (código completo de modales se mantiene sin cambios) … -->
+
+  <!-- Firebase SDK y conexión a base de datos -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-  <!-- Archivo de conexión a la base de datos (ubicado en la carpeta database) -->
   <script src="database/connection.js"></script>
   <script>
     // Referencias a elementos del DOM
@@ -214,15 +257,11 @@
       const adminElements = document.querySelectorAll('.admin-only');
       if (rol === 'administrador') {
         adminElements.forEach(element => {
-          // Si es un botón, mostrar como inline-block; de lo contrario, block
-          if (element.tagName.toLowerCase() === 'button') {
-            element.style.display = 'inline-block';
-          } else {
-            element.style.display = 'block';
-          }
+          // Mostrar como inline-block para botones
+          element.style.display = 'inline-block';
         });
       } else {
-        // Si es usuario normal, se asegura que los elementos admin sigan ocultos
+        // Ocultar elementos exclusivos para administradores
         adminElements.forEach(element => {
           element.style.display = 'none';
         });

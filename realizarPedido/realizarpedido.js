@@ -3,13 +3,16 @@
 // Importar jsPDF desde el objeto global
 const { jsPDF } = window.jspdf;
 
-// Variables globales (No se redeclara "db" ya que se declara en connection.js)
+// Variables globales (db se define en connection.js)
 let userSucursalId = null;
 let userSucursalName = null;
 let userRole = null;
 let currentOrderId = null;
 let selectedProduct = null;
 let orderAlreadySaved = false;
+
+// Variable global para almacenar el ID generado y evitar que cambie
+let generatedOrderId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // La conexión a Firebase ya se realizó en database/connection.js
@@ -89,19 +92,21 @@ function setupInitialProductTable() {
   orderAlreadySaved = false;
 }
 
-function showNewOrderForm() {
+async function showNewOrderForm() {
   document.getElementById('orderCreationContainer').style.display = 'block';
   document.getElementById('preSavedOrdersContainer').style.display = 'none';
-  loadNewOrderProviders().then(() => {
-    if (userRole === 'administrador') {
-      document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
-    } else {
-      document.getElementById('orderDateText').textContent = new Date().toISOString().split('T')[0];
-    }
-    generateOrderId();
-    currentOrderId = null;
-    setupInitialProductTable();
-  });
+  await loadNewOrderProviders();
+  if (userRole === 'administrador') {
+    document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+  } else {
+    document.getElementById('orderDateText').textContent = new Date().toISOString().split('T')[0];
+  }
+  // Genera el ID solo si aún no se ha creado en esta sesión
+  if (generatedOrderId === null) {
+    await generateOrderIdOnce();
+  }
+  currentOrderId = null;
+  setupInitialProductTable();
 }
 
 function showPreSavedOrders() {
@@ -216,27 +221,42 @@ async function openPreSavedOrder(docId) {
   }
 }
 
-async function generateOrderId() {
+/**
+ * Función que genera el ID de pedido UNA SOLA VEZ por sesión,
+ * utilizando una transacción en Firestore para actualizar el contador atómicamente.
+ */
+async function generateOrderIdOnce() {
+  if (generatedOrderId !== null) {
+    return generatedOrderId;
+  }
   try {
-    const ref = db.collection('config').doc('orderCounter');
-    const docSnap = await ref.get();
-    let newId = 1;
-    if (docSnap.exists) {
-      newId = docSnap.data().lastOrderId + 1;
-    }
-    await ref.set({ lastOrderId: newId });
-
+    const configRef = db.collection('config').doc('orderCounter');
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(configRef);
+      let newId;
+      if (!doc.exists) {
+        newId = 1;
+        transaction.set(configRef, { lastOrderId: newId });
+      } else {
+        newId = doc.data().lastOrderId + 1;
+        transaction.update(configRef, { lastOrderId: newId });
+      }
+      generatedOrderId = newId;
+    });
+    
     if (userRole === 'administrador') {
-      document.getElementById('orderId').value = newId;
+      document.getElementById('orderId').value = generatedOrderId;
     } else {
-      document.getElementById('orderIdText').textContent = newId;
+      document.getElementById('orderIdText').textContent = generatedOrderId;
     }
+    return generatedOrderId;
   } catch (error) {
     Swal.fire({
       icon: 'error',
       title: 'Error',
       text: 'Error al generar ID: ' + error.message
     });
+    throw error;
   }
 }
 
@@ -566,6 +586,8 @@ async function saveNewOrder() {
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                   });
                 }
+                // Reiniciamos el ID generado para el siguiente pedido
+                generatedOrderId = null;
                 orderAlreadySaved = true;
                 showOrderConfirmationModal(details);
               } catch (err) {

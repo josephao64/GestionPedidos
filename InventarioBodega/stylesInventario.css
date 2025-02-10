@@ -1,0 +1,186 @@
+/* Reset básico */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Estilos generales */
+  body {
+    background-color: #f8f9fa;
+    font-family: 'Arial', sans-serif;
+    color: #333;
+  }
+  
+  /* Menú lateral (Sidebar) */
+  .sidebar {
+    background-color: #ffffff;
+    border-right: 1px solid #dee2e6;
+    height: 100vh;
+    padding-top: 1rem;
+  }
+  
+  .nav.flex-column .nav-link {
+    color: #333;
+    padding: 10px 15px;
+    font-size: 1rem;
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  .nav.flex-column .nav-link:hover {
+    background-color: #e9ecef;
+    color: #000;
+  }
+  
+  .nav.flex-column .nav-link.active {
+    font-weight: bold;
+    background-color: #e9ecef;
+    color: #000;
+  }
+  
+  /* Contenido principal */
+  main {
+    padding: 20px;
+  }
+  
+  /* Tablas */
+  .table {
+    background-color: #ffffff;
+    margin-bottom: 1rem;
+  }
+  
+  .table th,
+  .table td {
+    vertical-align: middle;
+  }
+  
+  /* Tarjetas de productos (si se usan) */
+  .card {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+  }
+  
+  .card-body {
+    padding: 15px;
+  }
+  
+  /* Formularios y controles */
+  input,
+  textarea,
+  select {
+    margin-bottom: 10px;
+  }
+  
+  /* Modales personalizados */
+  .modal .modal-content {
+    border-radius: 5px;
+    padding: 20px;
+  }
+  
+  /* Validación */
+  input:invalid,
+  textarea:invalid,
+  select:invalid {
+    border-color: #dc3545;
+  }
+  
+  .invalid-feedback {
+    display: none;
+    color: #dc3545;
+    font-size: 0.875rem;
+  }
+  
+  .is-invalid + .invalid-feedback {
+    display: block;
+  }
+  
+  /* Botones */
+  .btn {
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  }
+  
+  /* Responsividad */
+  @media (max-width: 768px) {
+    .sidebar {
+      height: auto;
+    }
+  }
+  
+  /* Gráfico del reporte */
+  #reportChart {
+    background-color: #ffffff;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+  }
+  
+  /* Estilos para el reporte de Stock de Productos */
+  #exportProductsContainer {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    margin: 20px auto;
+  }
+  
+  #exportProductsContainer h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.5rem;
+  }
+  
+  #exportProductsContainer table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+  }
+  
+  #exportProductsContainer table th,
+  #exportProductsContainer table td {
+    padding: 8px;
+    border: 1px solid #dee2e6;
+  }
+  
+  /* Estilos para la exportación de factura (diseño real) */
+  #exportInvoiceContainer {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 20px;
+    max-width: 600px;
+    margin: 20px auto;
+    font-family: 'Arial', sans-serif;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  #exportInvoiceContainer h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    border-bottom: 2px solid #ccc;
+    padding-bottom: 10px;
+  }
+  
+  #exportInvoiceContainer div {
+    margin-bottom: 10px;
+    font-size: 1rem;
+  }
+  
+  #exportInvoiceContainer strong {
+    display: inline-block;
+    width: 140px;
+  }
+  
+  #exportInvoiceContainer em {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 1rem;
+    color: #555;
+  }
+  

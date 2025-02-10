@@ -127,28 +127,31 @@
       background-color: #f2f2f2;
     }
     /* =====================================
-       Botones de Acción en la Tabla
+       Estilo para la fila seleccionada
        ===================================== */
-    .action-btn {
-      padding: 6px 10px;
-      margin: 0 2px;
+    tr.selected {
+      background-color: #d9edf7;
+    }
+    /* =====================================
+       Área de Acciones Globales
+       ===================================== */
+    .global-actions {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .global-actions button {
+      margin: 0 10px;
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #5bc0de;
+      color: white;
       border: none;
       border-radius: 4px;
-      cursor: pointer;
-      color: white;
       transition: background-color 0.3s ease;
     }
-    .edit-btn {
-      background-color: #2196F3;
-    }
-    .edit-btn:hover {
-      background-color: #0b7dda;
-    }
-    .delete-btn {
-      background-color: #f44336;
-    }
-    .delete-btn:hover {
-      background-color: #da190b;
+    .global-actions button:hover {
+      background-color: #31b0d5;
     }
     /* =====================================
        Modal para Confirmar Eliminación
@@ -193,13 +196,10 @@
        Responsividad
        ===================================== */
     @media (max-width: 768px) {
-      .buttons button {
+      .buttons button,
+      .global-actions button {
         margin: 5px 0;
         width: 100%;
-      }
-      .action-btn {
-        padding: 8px 12px;
-        font-size: 14px;
       }
       form input[type="text"],
       form input[type="password"],
@@ -278,7 +278,7 @@
       <button type="button" id="cancel-edit" style="display: none; margin-top: 10px;">Cancelar Edición</button>
     </form>
 
-    <!-- Tabla de Usuarios -->
+    <!-- Tabla de Usuarios (sin botones de acción por fila) -->
     <table>
       <thead>
         <tr>
@@ -286,13 +286,19 @@
           <th>Nombre de Usuario</th>
           <th>Rol</th>
           <th>Sucursal</th>
-          <th>Acciones</th>
         </tr>
       </thead>
       <tbody id="users-table-body">
         <!-- Los usuarios se cargarán aquí dinámicamente -->
       </tbody>
     </table>
+
+    <!-- Área de Acciones Globales -->
+    <div class="global-actions">
+      <button id="btn-ver">Ver Usuario</button>
+      <button id="btn-editar">Editar</button>
+      <button id="btn-eliminar">Eliminar</button>
+    </div>
 
     <!-- Modal para Confirmar Eliminación -->
     <div id="delete-modal" class="modal">
@@ -323,12 +329,16 @@
     firebase.initializeApp(firebaseConfig);
     var db = firebase.firestore();
 
-    // Referencias a elementos del DOM
+    // Variables globales y referencias a elementos del DOM
     const messageDiv = document.getElementById('message');
     const errorDiv = document.getElementById('error');
     const userForm = document.getElementById('user-form');
     const usersTableBody = document.getElementById('users-table-body');
     const cancelEditBtn = document.getElementById('cancel-edit');
+
+    const btnVer = document.getElementById('btn-ver');
+    const btnEditar = document.getElementById('btn-editar');
+    const btnEliminar = document.getElementById('btn-eliminar');
 
     const deleteModal = document.getElementById('delete-modal');
     const closeModalBtn = document.getElementById('close-modal');
@@ -342,6 +352,7 @@
     const permDeleteReceiptCheckbox = document.getElementById('permDeleteReceipt');
 
     let userToDelete = null;
+    let selectedUserId = null; // Almacena el ID del usuario seleccionado
 
     // =============================
     //   Verificar si es Admin
@@ -402,6 +413,7 @@
       db.collection('usuarios').get()
         .then((querySnapshot) => {
           usersTableBody.innerHTML = '';
+          selectedUserId = null; // Reiniciar selección
           const sucursalesPromises = [];
 
           querySnapshot.forEach((doc) => {
@@ -435,21 +447,61 @@
     }
 
     // =============================
-    //   Crear Fila en la Tabla
+    //   Crear Fila en la Tabla (sin botones de acción)
     // =============================
     function crearFilaUsuario(id, username, rol, sucursalName) {
+      // Si 'rol' es undefined, se muestra 'N/A'
+      const rolMostrado = rol ? rol.charAt(0).toUpperCase() + rol.slice(1) : 'N/A';
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${id}</td>
         <td>${username}</td>
-        <td>${rol.charAt(0).toUpperCase() + rol.slice(1)}</td>
+        <td>${rolMostrado}</td>
         <td>${sucursalName}</td>
-        <td>
-          <button class="action-btn edit-btn" data-id="${id}">Editar</button>
-          <button class="action-btn delete-btn" data-id="${id}">Eliminar</button>
-        </td>
       `;
+      // Agregar evento para seleccionar la fila
+      tr.addEventListener('click', function() {
+        seleccionarFila(tr, id);
+      });
       usersTableBody.appendChild(tr);
+    }
+
+    // =============================
+    //   Función para seleccionar una fila
+    // =============================
+    function seleccionarFila(fila, id) {
+      // Remover la clase 'selected' de todas las filas
+      const filas = usersTableBody.querySelectorAll('tr');
+      filas.forEach(tr => tr.classList.remove('selected'));
+
+      // Agregar la clase 'selected' a la fila clickeada
+      fila.classList.add('selected');
+      selectedUserId = id;
+    }
+
+    // =============================
+    //   Función Ver Usuario (muestra la contraseña almacenada)
+    // =============================
+    function verUsuario() {
+      if (!selectedUserId) {
+        alert("Por favor, selecciona un usuario de la tabla.");
+        return;
+      }
+      db.collection('usuarios').doc(selectedUserId).get()
+        .then(doc => {
+          if (doc.exists) {
+            const user = doc.data();
+            // Se muestra el hash de la contraseña almacenada (o la contraseña en texto claro, si fuera el caso)
+            alert(`Usuario: ${user.username}\nContraseña: ${user.password}`);
+          } else {
+            alert("Usuario no encontrado.");
+          }
+        })
+        .catch(error => {
+          console.error("Error al obtener usuario: ", error);
+          alert("Error al obtener usuario.");
+        });
     }
 
     // =============================
@@ -552,21 +604,30 @@
     });
 
     // =============================
-    //   Editar / Eliminar (Tabla)
+    //   Editar / Eliminar usando acciones globales
     // =============================
-    usersTableBody.addEventListener('click', function(e) {
-      if (e.target.classList.contains('edit-btn')) {
-        const userId = e.target.getAttribute('data-id');
-        editarUsuario(userId);
+    btnEditar.addEventListener('click', function() {
+      if (!selectedUserId) {
+        alert("Por favor, selecciona un usuario de la tabla.");
+        return;
       }
-      if (e.target.classList.contains('delete-btn')) {
-        const userId = e.target.getAttribute('data-id');
-        abrirModalEliminar(userId);
+      editarUsuario(selectedUserId);
+    });
+
+    btnEliminar.addEventListener('click', function() {
+      if (!selectedUserId) {
+        alert("Por favor, selecciona un usuario de la tabla.");
+        return;
       }
+      abrirModalEliminar(selectedUserId);
+    });
+
+    btnVer.addEventListener('click', function() {
+      verUsuario();
     });
 
     // =============================
-    //   Función editarUsuario
+    //   Función editarUsuario (se usa igual que antes)
     // =============================
     function editarUsuario(userId) {
       db.collection('usuarios').doc(userId).get()
@@ -575,7 +636,7 @@
             const user = doc.data();
             document.getElementById('user-id').value = doc.id;
             document.getElementById('username').value = user.username;
-            document.getElementById('password').value = '';
+            document.getElementById('password').value = ''; // Dejar en blanco por seguridad
             document.getElementById('rol').value = user.rol;
             document.getElementById('sucursal').value = user.sucursalId;
 
@@ -621,12 +682,6 @@
     });
     confirmDeleteBtn.addEventListener('click', function() {
       if (userToDelete) {
-        const usuarioLogueado = localStorage.getItem('usuarioLogueado');
-        if (usuarioLogueado === 'admin' && userToDelete === 'admin') {
-          alert("No puedes eliminar al usuario admin.");
-          deleteModal.style.display = 'none';
-          return;
-        }
         db.collection('usuarios').doc(userToDelete).delete()
           .then(() => {
             messageDiv.textContent = "Usuario eliminado exitosamente.";
@@ -663,6 +718,7 @@
       localStorage.removeItem('usuarioLogueado');
       window.location.href = '../login.html';
     }
+    // (Si tienes un botón de cierre de sesión, asegúrate de agregarle el listener)
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
       logoutButton.addEventListener('click', cerrarSesion);

@@ -8,6 +8,10 @@ let userRole = null;
 let userPermissions = {};
 let logoBase64 = ""; // Se cargará el logo en base64
 
+// Variables para almacenar las funciones de desuscripción de los listeners
+let inProcessUnsubscribe = null;
+let completedUnsubscribe = null;
+
 /**********************************************************
  * DOMContentLoaded: Inicializa la carga de pedidos y otros
  * datos al cargar la página
@@ -20,10 +24,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadProvidersForAdmin();
   }
   loadLogo();
-  setupRealTimeInProcessListener();
-  setupRealTimeCompletedListener();
-  // Carga automática de pedidos en proceso al entrar
-  loadInProcessOrders();
+  // Se adjuntan los listeners en tiempo real (dinámicos)
+  attachInProcessListener();
+  attachCompletedListener();
 });
 
 /**********************************************************
@@ -124,77 +127,88 @@ function openTab(evt, tabName) {
 function goToMainMenu() { window.location.href = "../index.html"; }
 
 /**********************************************************
- * Real-Time Listeners
+ * Listeners en Tiempo Real “Dinámicos”
  **********************************************************/
-function setupRealTimeInProcessListener() {
+// Adjunta o re-adjunta el listener para pedidos en proceso
+function attachInProcessListener() {
+  if (inProcessUnsubscribe) inProcessUnsubscribe();
   const statuses = ["pending", "pedidoTomado", "pedidoEnBodega", "bodegaEnvioPedido", "caminoATienda"];
-  let query = db.collection("orders").where("status", "in", statuses);
-  if (userRole !== "administrador") { query = query.where("sucursalId", "==", userSucursalId); }
-  query.onSnapshot(() => { loadInProcessOrders(); });
-}
-function setupRealTimeCompletedListener() {
-  let query = db.collection("orders").where("status", "==", "sucursalRecibioPedido");
-  if (userRole !== "administrador") { query = query.where("sucursalId", "==", userSucursalId); }
-  query.onSnapshot(() => { loadCompletedOrders(); });
-}
-
-/**********************************************************
- * loadInProcessOrders
- **********************************************************/
-async function loadInProcessOrders() {
-  try {
-    const cont = document.getElementById("inProcessOrdersAdminCards");
-    cont.innerHTML = "";
-    const idSearch = document.getElementById("idSearchInput")?.value?.trim();
-    const statuses = ["pending", "pedidoTomado", "pedidoEnBodega", "bodegaEnvioPedido", "caminoATienda"];
-    let query = idSearch ? db.collection("orders").where("orderId", "==", idSearch)
-                         : db.collection("orders").where("status", "in", statuses);
+  let query = null;
+  const idSearch = document.getElementById("idSearchInput")?.value?.trim();
+  if (idSearch) {
+    query = db.collection("orders").where("orderId", "==", idSearch);
+  } else {
+    query = db.collection("orders").where("status", "in", statuses);
     if (userRole === "administrador") {
       const selSuc = document.getElementById("sucursalFilter").value;
       if (selSuc !== "all") query = query.where("sucursalId", "==", selSuc);
       const selProv = document.getElementById("providerFilter").value;
       if (selProv !== "all") query = query.where("providerName", "==", selProv);
-    } else { query = query.where("sucursalId", "==", userSucursalId); }
-    const sortValue = document.getElementById("sortOrder")?.value || "masReciente";
-    query = sortValue === "masReciente" ? query.orderBy("timestamp", "desc") : query.orderBy("timestamp", "asc");
-    const snap = await query.get();
-    snap.forEach(doc => {
+    } else {
+      query = query.where("sucursalId", "==", userSucursalId);
+    }
+  }
+  const sortValue = document.getElementById("sortOrder")?.value || "masReciente";
+  query = sortValue === "masReciente" ? query.orderBy("timestamp", "desc") : query.orderBy("timestamp", "asc");
+  
+  inProcessUnsubscribe = query.onSnapshot(snapshot => {
+    const cont = document.getElementById("inProcessOrdersAdminCards");
+    cont.innerHTML = "";
+    snapshot.forEach(doc => {
       const order = doc.data();
       if (statuses.includes(order.status)) {
         const card = createOrderCard(doc.id, order);
         cont.appendChild(card);
       }
     });
-  } catch (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); }
+  }, error => {
+    Swal.fire({ icon: "error", title: "Error", text: error.message });
+  });
 }
 
-/**********************************************************
- * loadCompletedOrders
- **********************************************************/
-async function loadCompletedOrders() {
-  try {
-    const cont = document.getElementById("completedOrdersAdminCards");
-    if (cont) cont.innerHTML = "";
-    const idSearch = document.getElementById("idSearchInput")?.value?.trim();
-    let query = idSearch ? db.collection("orders").where("status", "==", "sucursalRecibioPedido").where("orderId", "==", idSearch)
-                         : db.collection("orders").where("status", "==", "sucursalRecibioPedido");
+// Adjunta o re-adjunta el listener para pedidos completados
+function attachCompletedListener() {
+  if (completedUnsubscribe) completedUnsubscribe();
+  const idSearch = document.getElementById("idSearchInput")?.value?.trim();
+  let query = null;
+  if (idSearch) {
+    query = db.collection("orders").where("status", "==", "sucursalRecibioPedido")
+            .where("orderId", "==", idSearch);
+  } else {
+    query = db.collection("orders").where("status", "==", "sucursalRecibioPedido");
     if (userRole === "administrador") {
       const selSuc = document.getElementById("sucursalFilter").value;
       if (selSuc !== "all") query = query.where("sucursalId", "==", selSuc);
       const selProv = document.getElementById("providerFilter").value;
       if (selProv !== "all") query = query.where("providerName", "==", selProv);
-    } else { query = query.where("sucursalId", "==", userSucursalId); }
-    const sortValue = document.getElementById("sortOrder")?.value || "masReciente";
-    query = sortValue === "masReciente" ? query.orderBy("timestamp", "desc") : query.orderBy("timestamp", "asc");
-    const snap = await query.get();
-    snap.forEach(doc => {
+    } else {
+      query = query.where("sucursalId", "==", userSucursalId);
+    }
+  }
+  const sortValue = document.getElementById("sortOrder")?.value || "masReciente";
+  query = sortValue === "masReciente" ? query.orderBy("timestamp", "desc") : query.orderBy("timestamp", "asc");
+  
+  completedUnsubscribe = query.onSnapshot(snapshot => {
+    const cont = document.getElementById("completedOrdersAdminCards");
+    if (cont) cont.innerHTML = "";
+    snapshot.forEach(doc => {
       const order = doc.data();
       if (order.status === "sucursalRecibioPedido") {
         const card = createOrderCard(doc.id, order);
         cont.appendChild(card);
       }
     });
-  } catch (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); }
+  }, error => {
+    Swal.fire({ icon: "error", title: "Error", text: error.message });
+  });
+}
+
+/**********************************************************
+ * reloadOrders: Se invoca cuando cambian los filtros
+ **********************************************************/
+function reloadOrders() {
+  attachInProcessListener();
+  attachCompletedListener();
 }
 
 /**********************************************************
@@ -274,7 +288,7 @@ function updateStatus(orderDocId, newStatus) {
 }
 
 /**********************************************************
- * forceCompleteOrder (Forzar completado con comentario)
+ * forceCompleteOrder
  **********************************************************/
 function forceCompleteOrder(orderDocId) {
   Swal.fire({
@@ -384,7 +398,7 @@ async function deleteOrder(orderId) {
 }
 
 /**********************************************************
- * showOrderDetails (con botón de Exportar Pedido)
+ * showOrderDetails
  **********************************************************/
 function showOrderDetails(orderId) {
   db.collection("orders").doc(orderId).get()
@@ -428,7 +442,8 @@ function closeOrderDetailsModal() {
 }
 
 /**********************************************************
- * editOrder (CRUD: Editar, Agregar y Eliminar Productos)
+ * editOrder, addProductRow, removeProductRow, saveEditedOrder,
+ * closeEditOrderModal
  **********************************************************/
 function editOrder(orderDocId) {
   db.collection("orders").doc(orderDocId).get()
@@ -498,7 +513,8 @@ function closeEditOrderModal() {
 }
 
 /**********************************************************
- * exportOrder (Imagen, Excel)
+ * exportOrder, closeExportModal, exportAs, exportAsImageDirect,
+ * exportAsImage, exportAsExcel
  **********************************************************/
 function exportOrder(orderId) {
   document.getElementById("exportModal").style.display = "block";
@@ -550,7 +566,6 @@ function exportAsImage(order, fileName) {
     const editDate = new Date(order.lastEditTimestamp.toDate());
     exportLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()} por: ${order.lastEditedBy || "N/A"}`;
   } else { exportLastEditHidden.textContent = ""; }
-  // Actualizado para utilizar la ruta correcta en la carpeta resources/images
   exportLogoImg.src = logoBase64 || "../resources/images/logo.png";
   tBody.innerHTML = "";
   if (order.products) {
@@ -612,7 +627,8 @@ function exportAsExcel(order, fileName) {
 }
 
 /**********************************************************
- * confirmOrder
+ * confirmOrder, updateTotalPerProduct, calculateInvoiceTotal,
+ * closeConfirmOrderModal, saveConfirmedOrder
  **********************************************************/
 async function confirmOrder(orderId) {
   try {
@@ -779,7 +795,7 @@ async function saveConfirmedOrder() {
 }
 
 /**********************************************************
- * showReceivedOrder
+ * showReceivedOrder, closeReceivedOrderModal
  **********************************************************/
 function showReceivedOrder(orderId) {
   db.collection("orders").doc(orderId).get()
@@ -888,7 +904,6 @@ function exportAsReceptionImage(order, fileName) {
     const editDate = new Date(order.lastEditTimestamp.toDate());
     exportReceptionLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()} por: ${order.lastEditedBy || "N/A"}`;
   } else { exportReceptionLastEditHidden.textContent = ""; }
-  // Actualizar la ruta del logo
   exportReceptionLogoImg.src = logoBase64 || "../resources/images/logo.png";
   exportReceptionTBody.innerHTML = "";
   if (order.receivedProducts) {
@@ -946,13 +961,10 @@ function exportAsReceivedOrderImage(orderId) {
     })
     .catch(error => { Swal.fire({ icon: "error", title: "Error al exportar", text: error.message }); });
 }
-  
+
 /**********************************************************
- * Otras funciones (deleteOrder, changeStatus, etc.)
+ * escapeHtml
  **********************************************************/
-// Las demás funciones se mantienen sin cambios...
-// (deleteOrder, markOrderAsTaken, forceCompleteOrder, etc.)
-  
 function escapeHtml(str) {
   const map = {
     '&': '&amp;',
