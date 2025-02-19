@@ -21,15 +21,17 @@
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
     <!-- Chart.js (para reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- html2canvas (opcional) -->
+    <!-- html2canvas (para generar imagen/PDF a partir de HTML) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF (para exportar a PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Archivo JavaScript principal -->
     <script defer src="salidas.js"></script>
   </head>
   <body>
     <!-- Botón de Inicio (ir a index.html) -->
     <div class="d-flex justify-content-end p-2">
-        <a href="../../INDEX.HTML" class="btn btn-secondary">Inicio</a>
+      <a href="../../INDEX.HTML" class="btn btn-secondary">Inicio</a>
     </div>
 
     <!-- Navbar para móviles -->
@@ -47,6 +49,7 @@
         <span class="navbar-brand mb-0 h1">Salidas de Bodega</span>
       </div>
     </nav>
+
     <!-- Offcanvas para menú en móviles -->
     <div
       class="offcanvas offcanvas-start d-md-none"
@@ -148,7 +151,6 @@
                 <div class="row g-3 mb-3">
                   <div class="col-12 col-md-6">
                     <label for="outgoingUser" class="form-label">Usuario Responsable</label>
-                    <!-- Select con opciones "ERICK" y "CESAR" -->
                     <select id="outgoingUser" class="form-select" required>
                       <option value="">Seleccione</option>
                       <option value="ERICK">ERICK</option>
@@ -229,9 +231,19 @@
                 </select>
               </div>
             </div>
-            <button class="btn btn-primary mb-3" onclick="generateOutgoingReport()">
-              Generar Reporte
-            </button>
+            <button class="btn btn-primary mb-3" onclick="generateOutgoingReport()">Generar Reporte</button>
+            <!-- Botones de exportación -->
+            <div class="mb-3">
+              <button class="btn btn-success me-2" onclick="exportReportToImage()">
+                Exportar a Imagen
+              </button>
+              <button class="btn btn-danger me-2" onclick="exportReportToPDF()">
+                Exportar a PDF
+              </button>
+              <button class="btn btn-info" onclick="exportReportToExcel()">
+                Exportar a Excel
+              </button>
+            </div>
             <canvas id="reportChart" class="my-3" style="max-height: 300px;"></canvas>
             <div class="table-responsive">
               <table class="table table-striped" id="reportOutgoingTable">

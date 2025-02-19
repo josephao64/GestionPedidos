@@ -340,6 +340,105 @@ var firebaseConfig = {
   }
   
   /* =========================
+     EXPORTAR REPORTES
+     Funciones para exportar el reporte en Imagen, PDF y Excel (CSV)
+  ============================*/
+  
+  // Función que genera un elemento HTML para exportar
+  function generateExportContent() {
+    // Crear contenedor temporal
+    var container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.top = "-10000px"; // fuera de la vista
+    container.style.left = "0";
+    container.style.width = "100%";
+    container.style.backgroundColor = "#fff";
+    container.style.padding = "20px";
+    container.style.border = "1px solid #ccc";
+    container.style.fontFamily = "Arial, sans-serif";
+  
+    // Título
+    var header = document.createElement("h2");
+    header.textContent = "Reportes de Salidas de Bodega";
+    container.appendChild(header);
+  
+    // Rango de fechas
+    var startDate = document.getElementById("reportStartDate").value || "";
+    var endDate = document.getElementById("reportEndDate").value || "";
+    var dateInfo = document.createElement("p");
+    dateInfo.textContent = "Fecha Inicio: " + startDate + " - Fecha Fin: " + endDate;
+    container.appendChild(dateInfo);
+  
+    // Clonar la tabla de reportes
+    var originalTable = document.getElementById("reportOutgoingTable");
+    var tableClone = originalTable.cloneNode(true);
+    // Cambiar el encabezado de la primera columna a "Fecha de Salida"
+    var ths = tableClone.getElementsByTagName("th");
+    if (ths.length > 0) {
+      ths[0].textContent = "Fecha de Salida";
+    }
+    container.appendChild(tableClone);
+  
+    // Agregar el contenedor al body para que html2canvas pueda capturarlo
+    document.body.appendChild(container);
+    return container;
+  }
+  
+  // Exportar el reporte como imagen (PNG) con la tabla y encabezados personalizados
+  function exportReportToImage() {
+    var exportContent = generateExportContent();
+    html2canvas(exportContent).then(function(canvas) {
+      let image = canvas.toDataURL("image/png");
+      let link = document.createElement("a");
+      link.href = image;
+      link.download = "reporte_salidas.png";
+      link.click();
+      document.body.removeChild(exportContent);
+    });
+  }
+  
+  // Exportar el reporte como PDF con encabezado y tabla personalizada
+  function exportReportToPDF() {
+    var exportContent = generateExportContent();
+    html2canvas(exportContent).then(function(canvas) {
+      let image = canvas.toDataURL("image/png");
+      var pdf = new jsPDF('p', 'mm', 'a4');
+      let imgProps = pdf.getImageProperties(image);
+      let pdfWidth = pdf.internal.pageSize.getWidth();
+      let pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      pdf.addImage(image, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save("reporte_salidas.pdf");
+      document.body.removeChild(exportContent);
+    });
+  }
+  
+  // Exportar el reporte a Excel (CSV) con el encabezado de "Fecha de Salida"
+  function exportReportToExcel() {
+    let table = document.getElementById("reportOutgoingTable");
+    let csv = [];
+    for (let i = 0; i < table.rows.length; i++) {
+      let row = table.rows[i];
+      let cols = row.querySelectorAll("td, th");
+      let rowData = [];
+      for (let j = 0; j < cols.length; j++) {
+        let cellText = cols[j].innerText;
+        if (i === 0 && j === 0) {
+          cellText = "Fecha de Salida"; // reemplazar encabezado
+        }
+        rowData.push('"' + cellText.replace(/"/g, '""') + '"');
+      }
+      csv.push(rowData.join(","));
+    }
+    let csvContent = csv.join("\n");
+    let blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    let link = document.createElement("a");
+    let url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "reporte_salidas.csv");
+    link.click();
+  }
+  
+  /* =========================
      INICIALIZACIÓN DE LA PÁGINA
   ============================*/
   window.onload = async function() {
