@@ -16,6 +16,8 @@
       padding: 0;
       position: relative;
       min-height: 100vh;
+      /* Se oculta inicialmente */
+      visibility: hidden;
     }
     /* =====================================
        Contenedor para el mensaje de bienvenida
@@ -121,7 +123,7 @@
       gap: 10px;
       z-index: 600;
     }
-    /* Botón exclusivo para administradores: Empresa, Bodega y Reportes */
+    /* Botones exclusivos para administradores */
     .menu-button.admin-only {
       display: none;
     }
@@ -132,16 +134,7 @@
     .menu-button#logout-button:hover {
       background-color: #da190b;
     }
-    /* =====================================
-       Elementos exclusivos para administradores
-       (se mostrarán mediante JavaScript si el rol es 'administrador')
-       ===================================== */
-    .admin-only {
-      display: none;
-    }
-    /* =====================================
-       Responsividad para dispositivos móviles
-       ===================================== */
+    /* Responsividad para dispositivos móviles */
     @media (max-width: 768px) {
       .welcome-container {
         top: 10px;
@@ -182,7 +175,6 @@
 
   <!-- Contenedor para el logo centrado -->
   <div class="logo-container">
-    <!-- El logo se encuentra en: resources/images/logo.png -->
     <img src="resources/images/logo.png" alt="Logo de la aplicación">
   </div>
 
@@ -196,96 +188,105 @@
       <li><a href="gestionPedidos/pedidos.html">Gestión de Pedidos</a></li>
     </ul>
     <div class="right-menu">
-      <!-- Botón "Empresa" (exclusivo para administradores) -->
+      <!-- Botones para administradores -->
       <button class="menu-button admin-only" id="empresa-button" onclick="window.location.href='empresa/empresaMenu.html'">Empresa</button>
-      <!-- Botón "Bodega" (exclusivo para administradores) -->
       <button class="menu-button admin-only" id="bodega-button" onclick="window.location.href='InventarioBodega/inventory.html'">Bodega</button>
-      <!-- Botón "Reportes" (exclusivo para administradores) -->
       <button class="menu-button admin-only" id="reportes-button" onclick="window.location.href='reportes/reportes.html'">Reportes</button>
+      <!-- Botón exclusivo para usuarios de rol Bodega -->
+      <button class="menu-button" id="salidas-bodega-button" style="display: none;" onclick="window.location.href='InventarioBodega/salidas encargado bodega/salidas.html'">Salidas Bodega</button>
       <button class="menu-button" id="logout-button">Cerrar Sesión</button>
     </div>
   </div>
 
-  <!-- Resto de tu contenido y modales (para productos, movimientos, facturas, etc.) se mantiene igual -->
-  <!-- … (código completo de modales y demás se deja sin cambios) … -->
+  <!-- Script para gestionar el menú según el rol del usuario -->
+  <script>
+    // Función que ajusta el menú según el rol del usuario
+    function ajustarMenuSegunRol(rol) {
+      const adminElements = document.querySelectorAll('.admin-only');
+      const salidasBodegaButton = document.getElementById('salidas-bodega-button');
+      // Referencias a los enlaces del menú de pedidos
+      const realizarPedidosLink = document.querySelector('.oe_menu li:nth-child(1)');
+      const gestionPedidosLink = document.querySelector('.oe_menu li:nth-child(2)');
 
-  <!-- Contenedor oculto para exportar el diseño de factura -->
-  <div id="exportInvoiceContainer" style="display:none; padding:20px; border:1px solid #ccc; max-width:600px; margin:20px auto; font-family: Arial, sans-serif;">
-    <h2 style="text-align:center; margin-bottom:20px;">Factura</h2>
-    <div style="margin-bottom:10px;">
-      <strong>Número:</strong> <span id="exportInvoiceNum"></span>
-    </div>
-    <div style="margin-bottom:10px;">
-      <strong>Fecha:</strong> <span id="exportInvoiceDate"></span>
-    </div>
-    <div style="margin-bottom:10px;">
-      <strong>Proveedor:</strong> <span id="exportInvoiceSupplier"></span>
-    </div>
-    <div style="margin-bottom:10px;">
-      <strong>Producto:</strong> <span id="exportInvoiceProduct"></span>
-    </div>
-    <div style="margin-bottom:10px;">
-      <strong>Cantidad:</strong> <span id="exportInvoiceQuantity"></span>
-    </div>
-    <div style="margin-bottom:10px;">
-      <strong>Precio Unitario:</strong> Q.<span id="exportInvoiceUnitPrice"></span>
-    </div>
-    <div style="margin-bottom:10px;">
-      <strong>Total:</strong> Q.<span id="exportInvoiceTotal"></span>
-    </div>
-    <div style="text-align:center; margin-top:20px;">
-      <em>Gracias por su compra</em>
-    </div>
-  </div>
+      if (rol === 'administrador') {
+        adminElements.forEach(element => {
+          element.style.display = 'inline-block';
+        });
+        salidasBodegaButton.style.display = 'none';
+        if (realizarPedidosLink) {
+          realizarPedidosLink.style.display = 'list-item';
+        }
+        if (gestionPedidosLink) {
+          gestionPedidosLink.style.display = 'list-item';
+        }
+      } else if (rol === 'bodega') {
+        adminElements.forEach(element => {
+          element.style.display = 'none';
+        });
+        salidasBodegaButton.style.display = 'inline-block';
+        // Ocultar enlaces de pedidos para rol bodega
+        if (realizarPedidosLink) {
+          realizarPedidosLink.style.display = 'none';
+        }
+        if (gestionPedidosLink) {
+          gestionPedidosLink.style.display = 'none';
+        }
+      } else {
+        adminElements.forEach(element => {
+          element.style.display = 'none';
+        });
+        salidasBodegaButton.style.display = 'none';
+        if (realizarPedidosLink) {
+          realizarPedidosLink.style.display = 'none';
+        }
+        if (gestionPedidosLink) {
+          gestionPedidosLink.style.display = 'none';
+        }
+      }
+    }
+  </script>
 
-  <!-- Se omiten aquí los modales de productos, movimientos, reajustes, catálogo, facturas y reportes (mantén el código existente) -->
-  <!-- … (código completo de modales se mantiene sin cambios) … -->
-
-  <!-- Firebase SDK y conexión a base de datos -->
+  <!-- Firebase y lógica de la aplicación -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-  <script src="database/connection.js"></script>
   <script>
+    // Configuración de Firebase
+    var firebaseConfig = {
+      apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
+      authDomain: "logisticdb-2e63c.firebaseapp.com",
+      projectId: "logisticdb-2e63c",
+      storageBucket: "logisticdb-2e63c.appspot.com",
+      messagingSenderId: "917523682093",
+      appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+
     // Referencias a elementos del DOM
     const welcomeMessage = document.getElementById('welcome-message');
     const empresaButton = document.getElementById('empresa-button');
     const logoutButton = document.getElementById('logout-button');
 
-    // Función para ajustar el menú según el rol del usuario
-    function ajustarMenuSegunRol(rol) {
-      const adminElements = document.querySelectorAll('.admin-only');
-      if (rol === 'administrador') {
-        adminElements.forEach(element => {
-          // Mostrar como inline-block para botones
-          element.style.display = 'inline-block';
-        });
-      } else {
-        // Ocultar elementos exclusivos para administradores
-        adminElements.forEach(element => {
-          element.style.display = 'none';
-        });
-      }
-    }
-
-    // Función para verificar el usuario logueado y su rol
+    // Función para verificar el usuario logueado y configurar el menú según su rol
     function verificarUsuario() {
       const usuarioLogueado = localStorage.getItem('usuarioLogueado');
       if (usuarioLogueado) {
         db.collection('usuarios').where('username', '==', usuarioLogueado).limit(1).get()
-          .then(querySnapshot => {
+          .then((querySnapshot) => {
             if (!querySnapshot.empty) {
               const userData = querySnapshot.docs[0].data();
               ajustarMenuSegunRol(userData.rol);
               welcomeMessage.textContent = `Bienvenido, ${userData.username}!`;
+              // Una vez verificado, hacemos visible el contenido
+              document.body.style.visibility = 'visible';
             } else {
-              alert('Usuario no encontrado. Por favor, inicia sesión nuevamente.');
+              alert('Usuario no encontrado. Inicia sesión nuevamente.');
               window.location.href = 'login.html';
             }
           })
-          .catch(error => {
+          .catch((error) => {
             console.error("Error al verificar el usuario: ", error);
-            alert('Error al verificar el usuario. Por favor, intenta nuevamente.');
+            alert('Error al verificar el usuario.');
             window.location.href = 'login.html';
           });
       } else {
@@ -293,12 +294,11 @@
       }
     }
 
-    // Función para manejar el cierre de sesión
+    // Función para cerrar sesión
     function cerrarSesion() {
       localStorage.removeItem('usuarioLogueado');
       window.location.href = 'login.html';
     }
-
     logoutButton.addEventListener('click', cerrarSesion);
     empresaButton.addEventListener('click', function() {
       window.location.href = 'empresa/empresaMenu.html';

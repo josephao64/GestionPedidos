@@ -246,6 +246,7 @@
         <option value="" disabled selected>-- Selecciona un Rol --</option>
         <option value="administrador">Administrador</option>
         <option value="usuario">Usuario</option>
+        <option value="bodega">Bodega</option>
       </select>
 
       <label for="sucursal">Sucursal</label>
@@ -257,19 +258,19 @@
       <fieldset style="margin: 1rem 0;">
         <legend><strong>Permisos Específicos</strong></legend>
         <label style="display: block; margin-bottom: 5px;">
-          <input type="checkbox" id="permChangeStatus" />
+          <input type="checkbox" id="permChangeStatus">
           Permitir Cambiar Estado de Pedido
         </label>
         <label style="display: block; margin-bottom: 5px;">
-          <input type="checkbox" id="permEditOrder" />
+          <input type="checkbox" id="permEditOrder">
           Permitir Editar Pedido
         </label>
         <label style="display: block; margin-bottom: 5px;">
-          <input type="checkbox" id="permDeleteOrder" />
+          <input type="checkbox" id="permDeleteOrder">
           Permitir Eliminar Pedido
         </label>
         <label style="display: block; margin-bottom: 5px;">
-          <input type="checkbox" id="permDeleteReceipt" />
+          <input type="checkbox" id="permDeleteReceipt">
           Permitir Eliminar Recibo
         </label>
       </fieldset>
@@ -278,7 +279,7 @@
       <button type="button" id="cancel-edit" style="display: none; margin-top: 10px;">Cancelar Edición</button>
     </form>
 
-    <!-- Tabla de Usuarios (sin botones de acción por fila) -->
+    <!-- Tabla de Usuarios -->
     <table>
       <thead>
         <tr>
@@ -317,7 +318,7 @@
   <!-- Biblioteca CryptoJS para Hashing de Contraseñas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script>
-    // Configuración de Firebase (Se mantiene la conexión existente)
+    // Configuración de Firebase
     var firebaseConfig = {
       apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
       authDomain: "logisticdb-2e63c.firebaseapp.com",
@@ -329,7 +330,7 @@
     firebase.initializeApp(firebaseConfig);
     var db = firebase.firestore();
 
-    // Variables globales y referencias a elementos del DOM
+    // Variables globales y referencias al DOM
     const messageDiv = document.getElementById('message');
     const errorDiv = document.getElementById('error');
     const userForm = document.getElementById('user-form');
@@ -355,7 +356,7 @@
     let selectedUserId = null; // Almacena el ID del usuario seleccionado
 
     // =============================
-    //   Verificar si es Admin
+    //   Verificar si el usuario es Admin o Bodega
     // =============================
     function verificarAdmin() {
       const usuarioLogueado = localStorage.getItem('usuarioLogueado');
@@ -364,7 +365,8 @@
           .then((querySnapshot) => {
             if (!querySnapshot.empty) {
               const userData = querySnapshot.docs[0].data();
-              if (userData.rol !== 'administrador') {
+              // Permitir acceso si el rol es "administrador" o "bodega"
+              if (userData.rol !== 'administrador' && userData.rol !== 'bodega') {
                 alert('No tienes permisos para acceder a esta página.');
                 window.location.href = "../empresa/empresaMenu.html";
               } else {
@@ -450,9 +452,7 @@
     //   Crear Fila en la Tabla (sin botones de acción)
     // =============================
     function crearFilaUsuario(id, username, rol, sucursalName) {
-      // Si 'rol' es undefined, se muestra 'N/A'
       const rolMostrado = rol ? rol.charAt(0).toUpperCase() + rol.slice(1) : 'N/A';
-
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${id}</td>
@@ -460,7 +460,6 @@
         <td>${rolMostrado}</td>
         <td>${sucursalName}</td>
       `;
-      // Agregar evento para seleccionar la fila
       tr.addEventListener('click', function() {
         seleccionarFila(tr, id);
       });
@@ -471,11 +470,8 @@
     //   Función para seleccionar una fila
     // =============================
     function seleccionarFila(fila, id) {
-      // Remover la clase 'selected' de todas las filas
       const filas = usersTableBody.querySelectorAll('tr');
       filas.forEach(tr => tr.classList.remove('selected'));
-
-      // Agregar la clase 'selected' a la fila clickeada
       fila.classList.add('selected');
       selectedUserId = id;
     }
@@ -492,7 +488,6 @@
         .then(doc => {
           if (doc.exists) {
             const user = doc.data();
-            // Se muestra el hash de la contraseña almacenada (o la contraseña en texto claro, si fuera el caso)
             alert(`Usuario: ${user.username}\nContraseña: ${user.password}`);
           } else {
             alert("Usuario no encontrado.");
@@ -604,7 +599,7 @@
     });
 
     // =============================
-    //   Editar / Eliminar usando acciones globales
+    //   Acciones Globales: Editar, Eliminar, Ver
     // =============================
     btnEditar.addEventListener('click', function() {
       if (!selectedUserId) {
@@ -626,9 +621,6 @@
       verUsuario();
     });
 
-    // =============================
-    //   Función editarUsuario (se usa igual que antes)
-    // =============================
     function editarUsuario(userId) {
       db.collection('usuarios').doc(userId).get()
         .then((doc) => {
@@ -636,10 +628,9 @@
             const user = doc.data();
             document.getElementById('user-id').value = doc.id;
             document.getElementById('username').value = user.username;
-            document.getElementById('password').value = ''; // Dejar en blanco por seguridad
+            document.getElementById('password').value = ''; // Por seguridad
             document.getElementById('rol').value = user.rol;
             document.getElementById('sucursal').value = user.sucursalId;
-
             if (user.permisos) {
               permChangeStatusCheckbox.checked = !!user.permisos.canChangeStatus;
               permEditOrderCheckbox.checked = !!user.permisos.canEditOrder;
@@ -651,7 +642,6 @@
               permDeleteOrderCheckbox.checked = false;
               permDeleteReceiptCheckbox.checked = false;
             }
-
             cancelEditBtn.style.display = 'block';
             userForm.querySelector('button[type="submit"]').textContent = 'Actualizar Usuario';
             window.scrollTo(0, 0);
@@ -665,9 +655,6 @@
         });
     }
 
-    // =============================
-    //   Eliminar: Modal Confirm
-    // =============================
     function abrirModalEliminar(userId) {
       userToDelete = userId;
       deleteModal.style.display = 'block';
@@ -699,9 +686,6 @@
       }
     });
 
-    // =============================
-    //   Cancelar Edición
-    // =============================
     cancelEditBtn.addEventListener('click', function() {
       userForm.reset();
       document.getElementById('user-id').value = '';
@@ -711,6 +695,25 @@
       messageDiv.textContent = '';
     });
 
+    // --- NUEVO: Al cambiar el rol, si es "bodega" se deshabilitan los permisos ---
+    document.getElementById('rol').addEventListener('change', function(){
+      if(this.value === 'bodega'){
+        permChangeStatusCheckbox.checked = false;
+        permEditOrderCheckbox.checked = false;
+        permDeleteOrderCheckbox.checked = false;
+        permDeleteReceiptCheckbox.checked = false;
+        permChangeStatusCheckbox.disabled = true;
+        permEditOrderCheckbox.disabled = true;
+        permDeleteOrderCheckbox.disabled = true;
+        permDeleteReceiptCheckbox.disabled = true;
+      } else {
+        permChangeStatusCheckbox.disabled = false;
+        permEditOrderCheckbox.disabled = false;
+        permDeleteOrderCheckbox.disabled = false;
+        permDeleteReceiptCheckbox.disabled = false;
+      }
+    });
+
     // =============================
     //   Cerrar Sesión
     // =============================
@@ -718,7 +721,6 @@
       localStorage.removeItem('usuarioLogueado');
       window.location.href = '../login.html';
     }
-    // (Si tienes un botón de cierre de sesión, asegúrate de agregarle el listener)
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
       logoutButton.addEventListener('click', cerrarSesion);
