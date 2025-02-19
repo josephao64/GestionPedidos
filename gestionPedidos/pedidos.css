@@ -7,9 +7,9 @@
     margin: 0;
     padding: 0;
     color: #333;
-}
-
-.header {
+  }
+  
+  .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -17,14 +17,14 @@
     color: white;
     padding: 20px;
     border-bottom: 3px solid #0056b3;
-}
-
-h1 {
+  }
+  
+  h1 {
     margin: 0;
     font-size: 2em;
-}
-
-.main-menu-button {
+  }
+  
+  .main-menu-button {
     padding: 10px 20px;
     border: none;
     background-color: #0056b3;
@@ -32,23 +32,23 @@ h1 {
     cursor: pointer;
     transition: background-color 0.3s, transform 0.2s;
     border-radius: 5px;
-}
-
-.main-menu-button:hover {
+  }
+  
+  .main-menu-button:hover {
     background-color: #004494;
     transform: scale(1.05);
-}
-
-/* =========================================================
-   Pestañas
-   ========================================================= */
-.tab-container {
+  }
+  
+  /* =========================================================
+     Pestañas
+     ========================================================= */
+  .tab-container {
     display: flex;
     justify-content: center;
     margin: 20px 0;
-}
-
-.tab-button {
+  }
+  
+  .tab-button {
     margin-right: 10px;
     padding: 10px 20px;
     font-size: 16px;
@@ -56,23 +56,23 @@ h1 {
     border: none;
     background-color: #f1f1f1;
     transition: background-color 0.3s, transform 0.2s;
-}
-
-.tab-button:hover {
+  }
+  
+  .tab-button:hover {
     background-color: #ddd;
     transform: scale(1.05);
-}
-
-.tab-button.active {
+  }
+  
+  .tab-button.active {
     background-color: #fff;
     border-bottom: none;
     font-weight: bold;
-}
-
-/* =========================================================
-   Contenedores
-   ========================================================= */
-.container {
+  }
+  
+  /* =========================================================
+     Contenedores
+     ========================================================= */
+  .container {
     display: none;
     margin: 20px;
     padding: 20px;
@@ -80,57 +80,57 @@ h1 {
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     overflow-x: hidden;
-}
-
-.table-wrapper {
+  }
+  
+  .table-wrapper {
     width: 100%;
     overflow-x: auto;
-}
-
-.table {
+  }
+  
+  .table {
     width: 100%;
     border-collapse: collapse;
-}
-
-.table, .th, .td {
+  }
+  
+  .table, .th, .td {
     border: 1px solid #ddd;
     padding: 15px;
     text-align: left;
-}
-
-.th {
+  }
+  
+  .th {
     background-color: #f2f2f2;
-}
-
-/* =========================================================
-   Tarjetas de pedido
-   ========================================================= */
-.order-card {
+  }
+  
+  /* =========================================================
+     Tarjetas de pedido
+     ========================================================= */
+  .order-card {
     padding: 15px;
     border-radius: 10px;
     background-color: white;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     transition: box-shadow 0.3s, transform 0.2s;
     margin-bottom: 20px;
-}
-
-.order-card:hover {
+  }
+  
+  .order-card:hover {
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
     transform: scale(1.02);
-}
-
-.order-card h3 {
+  }
+  
+  .order-card h3 {
     margin-top: 0;
     font-size: 1.2em;
     color: #007BFF;
-}
-
-.order-card p {
+  }
+  
+  .order-card p {
     margin: 5px 0;
     font-size: 1em;
-}
-
-.order-card button {
+  }
+  
+  .order-card button {
     margin: 5px 0;
     padding: 8px 12px;
     border: none;
@@ -139,59 +139,59 @@ h1 {
     cursor: pointer;
     transition: background-color 0.3s, transform 0.2s;
     border-radius: 5px;
-}
-
-.order-card button:hover {
+  }
+  
+  .order-card button:hover {
     background-color: #0056b3;
     transform: scale(1.05);
-}
-
-/* Botones específicos (Recibos manuales/automáticos, etc.) */
-.order-card button.generate-manual-receipt,
-.order-card button.generate-automatic-receipt {
+  }
+  
+  /* Botones específicos (Recibos manuales/automáticos, etc.) */
+  .order-card button.generate-manual-receipt,
+  .order-card button.generate-automatic-receipt {
     background-color: #28a745;
-}
-
-.order-card button.generate-manual-receipt:hover,
-.order-card button.generate-automatic-receipt:hover {
+  }
+  
+  .order-card button.generate-manual-receipt:hover,
+  .order-card button.generate-automatic-receipt:hover {
     background-color: #218838;
-}
-
-.order-card button.download-receipt {
+  }
+  
+  .order-card button.download-receipt {
     background-color: #17a2b8;
-}
-
-.order-card button.download-receipt:hover {
+  }
+  
+  .order-card button.download-receipt:hover {
     background-color: #117a8b;
-}
-
-.order-card button.change-status-button {
+  }
+  
+  .order-card button.change-status-button {
     background-color: #ffc107;
     color: black;
-}
-
-.order-card button.change-status-button:hover {
+  }
+  
+  .order-card button.change-status-button:hover {
     background-color: #e0a800;
-}
-
-/* =========================================================
-   Barra de Progreso de Estado
-   ========================================================= */
-.progress-container {
+  }
+  
+  /* =========================================================
+     Barra de Progreso de Estado
+     ========================================================= */
+  .progress-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-top: 10px;
-}
-
-.progress-step {
+  }
+  
+  .progress-step {
     display: flex;
     flex-direction: column;
     align-items: center;
     flex: 1;
-}
-
-.progress-step .step-number {
+  }
+  
+  .progress-step .step-number {
     width: 30px;
     height: 30px;
     border-radius: 50%;
@@ -201,36 +201,36 @@ h1 {
     align-items: center;
     justify-content: center;
     font-weight: bold;
-}
-
-.progress-step.completed .step-number {
+  }
+  
+  .progress-step.completed .step-number {
     background-color: #28a745;
-}
-
-.progress-step.current .step-number {
+  }
+  
+  .progress-step.current .step-number {
     background-color: #ffc107;
-}
-
-.progress-step .step-label {
+  }
+  
+  .progress-step .step-label {
     margin-top: 5px;
     font-size: 12px;
-}
-
-.progress-line {
+  }
+  
+  .progress-line {
     flex: 1;
     height: 4px;
     background-color: #ccc;
     margin: 0 10px;
-}
-
-.progress-line.completed {
+  }
+  
+  .progress-line.completed {
     background-color: #28a745;
-}
-
-/* =========================================================
-   Modales
-   ========================================================= */
-.modal {
+  }
+  
+  /* =========================================================
+     Modales
+     ========================================================= */
+  .modal {
     display: none;
     position: fixed;
     z-index: 1000;
@@ -240,9 +240,9 @@ h1 {
     height: 100%;
     overflow: auto;
     background-color: rgba(0,0,0,0.5);
-}
-
-.modal-content {
+  }
+  
+  .modal-content {
     background-color: #fefefe;
     margin: 5% auto;
     padding: 20px;
@@ -250,116 +250,204 @@ h1 {
     width: 80%;
     border-radius: 8px;
     max-width: 800px;
-}
-
-.close {
+  }
+  
+  .close {
     color: #aaa;
     float: right;
     font-size: 28px;
     font-weight: bold;
     cursor: pointer;
     transition: color 0.3s;
-}
-
-.close:hover {
+  }
+  
+  .close:hover {
     color: black;
-}
-
-/* Estilo para tablas dentro de modales */
-.modal table {
+  }
+  
+  /* Estilo para tablas dentro de modales */
+  .modal table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
-}
-
-.modal th,
-.modal td {
+  }
+  
+  .modal th,
+  .modal td {
     border: 1px solid #ddd;
     padding: 10px;
     text-align: left;
-}
-
-.modal th {
+  }
+  
+  .modal th {
     background-color: #f2f2f2;
-}
-
-/* Inputs en el contenido del modal */
-.modal input,
-.modal textarea {
+  }
+  
+  /* Inputs en el contenido del modal */
+  .modal input,
+  .modal textarea {
     width: 100%;
     padding: 8px;
     margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 5px;
     box-sizing: border-box;
-}
-
-/* =========================================================
-   Formulario de Confirmación de Pedido
-   ========================================================= */
-#invoiceTotalContainer {
+  }
+  
+  /* =========================================================
+     Formulario de Confirmación de Pedido
+     ========================================================= */
+  #invoiceTotalContainer {
     text-align: right;
     font-size: 1.2em;
     margin-top: 20px;
-}
-
-/* =========================================================
-   Responsividad
-   ========================================================= */
-@media screen and (max-width: 768px) {
+  }
+  
+  /* =========================================================
+     Responsividad
+     ========================================================= */
+  @media screen and (max-width: 768px) {
     .modal-content {
-        width: 95%;
-        padding: 15px;
+      width: 95%;
+      padding: 15px;
     }
-
+  
     .tab-button {
-        font-size: 14px;
-        padding: 8px 16px;
+      font-size: 14px;
+      padding: 8px 16px;
     }
-
+  
     .order-card h3 {
-        font-size: 1em;
+      font-size: 1em;
     }
-
+  
     .order-card p {
-        font-size: 0.9em;
+      font-size: 0.9em;
     }
-
+  
     .progress-step .step-label {
-        font-size: 10px;
+      font-size: 10px;
     }
-
+  
     .modal h2 {
-        font-size: 1.3em;
+      font-size: 1.3em;
     }
-
+  
     #invoiceTotalContainer {
-        font-size: 1em;
+      font-size: 1em;
     }
-}
-
-/* =========================================================
-   NUEVAS CLASES (cambios solicitados)
-   ========================================================= */
-
-/* Texto para indicar mismatch de cantidades */
-.mismatch-quantities {
+  }
+  
+  /* =========================================================
+     NUEVAS CLASES (cambios solicitados)
+     ========================================================= */
+  
+  /* Texto para indicar mismatch de cantidades */
+  .mismatch-quantities {
     color: #dc3545; /* Rojo */
     font-weight: bold;
-}
-
-/* Texto para indicar pedido pendiente de factura */
-.pending-invoice {
+  }
+  
+  /* Texto para indicar pedido pendiente de factura */
+  .pending-invoice {
     color: #fd7e14; /* Naranja */
     font-weight: bold;
-}
-
-/* Si deseas resaltar la tarjeta de un pedido incompleto */
-.order-card.incomplete-state {
+  }
+  
+  /* Si deseas resaltar la tarjeta de un pedido incompleto */
+  .order-card.incomplete-state {
     border: 2px dashed #dc3545; /* Borde rojo */
-}
-
-/* Ejemplo de color para estado 'enTiendaIncompleto' en la barra de progreso */
-.progress-step.enTiendaIncompleto .step-number {
+  }
+  
+  /* Ejemplo de color para estado 'enTiendaIncompleto' en la barra de progreso */
+  .progress-step.enTiendaIncompleto .step-number {
     background-color: #dc3545; /* Rojo (o el color que prefieras) */
-}
+  }
+  
+  /* =========================================================
+     Estilos para el Ticket de Exportación
+     (Utilizado en "Exportar Pedido como Imagen")
+     ========================================================= */
+  .ticket {
+    width: 550px;
+    padding: 20px 15px;
+    border: 1px solid #ddd;
+    background-color: #ffffff;
+    color: #333333;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    margin: 20px auto;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+  }
+  
+  .ticket-header {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  .ticket-header img {
+    width: 300px;
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 10px;
+  }
+  
+  .ticket-header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #333333;
+  }
+  
+  .ticket-header h2 {
+    margin: 5px 0 0;
+    font-size: 18px;
+    color: #666666;
+  }
+  
+  .order-id {
+    font-size: 20px;
+    font-weight: bold;
+    color: #FF5733;
+  }
+  
+  .ticket-body {
+    margin-bottom: 10px;
+  }
+  
+  .ticket-body p {
+    margin: 6px 0;
+    line-height: 1.4;
+  }
+  
+  .products-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    table-layout: fixed;
+    font-size: 16px;
+  }
+  
+  .products-table th,
+  .products-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+  
+  .products-table th {
+    text-align: center;
+    white-space: nowrap;
+  }
+  
+  .products-table td {
+    text-align: left;
+    word-wrap: break-word;
+  }
+  
+  .ticket-footer {
+    text-align: center;
+    font-size: 14px;
+    color: #777777;
+    margin-top: 10px;
+  }
+  

@@ -40,6 +40,7 @@ function showSection(section) {
     loadProducts();
   } else if (section === "movements") {
     document.getElementById("movementsSection").style.display = "block";
+    // La función loadMovements() se encuentra en movimientos.js
     loadMovements();
   } else if (section === "adjustments") {
     document.getElementById("adjustmentsSection").style.display = "block";
@@ -54,7 +55,6 @@ function showSection(section) {
 
 /* =========================
    GESTIÓN DE PRODUCTOS
-   (Utilizamos el campo numérico "idNum" para mostrar un ID entero)
 ============================*/
 function showAddProductForm() {
   document.getElementById("productModalLabel").textContent = "Agregar Producto";
@@ -77,7 +77,7 @@ async function saveProduct() {
 
     if (!name) throw new Error("El nombre del producto es obligatorio.");
 
-    // Si es nuevo, asignar un número entero único (por ejemplo, Date.now())
+    // Si es nuevo, asignar un número entero único
     var idNum = id ? null : Date.now();
 
     var productData = {
@@ -202,166 +202,6 @@ async function populateProductSelects() {
 }
 
 /* =========================
-   MOVIMIENTOS
-============================*/
-function showAddMovementForm() {
-  document.getElementById("movementId").value = "";
-  populateProductSelects();
-  document.getElementById("movementQuantity").value = "";
-  document.getElementById("movementUser").value = "";
-  document.getElementById("movementReason").value = "";
-  document.getElementById("movementComments").value = "";
-  document.getElementById("movementModalLabel").textContent = "Registrar Movimiento";
-}
-
-async function saveMovement() {
-  try {
-    let movementId = document.getElementById("movementId").value;
-    let productId = document.getElementById("movementProductSelect").value;
-    let type = document.getElementById("movementType").value;
-    let quantity = parseFloat(document.getElementById("movementQuantity").value);
-    let user = document.getElementById("movementUser").value;
-    let reason = document.getElementById("movementReason").value;
-    let comments = document.getElementById("movementComments").value;
-
-    if (isNaN(quantity) || quantity <= 0)
-      throw new Error("La cantidad debe ser un número positivo.");
-
-    let productRef = db.collection("inventoryProducts").doc(productId);
-    let productDoc = await productRef.get();
-    let product = productDoc.exists ? productDoc.data() : null;
-
-    if (movementId) {
-      // Edición: revertir efecto del movimiento anterior y aplicar el nuevo
-      let oldMovementDoc = await db.collection("inventoryMovements").doc(movementId).get();
-      if (!oldMovementDoc.exists) throw new Error("Movimiento no encontrado");
-      let oldMovement = oldMovementDoc.data();
-      let oldEffect = (oldMovement.type === "entrada" || oldMovement.type === "ajuste") ? oldMovement.quantity : -oldMovement.quantity;
-      let newEffect = (type === "entrada" || type === "ajuste") ? quantity : -quantity;
-      let diff = newEffect - oldEffect;
-      if (product) {
-        let newStock = product.stock + diff;
-        if (newStock < 0) throw new Error("No hay suficiente stock para la actualización.");
-        await productRef.update({ stock: newStock });
-      }
-      await db.collection("inventoryMovements").doc(movementId).update({
-        type: type,
-        quantity: quantity,
-        date: firebase.firestore.FieldValue.serverTimestamp(),
-        user: user,
-        reason: reason,
-        comments: comments
-      });
-    } else {
-      // Nuevo movimiento
-      if (product) {
-        let newStock = product.stock;
-        if (type === "entrada" || type === "ajuste") {
-          newStock += quantity;
-        } else if (type === "salida") {
-          newStock -= quantity;
-          if (newStock < 0) throw new Error("No hay suficiente stock para realizar esta salida.");
-        }
-        await productRef.update({ stock: newStock });
-      }
-      await db.collection("inventoryMovements").add({
-        productId: productId,
-        type: type,
-        quantity: quantity,
-        date: firebase.firestore.FieldValue.serverTimestamp(),
-        user: user,
-        reason: reason,
-        comments: comments
-      });
-    }
-    closeModal("movementModal");
-    loadProducts();
-    loadMovements();
-  } catch (error) {
-    console.error("Error al registrar/actualizar movimiento:", error);
-    alert("Error al registrar/actualizar movimiento: " + error.message);
-  }
-}
-
-async function loadMovements() {
-  try {
-    let snapshot = await db.collection("inventoryMovements").orderBy("date", "desc").get();
-    let tbody = document.getElementById("movementsTable").getElementsByTagName("tbody")[0];
-    tbody.innerHTML = "";
-    for (let doc of snapshot.docs) {
-      let m = doc.data();
-      let productDoc = await db.collection("inventoryProducts").doc(m.productId).get();
-      let productName = productDoc.exists ? productDoc.data().name : "Producto no encontrado";
-      let row = tbody.insertRow();
-      row.insertCell(0).textContent = productName;
-      row.insertCell(1).textContent = m.type;
-      row.insertCell(2).textContent = m.quantity;
-      let dateStr = m.date ? m.date.toDate().toLocaleString() : "";
-      row.insertCell(3).textContent = dateStr;
-      row.insertCell(4).textContent = m.user;
-      row.insertCell(5).textContent = m.reason;
-      row.insertCell(6).textContent = m.comments;
-      row.insertCell(7).innerHTML = `
-        <button class="btn btn-sm btn-primary" onclick="editMovement('${doc.id}')">
-          <i class="fa-solid fa-edit"></i> Editar
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="deleteMovement('${doc.id}')">
-          <i class="fa-solid fa-trash"></i> Eliminar
-        </button>`;
-    }
-  } catch (error) {
-    console.error("Error al cargar movimientos:", error);
-    alert("Error al cargar movimientos: " + error.message);
-  }
-}
-
-async function editMovement(movementId) {
-  try {
-    let doc = await db.collection("inventoryMovements").doc(movementId).get();
-    if (doc.exists) {
-      let m = doc.data();
-      document.getElementById("movementId").value = movementId;
-      document.getElementById("movementProductSelect").value = m.productId;
-      document.getElementById("movementType").value = m.type;
-      document.getElementById("movementQuantity").value = m.quantity;
-      document.getElementById("movementUser").value = m.user;
-      document.getElementById("movementReason").value = m.reason;
-      document.getElementById("movementComments").value = m.comments;
-      document.getElementById("movementModalLabel").textContent = "Editar Movimiento";
-      new bootstrap.Modal(document.getElementById("movementModal")).show();
-    } else {
-      alert("Movimiento no encontrado.");
-    }
-  } catch (error) {
-    console.error("Error al cargar movimiento:", error);
-    alert("Error al cargar movimiento: " + error.message);
-  }
-}
-
-async function deleteMovement(movementId) {
-  if (!confirm("¿Estás seguro de eliminar este movimiento?")) return;
-  try {
-    let doc = await db.collection("inventoryMovements").doc(movementId).get();
-    if (!doc.exists) throw new Error("Movimiento no encontrado");
-    let m = doc.data();
-    let effect = (m.type === "entrada" || m.type === "ajuste") ? m.quantity : -m.quantity;
-    let productRef = db.collection("inventoryProducts").doc(m.productId);
-    let productDoc = await productRef.get();
-    if (productDoc.exists) {
-      let product = productDoc.data();
-      let newStock = product.stock - effect;
-      await productRef.update({ stock: newStock });
-    }
-    await db.collection("inventoryMovements").doc(movementId).delete();
-    loadMovements();
-    loadProducts();
-  } catch (error) {
-    console.error("Error al eliminar movimiento:", error);
-    alert("Error al eliminar movimiento: " + error.message);
-  }
-}
-
-/* =========================
    REAJUSTES
 ============================*/
 function showAdjustmentModal() {
@@ -480,7 +320,6 @@ async function importProduct(productId) {
 /* =========================
    FACTURAS Y PROVEEDORES
 ============================*/
-// Cargar proveedores desde la colección "providers"
 async function populateProviders() {
   try {
     let snapshot = await db.collection("providers").get();
@@ -499,7 +338,6 @@ async function populateProviders() {
   }
 }
 
-// Cargar productos para el select de factura
 async function populateInvoiceProductSelect() {
   try {
     let snapshot = await db.collection("inventoryProducts").get();
@@ -519,8 +357,11 @@ async function populateInvoiceProductSelect() {
 }
 
 function showAddInvoiceForm() {
+  document.getElementById("invoiceId").value = "";
+  document.getElementById("invoiceModalLabel").textContent = "Agregar Factura";
   document.getElementById("invoiceNumber").value = "";
   document.getElementById("invoiceDate").value = "";
+  document.getElementById("invoiceCompany").value = "";
   populateProviders();
   populateInvoiceProductSelect();
   document.getElementById("invoiceQuantity").value = "";
@@ -529,7 +370,6 @@ function showAddInvoiceForm() {
   new bootstrap.Modal(document.getElementById("invoiceModal")).show();
 }
 
-// Actualiza el total (cantidad × precio)
 function updateInvoiceTotal() {
   let qty = parseFloat(document.getElementById("invoiceQuantity").value) || 0;
   let price = parseFloat(document.getElementById("invoiceUnitPrice").value) || 0;
@@ -538,33 +378,30 @@ function updateInvoiceTotal() {
 
 async function saveInvoice() {
   try {
+    let invoiceId = document.getElementById("invoiceId").value;
     let invoiceNumber = document.getElementById("invoiceNumber").value;
     let invoiceDate = document.getElementById("invoiceDate").value;
+    let invoiceCompany = document.getElementById("invoiceCompany").value;
     let invoiceSupplier = document.getElementById("invoiceSupplier").value;
     let invoiceProductId = document.getElementById("invoiceProductSelect").value;
     let invoiceQuantity = parseFloat(document.getElementById("invoiceQuantity").value);
     let invoiceUnitPrice = parseFloat(document.getElementById("invoiceUnitPrice").value);
     let invoiceTotal = parseFloat(document.getElementById("invoiceTotal").value);
 
-    if (!invoiceNumber || !invoiceDate || !invoiceSupplier || !invoiceProductId ||
+    if (!invoiceNumber || !invoiceDate || !invoiceCompany || !invoiceSupplier || !invoiceProductId ||
         isNaN(invoiceQuantity) || invoiceQuantity <= 0 ||
         isNaN(invoiceUnitPrice) || invoiceUnitPrice <= 0) {
       throw new Error("Todos los campos son obligatorios y deben ser números positivos.");
     }
 
-    // Verificar si ya existe una factura con el mismo número
-    let duplicateQuery = await db.collection("invoices").where("invoiceNum", "==", invoiceNumber).get();
-    if (!duplicateQuery.empty) {
-      throw new Error("La factura con este número ya existe.");
-    }
-
-    // Parsear la fecha manualmente (formato "YYYY-MM-DD")
+    // Parsear la fecha (formato "YYYY-MM-DD")
     let parts = invoiceDate.split("-");
     let localInvoiceDate = new Date(parts[0], parts[1] - 1, parts[2]);
 
     let invoiceData = {
       invoiceNum: invoiceNumber,
       date: localInvoiceDate,
+      company: invoiceCompany,
       supplier: invoiceSupplier,
       productId: invoiceProductId,
       quantity: invoiceQuantity,
@@ -572,30 +409,58 @@ async function saveInvoice() {
       total: invoiceTotal
     };
 
-    // Guardar la factura y capturar su referencia
-    let invoiceRef = await db.collection("invoices").add(invoiceData);
-
-    // Actualizar el stock del producto (factura como entrada)
     let productRef = db.collection("inventoryProducts").doc(invoiceProductId);
     let productDoc = await productRef.get();
     if (!productDoc.exists) throw new Error("Producto no encontrado.");
     let product = productDoc.data();
-    let newStock = product.stock + invoiceQuantity;
-    await productRef.update({ stock: newStock });
 
-    // Registrar movimiento de entrada por factura, incluyendo el ID de la factura
-    await db.collection("inventoryMovements").add({
-      productId: invoiceProductId,
-      type: "entrada",
-      quantity: invoiceQuantity,
-      date: firebase.firestore.FieldValue.serverTimestamp(),
-      user: "Factura",
-      reason: "Factura de proveedor: " + invoiceSupplier,
-      comments: "Factura ingresada el " + invoiceDate,
-      invoiceId: invoiceRef.id
-    });
+    if (invoiceId) {
+      // Edición de factura
+      let oldInvoiceDoc = await db.collection("invoices").doc(invoiceId).get();
+      if (!oldInvoiceDoc.exists) throw new Error("Factura no encontrada.");
+      let oldInvoice = oldInvoiceDoc.data();
+      // Calcular diferencia de cantidad para ajustar el stock
+      let diff = invoiceQuantity - oldInvoice.quantity;
+      let newStock = product.stock + diff;
+      if (newStock < 0) throw new Error("No hay suficiente stock para realizar esta modificación.");
+      await productRef.update({ stock: newStock });
+      await db.collection("invoices").doc(invoiceId).update(invoiceData);
 
-    alert("Factura agregada y entrada de producto registrada.");
+      // Actualizar el movimiento asociado
+      let movementSnapshot = await db.collection("inventoryMovements").where("invoiceId", "==", invoiceId).get();
+      movementSnapshot.forEach(async movementDoc => {
+        await db.collection("inventoryMovements").doc(movementDoc.id).update({
+          quantity: invoiceQuantity,
+          date: firebase.firestore.FieldValue.serverTimestamp(),
+          reason: "Factura modificada: " + invoiceSupplier,
+          comments: "Factura modificada el " + invoiceDate
+        });
+      });
+      alert("Factura modificada exitosamente.");
+    } else {
+      // Nueva factura: verificar duplicados
+      let duplicateQuery = await db.collection("invoices").where("invoiceNum", "==", invoiceNumber).get();
+      if (!duplicateQuery.empty) {
+        throw new Error("La factura con este número ya existe.");
+      }
+      // Actualizar el stock del producto (factura como entrada)
+      let newStock = product.stock + invoiceQuantity;
+      await productRef.update({ stock: newStock });
+      // Guardar la factura
+      let invoiceRef = await db.collection("invoices").add(invoiceData);
+      // Registrar movimiento de entrada
+      await db.collection("inventoryMovements").add({
+        productId: invoiceProductId,
+        type: "entrada",
+        quantity: invoiceQuantity,
+        date: firebase.firestore.FieldValue.serverTimestamp(),
+        user: "Factura",
+        reason: "Factura de proveedor: " + invoiceSupplier,
+        comments: "Factura ingresada el " + invoiceDate,
+        invoiceId: invoiceRef.id
+      });
+      alert("Factura agregada y entrada de producto registrada.");
+    }
     closeModal("invoiceModal");
     loadProducts();
     loadMovements();
@@ -607,34 +472,169 @@ async function saveInvoice() {
   }
 }
 
+/**
+ *  FUNCIÓN PRINCIPAL PARA CARGAR LAS FACTURAS
+ */
 async function loadInvoices() {
   try {
     let snapshot = await db.collection("invoices").orderBy("date", "desc").get();
     let tbody = document.getElementById("invoicesTable").getElementsByTagName("tbody")[0];
     tbody.innerHTML = "";
-    snapshot.forEach(async doc => {
-      let inv = doc.data();
-      let row = tbody.insertRow();
-      row.insertCell(0).textContent = inv.invoiceNum ? inv.invoiceNum : "-";
-      row.insertCell(1).textContent = inv.date ? new Date(inv.date.seconds * 1000).toLocaleDateString() : "";
-      row.insertCell(2).textContent = inv.supplier;
-      let productDoc = await db.collection("inventoryProducts").doc(inv.productId).get();
-      let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
-      row.insertCell(3).textContent = productName;
-      row.insertCell(4).textContent = inv.quantity;
-      row.insertCell(5).textContent = "Q." + inv.unitPrice;
-      row.insertCell(6).textContent = "Q." + inv.total;
-      row.insertCell(7).innerHTML = `
-        <button class="btn btn-sm btn-danger" onclick="deleteInvoice('${doc.id}')">
-          <i class="fa-solid fa-trash"></i> Eliminar
-        </button>
-        <button class="btn btn-sm btn-secondary" onclick="exportInvoiceImage('${doc.id}')">
-          <i class="fa-solid fa-file-export"></i> Exportar
-        </button>`;
-    });
+
+    // Referencia a la cabecera de acciones (para ocultarla si se agrupa)
+    let actionsHeader = document.getElementById("actionsHeader");
+
+    // Filtro por empresa
+    let filterCompany = document.getElementById("invoiceFilterCompany").value;
+    // Checkbox para agrupar
+    let groupByCompanyCheckbox = document.getElementById("groupByCompanyCheckbox");
+    let groupByCompany = groupByCompanyCheckbox && groupByCompanyCheckbox.checked;
+
+    if (groupByCompany) {
+      // Ocultar la columna de acciones
+      actionsHeader.style.display = "none";
+
+      // Agrupar facturas por empresa en un objeto
+      let groups = {};
+      snapshot.docs.forEach(doc => {
+        let inv = doc.data();
+        // Aplicar filtro si se ha seleccionado una empresa
+        if (filterCompany && inv.company !== filterCompany) return;
+
+        let companyName = inv.company || "SIN EMPRESA";
+        if (!groups[companyName]) {
+          groups[companyName] = [];
+        }
+        groups[companyName].push({ id: doc.id, data: inv });
+      });
+
+      // Iterar sobre cada grupo (empresa)
+      for (let company in groups) {
+        // Fila de encabezado con el nombre de la empresa
+        let headerRow = tbody.insertRow();
+        let headerCell = headerRow.insertCell(0);
+        headerCell.colSpan = 7;
+        headerCell.style.backgroundColor = "#CEE8FA";
+        headerCell.style.fontWeight = "bold";
+        headerCell.style.textAlign = "center";
+        headerCell.textContent = company.toUpperCase();
+
+        let totalSum = 0;
+
+        // Facturas de esta empresa
+        for (let item of groups[company]) {
+          let inv = item.data;
+          let row = tbody.insertRow();
+
+          let cellNum = row.insertCell(0);
+          cellNum.textContent = inv.invoiceNum ? inv.invoiceNum : "-";
+
+          let cellDate = row.insertCell(1);
+          if (inv.date) {
+            let dateStr = new Date(inv.date.seconds * 1000).toLocaleDateString();
+            cellDate.textContent = dateStr;
+          } else {
+            cellDate.textContent = "";
+          }
+
+          let cellSupplier = row.insertCell(2);
+          cellSupplier.textContent = inv.supplier;
+
+          let productDoc = await db.collection("inventoryProducts").doc(inv.productId).get();
+          let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
+          let cellProduct = row.insertCell(3);
+          cellProduct.textContent = productName;
+
+          let cellQty = row.insertCell(4);
+          cellQty.textContent = inv.quantity;
+
+          let cellUnitPrice = row.insertCell(5);
+          cellUnitPrice.textContent = parseFloat(inv.unitPrice).toFixed(4);
+
+          let cellTotal = row.insertCell(6);
+          cellTotal.textContent = "Q." + parseFloat(inv.total).toFixed(2);
+
+          totalSum += parseFloat(inv.total) || 0;
+        }
+
+        // Fila de total para la empresa
+        let totalRow = tbody.insertRow();
+        let totalCellLabel = totalRow.insertCell(0);
+        totalCellLabel.colSpan = 6;
+        totalCellLabel.style.textAlign = "right";
+        totalCellLabel.style.fontWeight = "bold";
+        totalCellLabel.textContent = "TOTAL " + company.toUpperCase() + ": ";
+
+        let totalCellValue = totalRow.insertCell(1);
+        totalCellValue.style.fontWeight = "bold";
+        totalCellValue.textContent = "Q." + totalSum.toFixed(2);
+      }
+    } else {
+      actionsHeader.style.display = "";
+      snapshot.forEach(async doc => {
+        let inv = doc.data();
+        if (filterCompany && inv.company !== filterCompany) return;
+        let row = tbody.insertRow();
+
+        row.insertCell(0).textContent = inv.invoiceNum ? inv.invoiceNum : "-";
+        row.insertCell(1).textContent = inv.date ? new Date(inv.date.seconds * 1000).toLocaleDateString() : "";
+        row.insertCell(2).textContent = inv.company;
+        row.insertCell(3).textContent = inv.supplier;
+
+        let productDoc = await db.collection("inventoryProducts").doc(inv.productId).get();
+        let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
+        row.insertCell(4).textContent = productName;
+
+        row.insertCell(5).textContent = inv.quantity;
+        row.insertCell(6).textContent = "Q." + parseFloat(inv.unitPrice).toFixed(2);
+        row.insertCell(7).textContent = "Q." + parseFloat(inv.total).toFixed(2);
+
+        let actionsCell = row.insertCell(8);
+        actionsCell.innerHTML = `
+          <button class="btn btn-sm btn-primary" onclick="editInvoice('${doc.id}')">
+            <i class="fa-solid fa-edit"></i> Editar
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="deleteInvoice('${doc.id}')">
+            <i class="fa-solid fa-trash"></i> Eliminar
+          </button>
+          <button class="btn btn-sm btn-secondary" onclick="exportInvoiceImage('${doc.id}')">
+            <i class="fa-solid fa-file-export"></i> Exportar
+          </button>`;
+      });
+    }
   } catch (error) {
     console.error("Error al cargar facturas:", error);
     alert("Error al cargar facturas: " + error.message);
+  }
+}
+
+async function editInvoice(invoiceId) {
+  try {
+    let doc = await db.collection("invoices").doc(invoiceId).get();
+    if (!doc.exists) throw new Error("Factura no encontrada.");
+    let inv = doc.data();
+    document.getElementById("invoiceId").value = invoiceId;
+    document.getElementById("invoiceModalLabel").textContent = "Editar Factura";
+    document.getElementById("invoiceNumber").value = inv.invoiceNum;
+
+    let d = new Date(inv.date.seconds * 1000);
+    let year = d.getFullYear();
+    let month = ("0" + (d.getMonth() + 1)).slice(-2);
+    let day = ("0" + d.getDate()).slice(-2);
+    document.getElementById("invoiceDate").value = year + "-" + month + "-" + day;
+
+    document.getElementById("invoiceCompany").value = inv.company;
+    await populateProviders();
+    document.getElementById("invoiceSupplier").value = inv.supplier;
+    await populateInvoiceProductSelect();
+    document.getElementById("invoiceProductSelect").value = inv.productId;
+    document.getElementById("invoiceQuantity").value = inv.quantity;
+    document.getElementById("invoiceUnitPrice").value = inv.unitPrice;
+    document.getElementById("invoiceTotal").value = inv.total;
+    new bootstrap.Modal(document.getElementById("invoiceModal")).show();
+  } catch (error) {
+    console.error("Error al cargar factura para editar:", error);
+    alert("Error al cargar factura: " + error.message);
   }
 }
 
@@ -648,17 +648,15 @@ async function deleteInvoice(invoiceId) {
     let productDoc = await productRef.get();
     if (!productDoc.exists) throw new Error("Producto no encontrado");
     let product = productDoc.data();
-    // Revertir el stock: restar la cantidad ingresada por la factura
+
     let newStock = product.stock - inv.quantity;
     await productRef.update({ stock: newStock });
 
-    // Eliminar los movimientos asociados a esta factura (aquellos que tengan invoiceId igual)
     let movementsSnapshot = await db.collection("inventoryMovements").where("invoiceId", "==", invoiceId).get();
     for (let movementDoc of movementsSnapshot.docs) {
       await db.collection("inventoryMovements").doc(movementDoc.id).delete();
     }
 
-    // Eliminar la factura
     await db.collection("invoices").doc(invoiceId).delete();
 
     loadInvoices();
@@ -670,9 +668,6 @@ async function deleteInvoice(invoiceId) {
   }
 }
 
-/* =========================
-   EXPORTAR FACTURA COMO IMAGEN (CON DISEÑO REAL)
-============================*/
 async function exportInvoiceImage(invoiceId) {
   try {
     let invDoc = await db.collection("invoices").doc(invoiceId).get();
@@ -681,7 +676,6 @@ async function exportInvoiceImage(invoiceId) {
     let productDoc = await db.collection("inventoryProducts").doc(inv.productId).get();
     let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
 
-    // Llenar el contenedor de factura con datos y diseño real
     document.getElementById("exportInvoiceNum").textContent = inv.invoiceNum ? inv.invoiceNum : "-";
     document.getElementById("exportInvoiceDate").textContent = inv.date ? new Date(inv.date.seconds * 1000).toLocaleDateString() : "";
     document.getElementById("exportInvoiceSupplier").textContent = inv.supplier;
@@ -696,7 +690,7 @@ async function exportInvoiceImage(invoiceId) {
     html2canvas(exportContainer).then(canvas => {
       let link = document.createElement("a");
       let now = new Date();
-      let fileName = "Factura_" + now.toISOString().slice(0,10) + ".png";
+      let fileName = "Factura_" + now.toISOString().slice(0, 10) + ".png";
       link.download = fileName;
       link.href = canvas.toDataURL("image/png");
       link.click();
@@ -710,7 +704,6 @@ async function exportInvoiceImage(invoiceId) {
 
 async function exportInvoicesImage() {
   try {
-    // Obtener todas las facturas y llenar el contenedor oculto
     let snapshot = await db.collection("invoices").orderBy("date", "desc").get();
     let tbody = document.getElementById("exportInvoicesBody");
     tbody.innerHTML = "";
@@ -723,6 +716,8 @@ async function exportInvoicesImage() {
       cellNum.textContent = inv.invoiceNum ? inv.invoiceNum : "-";
       let cellDate = document.createElement("td");
       cellDate.textContent = inv.date ? new Date(inv.date.seconds * 1000).toLocaleDateString() : "";
+      let cellCompany = document.createElement("td");
+      cellCompany.textContent = inv.company;
       let cellSupplier = document.createElement("td");
       cellSupplier.textContent = inv.supplier;
       let cellProduct = document.createElement("td");
@@ -730,11 +725,13 @@ async function exportInvoicesImage() {
       let cellQty = document.createElement("td");
       cellQty.textContent = inv.quantity;
       let cellUnit = document.createElement("td");
-      cellUnit.textContent = "Q." + inv.unitPrice;
+      cellUnit.textContent = "Q." + parseFloat(inv.unitPrice).toFixed(2);
       let cellTotal = document.createElement("td");
-      cellTotal.textContent = "Q." + inv.total;
+      cellTotal.textContent = "Q." + parseFloat(inv.total).toFixed(2);
+
       row.appendChild(cellNum);
       row.appendChild(cellDate);
+      row.appendChild(cellCompany);
       row.appendChild(cellSupplier);
       row.appendChild(cellProduct);
       row.appendChild(cellQty);
@@ -747,7 +744,7 @@ async function exportInvoicesImage() {
     html2canvas(exportContainer).then(canvas => {
       let link = document.createElement("a");
       let now = new Date();
-      let fileName = "Facturas_" + now.toISOString().slice(0,10) + ".png";
+      let fileName = "Facturas_" + now.toISOString().slice(0, 10) + ".png";
       link.download = fileName;
       link.href = canvas.toDataURL("image/png");
       link.click();
@@ -926,12 +923,13 @@ async function exportProductsStockImage() {
       tbody.appendChild(row);
     });
     let now = new Date();
-    document.getElementById("exportHeader").textContent = "REPORTE STOCK DE BODEGA - " + now.toLocaleDateString();
+    document.getElementById("exportHeader").textContent =
+      "REPORTE STOCK DE BODEGA - " + now.toLocaleDateString();
     let exportContainer = document.getElementById("exportProductsContainer");
     exportContainer.style.display = "block";
     html2canvas(exportContainer).then(canvas => {
       let link = document.createElement("a");
-      let fileName = "Stock_" + now.toISOString().slice(0,10) + ".png";
+      let fileName = "Stock_" + now.toISOString().slice(0, 10) + ".png";
       link.download = fileName;
       link.href = canvas.toDataURL("image/png");
       link.click();

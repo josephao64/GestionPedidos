@@ -1,0 +1,96 @@
+/* salidas.css */
+
+/* Estilos generales */
+body {
+    background-color: #f8f9fa;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Menú lateral (sidebar) para desktop */
+  .sidebar {
+    background-color: #fff;
+    border-right: 1px solid #dee2e6;
+    min-height: 100vh;
+    padding: 1rem;
+  }
+  .sidebar h4 {
+    margin-bottom: 1.5rem;
+    font-weight: bold;
+    color: #333;
+  }
+  .nav-link {
+    color: #333;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  .nav-link:hover {
+    color: #007bff;
+  }
+  
+  /* Offcanvas para móviles se usa la funcionalidad de Bootstrap */
+  
+  /* Contenido principal */
+  main {
+    padding-top: 20px;
+  }
+  
+  /* Secciones y títulos */
+  h2 {
+    margin-bottom: 20px;
+    color: #333;
+  }
+  
+  /* Tarjetas y formularios */
+  .card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    background-color: #fff;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Inputs y selects */
+  input[type="date"],
+  input[type="number"],
+  input[type="text"],
+  select {
+    border-radius: 0.25rem;
+    border: 1px solid #ced4da;
+  }
+  
+  /* Tablas */
+  .table {
+    background-color: #fff;
+  }
+  .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  .table-responsive {
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Gráfico de reportes */
+  #reportChart {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 1rem;
+  }
+  
+  /* Responsividad adicional */
+  @media (max-width: 576px) {
+    /* En móviles se oculta el sidebar de desktop */
+    .sidebar {
+      display: none;
+    }
+    main {
+      padding: 10px;
+    }
+    h2 {
+      font-size: 1.5rem;
+    }
+  }
+  

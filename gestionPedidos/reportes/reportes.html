@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reportes de Productos Recibidos</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- SweetAlert2 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <style>
+    body { padding-top: 20px; background-color: #f8f9fa; }
+    h1, h3 { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="mb-4">Reportes de Productos Recibidos por Sucursal</h1>
+    
+    <!-- Filtros del Reporte -->
+    <div class="card mb-4">
+      <div class="card-header">Filtros</div>
+      <div class="card-body">
+        <form id="reportFilterForm" class="form-inline">
+          <!-- Filtro por Sucursal -->
+          <div class="form-group mr-3">
+            <label for="sucursalSelect" class="mr-2">Sucursal:</label>
+            <select id="sucursalSelect" class="form-control">
+              <option value="all">Todas</option>
+              <!-- Se cargarán dinámicamente -->
+            </select>
+          </div>
+          <!-- Filtro por Proveedor -->
+          <div class="form-group mr-3">
+            <label for="providerSelect" class="mr-2">Proveedor:</label>
+            <select id="providerSelect" class="form-control">
+              <option value="all">Todos</option>
+              <!-- Se cargarán dinámicamente -->
+            </select>
+          </div>
+          <!-- Filtro por Fecha de Inicio -->
+          <div class="form-group mr-3">
+            <label for="startDate" class="mr-2">Fecha Inicio:</label>
+            <input type="date" id="startDate" class="form-control">
+          </div>
+          <!-- Filtro por Fecha Fin -->
+          <div class="form-group mr-3">
+            <label for="endDate" class="mr-2">Fecha Fin:</label>
+            <input type="date" id="endDate" class="form-control">
+          </div>
+          <!-- Tipo de Reporte -->
+          <div class="form-group mr-3">
+            <label for="reportType" class="mr-2">Tipo de Reporte:</label>
+            <select id="reportType" class="form-control">
+              <option value="summary">Resumen</option>
+              <option value="detailed">Detallado</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Generar Reporte</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Contenedor de Resultados -->
+    <div id="reportResults" class="mb-4"></div>
+  </div>
+
+  <!-- Firebase App (SDK core) -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <!-- Firebase Firestore -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Bootstrap JS (opcional) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Archivo de conexión a Firebase (ajusta la ruta según la estructura real) -->
+  <script src="../../database/connection.js"></script>
+  <!-- Archivo JS para reportes -->
+  <script src="reportes.js"></script>
+</body>
+</html>

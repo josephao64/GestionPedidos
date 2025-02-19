@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Salidas de Productos</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome (opcional) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Hoja de estilos personalizada -->
+    <link rel="stylesheet" href="salidas.css" />
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <!-- Chart.js (para reportes) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas (opcional) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Archivo JavaScript principal -->
+    <script defer src="salidas.js"></script>
+  </head>
+  <body>
+    <!-- Botón de Inicio (ir a index.html) -->
+    <div class="d-flex justify-content-end p-2">
+        <a href="../../INDEX.HTML" class="btn btn-secondary">Inicio</a>
+    </div>
+
+    <!-- Navbar para móviles -->
+    <nav class="navbar navbar-light bg-light d-md-none">
+      <div class="container-fluid">
+        <button
+          class="btn btn-primary"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#offcanvasSidebar"
+          aria-controls="offcanvasSidebar"
+        >
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <span class="navbar-brand mb-0 h1">Salidas de Bodega</span>
+      </div>
+    </nav>
+    <!-- Offcanvas para menú en móviles -->
+    <div
+      class="offcanvas offcanvas-start d-md-none"
+      tabindex="-1"
+      id="offcanvasSidebar"
+      aria-labelledby="offcanvasSidebarLabel"
+    >
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasSidebarLabel">Menú</h5>
+        <button
+          type="button"
+          class="btn-close text-reset"
+          data-bs-dismiss="offcanvas"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="offcanvas-body">
+        <ul class="nav flex-column">
+          <li class="nav-item mb-2">
+            <a href="#" class="nav-link" onclick="showSection('register'); closeOffcanvas()">
+              Registrar Salida
+            </a>
+          </li>
+          <li class="nav-item mb-2">
+            <a href="#" class="nav-link" onclick="showSection('history'); closeOffcanvas()">
+              Historial de Salidas
+            </a>
+          </li>
+          <li class="nav-item mb-2">
+            <a href="#" class="nav-link" onclick="showSection('stock'); closeOffcanvas()">
+              Stock Actual
+            </a>
+          </li>
+          <li class="nav-item mb-2">
+            <a href="#" class="nav-link" onclick="showSection('reports'); closeOffcanvas()">
+              Reportes de Salidas
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Sidebar para desktop (visible en md+ ) -->
+        <nav class="col-md-3 col-lg-2 d-none d-md-block bg-light sidebar p-3">
+          <h4 class="mb-4">Salidas de Bodega</h4>
+          <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+              <a href="#" class="nav-link" onclick="showSection('register')">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Registrar Salida
+              </a>
+            </li>
+            <li class="nav-item mb-2">
+              <a href="#" class="nav-link" onclick="showSection('history')">
+                <i class="fa-solid fa-list"></i> Historial de Salidas
+              </a>
+            </li>
+            <li class="nav-item mb-2">
+              <a href="#" class="nav-link" onclick="showSection('stock')">
+                <i class="fa-solid fa-boxes-stacked"></i> Stock Actual
+              </a>
+            </li>
+            <li class="nav-item mb-2">
+              <a href="#" class="nav-link" onclick="showSection('reports')">
+                <i class="fa-solid fa-chart-line"></i> Reportes de Salidas
+              </a>
+            </li>
+          </ul>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="col-12 col-md-9 col-lg-10 py-3">
+          <!-- Sección: Registrar Salida -->
+          <section id="registerSection" class="my-4">
+            <h2>Registrar Salida de Productos</h2>
+            <div class="card p-3 shadow-sm">
+              <form id="outgoingForm">
+                <div class="row g-3 mb-3">
+                  <div class="col-12 col-md-6">
+                    <label for="outgoingDate" class="form-label">Fecha de Salida</label>
+                    <input type="date" id="outgoingDate" class="form-control" required />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label for="outgoingBranch" class="form-label">Sucursal</label>
+                    <select id="outgoingBranch" class="form-select" required></select>
+                  </div>
+                </div>
+                <div class="row g-3 mb-3">
+                  <div class="col-12 col-md-6">
+                    <label for="outgoingProduct" class="form-label">Producto</label>
+                    <select id="outgoingProduct" class="form-select" required></select>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label for="outgoingQuantity" class="form-label">Cantidad</label>
+                    <input type="number" id="outgoingQuantity" class="form-control" required />
+                  </div>
+                </div>
+                <div class="row g-3 mb-3">
+                  <div class="col-12 col-md-6">
+                    <label for="outgoingUser" class="form-label">Usuario Responsable</label>
+                    <!-- Select con opciones "ERICK" y "CESAR" -->
+                    <select id="outgoingUser" class="form-select" required>
+                      <option value="">Seleccione</option>
+                      <option value="ERICK">ERICK</option>
+                      <option value="CESAR">CESAR</option>
+                    </select>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label for="outgoingComments" class="form-label">Comentarios</label>
+                    <input type="text" id="outgoingComments" class="form-control" />
+                  </div>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="saveOutgoing()">
+                  Registrar Salida
+                </button>
+              </form>
+            </div>
+          </section>
+
+          <!-- Sección: Historial de Salidas -->
+          <section id="historySection" class="my-4" style="display: none;">
+            <h2>Historial de Salidas</h2>
+            <div class="table-responsive">
+              <table class="table table-striped" id="outgoingTable">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Sucursal</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Usuario</th>
+                    <th>Comentarios</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Se llenará dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Sección: Stock Actual -->
+          <section id="stockSection" class="my-4" style="display: none;">
+            <h2>Stock Actual</h2>
+            <div class="table-responsive">
+              <table class="table table-striped" id="stockTable">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Se llenará dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Sección: Reportes de Salidas -->
+          <section id="reportsSection" class="my-4" style="display: none;">
+            <h2>Reportes de Salidas</h2>
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-md-4">
+                <label for="reportStartDate" class="form-label">Fecha Inicio</label>
+                <input type="date" id="reportStartDate" class="form-control" />
+              </div>
+              <div class="col-12 col-md-4">
+                <label for="reportEndDate" class="form-label">Fecha Fin</label>
+                <input type="date" id="reportEndDate" class="form-control" />
+              </div>
+              <div class="col-12 col-md-4">
+                <label for="reportBranch" class="form-label">Sucursal</label>
+                <select id="reportBranch" class="form-select">
+                  <option value="">Todas</option>
+                  <!-- Se llenará dinámicamente -->
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary mb-3" onclick="generateOutgoingReport()">
+              Generar Reporte
+            </button>
+            <canvas id="reportChart" class="my-3" style="max-height: 300px;"></canvas>
+            <div class="table-responsive">
+              <table class="table table-striped" id="reportOutgoingTable">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Sucursal</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Usuario</th>
+                    <th>Comentarios</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Se llenará dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle (incluye Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Función para cerrar el offcanvas en móviles -->
+    <script>
+      function closeOffcanvas() {
+        var offcanvasEl = document.getElementById("offcanvasSidebar");
+        var bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+        if (bsOffcanvas) {
+          bsOffcanvas.hide();
+        }
+      }
+    </script>
+  </body>
+</html>
