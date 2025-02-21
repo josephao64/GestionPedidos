@@ -316,7 +316,7 @@ var firebaseConfig = {
      EXPORTAR REPORTES
   ============================*/
   
-  // Exportar a Imagen
+  // Exportar a Imagen (usando html2canvas)
   function exportReportToImage() {
     let table = document.getElementById("reportOutgoingTable");
     if (!table) {
@@ -428,78 +428,97 @@ var firebaseConfig = {
     link.click();
   }
   
-  // Exportar a PDF (Stock Actual y Salidas de Bodega)
+  // Exportar a PDF (generado programáticamente sin capturar pantalla)
   function exportReportToPDF() {
-    const { jsPDF } = window.jspdf;  // Asegura que jsPDF esté definido
-    var exportContent = generateExportContent();
-    document.body.appendChild(exportContent);
-    html2canvas(exportContent).then(function(canvas) {
-      let image = canvas.toDataURL("image/png");
-      var pdf = new jsPDF('p', 'mm', 'a4');
-      let pdfWidth = pdf.internal.pageSize.getWidth();
-      let pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(image, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save("reporte_salidas.pdf");
-      document.body.removeChild(exportContent);
-    });
-  }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 10;
   
-  // Función para generar contenido del PDF
-  function generateExportContent() {
-    var container = document.createElement("div");
-    container.style.position = "absolute";
-    container.style.top = "-10000px";
-    container.style.left = "0";
-    container.style.width = "100%";
-    container.style.backgroundColor = "#fff";
-    container.style.padding = "20px";
-    container.style.border = "1px solid #ccc";
-    container.style.fontFamily = "Arial, sans-serif";
+    // Título y fecha
+    doc.setFontSize(18);
+    doc.text("Reporte de Inventario y Salidas de Bodega", pageWidth / 2, y, { align: "center" });
+    y += 10;
+    doc.setFontSize(12);
+    const currentDate = new Date().toLocaleDateString();
+    doc.text("Fecha: " + currentDate, pageWidth / 2, y, { align: "center" });
+    y += 10;
   
-    var mainTitle = document.createElement("h2");
-    mainTitle.textContent = "Reporte de Inventario y Salidas de Bodega";
-    container.appendChild(mainTitle);
-  
-    var currentDate = new Date().toLocaleDateString();
-    var datePara = document.createElement("p");
-    datePara.textContent = "Fecha: " + currentDate;
-    container.appendChild(datePara);
-  
-    var stockTitle = document.createElement("h3");
-    stockTitle.textContent = "Stock Actual de Inventario";
-    container.appendChild(stockTitle);
-  
-    var stockTable = document.getElementById("stockTable");
+    // Sección Stock Actual
+    doc.setFontSize(14);
+    doc.text("Stock Actual de Inventario", 14, y);
+    y += 5;
+    let stockTable = document.getElementById("stockTable");
+    let stockHeaders = [];
+    let stockData = [];
     if (stockTable) {
-      var stockClone = stockTable.cloneNode(true);
-      container.appendChild(stockClone);
+      let headers = stockTable.querySelectorAll("thead th");
+      headers.forEach(header => {
+        stockHeaders.push(header.innerText);
+      });
+      let rows = stockTable.querySelectorAll("tbody tr");
+      rows.forEach(row => {
+        let rowData = [];
+        let cols = row.querySelectorAll("td");
+        cols.forEach(col => {
+          rowData.push(col.innerText);
+        });
+        stockData.push(rowData);
+      });
+    }
+    if (stockData.length > 0) {
+      doc.autoTable({
+        head: [stockHeaders],
+        body: stockData,
+        startY: y,
+        theme: "grid"
+      });
+      y = doc.autoTable.previous.finalY + 10;
     } else {
-      var noStock = document.createElement("p");
-      noStock.textContent = "No se encontró información de stock actual.";
-      container.appendChild(noStock);
+      doc.text("No se encontró información de stock actual.", 14, y);
+      y += 10;
     }
   
-    var salidasTitle = document.createElement("h3");
-    salidasTitle.textContent = "Salidas de Bodega";
-    container.appendChild(salidasTitle);
-  
-    var startDate = document.getElementById("reportStartDate").value || "";
-    var endDate = document.getElementById("reportEndDate").value || "";
-    var salidasDate = document.createElement("p");
-    salidasDate.textContent = "Fecha Inicio: " + startDate + " - Fecha Fin: " + endDate;
-    container.appendChild(salidasDate);
-  
-    var reportTable = document.getElementById("reportOutgoingTable");
+    // Sección Salidas de Bodega
+    doc.setFontSize(14);
+    doc.text("Salidas de Bodega", 14, y);
+    y += 5;
+    let startDate = document.getElementById("reportStartDate").value;
+    let endDate = document.getElementById("reportEndDate").value;
+    let rangeText = "Fecha Inicio: " + (startDate || "N/A") + " - Fecha Fin: " + (endDate || "N/A");
+    doc.setFontSize(12);
+    doc.text(rangeText, 14, y);
+    y += 10;
+    let reportTable = document.getElementById("reportOutgoingTable");
+    let reportHeaders = [];
+    let reportData = [];
     if (reportTable) {
-      var reportClone = reportTable.cloneNode(true);
-      container.appendChild(reportClone);
+      let headers = reportTable.querySelectorAll("thead th");
+      headers.forEach(header => {
+        reportHeaders.push(header.innerText);
+      });
+      let rows = reportTable.querySelectorAll("tbody tr");
+      rows.forEach(row => {
+        let rowData = [];
+        let cols = row.querySelectorAll("td");
+        cols.forEach(col => {
+          rowData.push(col.innerText);
+        });
+        reportData.push(rowData);
+      });
+    }
+    if (reportData.length > 0) {
+      doc.autoTable({
+        head: [reportHeaders],
+        body: reportData,
+        startY: y,
+        theme: "grid"
+      });
     } else {
-      var noReport = document.createElement("p");
-      noReport.textContent = "No se encontró información de salidas.";
-      container.appendChild(noReport);
+      doc.text("No se encontró información de salidas.", 14, y);
     }
   
-    return container;
+    doc.save("reporte_salidas.pdf");
   }
   
   // Exportar a Excel (CSV)

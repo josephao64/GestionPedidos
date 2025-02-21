@@ -21,10 +21,12 @@
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
     <!-- Chart.js (para reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- html2canvas (para generar imagen/PDF a partir de HTML) -->
+    <!-- html2canvas (se sigue usando para exportar a imagen) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- jsPDF (para exportar a PDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF-AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <!-- Archivo JavaScript principal -->
     <script defer src="salidas.js"></script>
   </head>
@@ -69,36 +71,24 @@
       <div class="offcanvas-body">
         <ul class="nav flex-column">
           <li class="nav-item mb-2">
-            <a
-              href="#"
-              class="nav-link"
-              onclick="showSection('register'); closeOffcanvas()"
-              >Registrar Salida</a
-            >
+            <a href="#" class="nav-link" onclick="showSection('register'); closeOffcanvas()">
+              Registrar Salida
+            </a>
           </li>
           <li class="nav-item mb-2">
-            <a
-              href="#"
-              class="nav-link"
-              onclick="showSection('history'); closeOffcanvas()"
-              >Historial de Salidas</a
-            >
+            <a href="#" class="nav-link" onclick="showSection('history'); closeOffcanvas()">
+              Historial de Salidas
+            </a>
           </li>
           <li class="nav-item mb-2">
-            <a
-              href="#"
-              class="nav-link"
-              onclick="showSection('stock'); closeOffcanvas()"
-              >Stock Actual</a
-            >
+            <a href="#" class="nav-link" onclick="showSection('stock'); closeOffcanvas()">
+              Stock Actual
+            </a>
           </li>
           <li class="nav-item mb-2">
-            <a
-              href="#"
-              class="nav-link"
-              onclick="showSection('reports'); closeOffcanvas()"
-              >Reportes de Salidas</a
-            >
+            <a href="#" class="nav-link" onclick="showSection('reports'); closeOffcanvas()">
+              Reportes de Salidas
+            </a>
           </li>
         </ul>
       </div>
