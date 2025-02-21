@@ -15,21 +15,24 @@ body {
     min-height: 100vh;
     padding: 1rem;
   }
+  
   .sidebar h4 {
     margin-bottom: 1.5rem;
     font-weight: bold;
     color: #333;
   }
+  
   .nav-link {
     color: #333;
     font-weight: 500;
     margin-bottom: 0.5rem;
   }
+  
   .nav-link:hover {
     color: #007bff;
   }
   
-  /* Offcanvas para móviles se usa la funcionalidad de Bootstrap */
+  /* Offcanvas para móviles (usando Bootstrap) */
   
   /* Contenido principal */
   main {
@@ -60,15 +63,44 @@ body {
     border: 1px solid #ced4da;
   }
   
-  /* Tablas */
+  /* Tablas generales */
   .table {
     background-color: #fff;
   }
+  
   .table-striped tbody tr:nth-of-type(odd) {
     background-color: rgba(0, 0, 0, 0.05);
   }
+  
   .table-responsive {
     margin-bottom: 1.5rem;
+  }
+  
+  /* Estilos específicos para la tabla de reportes - diseño minimalista */
+  .report-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1.5rem;
+  }
+  
+  .report-table th,
+  .report-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+  }
+  
+  .report-table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+    text-align: center;
+  }
+  
+  .report-table td {
+    text-align: left;
+  }
+  
+  .report-table td:nth-child(4) {
+    text-align: center;
   }
   
   /* Gráfico de reportes */

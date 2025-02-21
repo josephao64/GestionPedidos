@@ -57,14 +57,11 @@ var firebaseConfig = {
   
   /* =========================
      CARGAR SUCURSALES DESDE LA BD
-     Usamos la colección "sucursales" y extraemos el campo "name"
   ============================*/
   async function populateBranches() {
     try {
       let snapshot = await db.collection("sucursales").get();
-      // Para el formulario de registro
       let selectOutgoing = document.getElementById("outgoingBranch");
-      // Para el reporte
       let selectReport = document.getElementById("reportBranch");
       selectOutgoing.innerHTML = '<option value="">Seleccione Sucursal</option>';
       selectReport.innerHTML = '<option value="">Todas</option>';
@@ -82,7 +79,7 @@ var firebaseConfig = {
   }
   
   /* =========================
-     REGISTRAR SALIDA (GUARDAR MOVIMIENTO CON TIPO "salida")
+     REGISTRAR SALIDA
   ============================*/
   async function saveOutgoing() {
     try {
@@ -104,11 +101,9 @@ var firebaseConfig = {
         throw new Error("Todos los campos son obligatorios y la cantidad debe ser positiva.");
       }
   
-      // Convertir la fecha (formato YYYY-MM-DD)
       let parts = outgoingDate.split("-");
       let dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
   
-      // Obtener el producto para descontar stock
       let productRef = db.collection("inventoryProducts").doc(outgoingProductId);
       let productDoc = await productRef.get();
       if (!productDoc.exists) throw new Error("Producto no encontrado.");
@@ -118,7 +113,6 @@ var firebaseConfig = {
         throw new Error("No hay stock suficiente para esta salida.");
       }
   
-      // Guardar el movimiento en "inventoryMovements" con tipo "salida"
       let movementData = {
         productId: outgoingProductId,
         type: "salida",
@@ -131,7 +125,6 @@ var firebaseConfig = {
       };
       await db.collection("inventoryMovements").add(movementData);
   
-      // Actualizar el stock del producto
       let newStock = productData.stock - outgoingQuantity;
       await productRef.update({ stock: newStock });
   
@@ -144,46 +137,34 @@ var firebaseConfig = {
   }
   
   /* =========================
-     HISTORIAL DE MOVIMIENTOS (incluyendo salidas)
+     HISTORIAL DE SALIDAS
   ============================*/
   async function loadOutgoingHistory() {
     try {
-      // Cargamos los movimientos de "inventoryMovements" (incluyendo tipo "salida")
       let snapshot = await db.collection("inventoryMovements").orderBy("createdAt", "desc").get();
       let tbody = document.getElementById("outgoingTable").getElementsByTagName("tbody")[0];
       tbody.innerHTML = "";
       for (let docu of snapshot.docs) {
         let movement = docu.data();
-        // Solo mostramos movimientos de tipo "salida"
         if (movement.type !== "salida") continue;
         let row = tbody.insertRow();
   
-        // Fecha
         let dateCell = row.insertCell(0);
         if (movement.date) {
           dateCell.textContent = new Date(movement.date.seconds * 1000).toLocaleDateString();
         } else {
           dateCell.textContent = "";
         }
-  
-        // Sucursal
         row.insertCell(1).textContent = movement.branch;
   
-        // Producto
         let productDoc = await db.collection("inventoryProducts").doc(movement.productId).get();
         let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
         row.insertCell(2).textContent = productName;
   
-        // Cantidad
         row.insertCell(3).textContent = movement.quantity;
-  
-        // Usuario
         row.insertCell(4).textContent = movement.user;
-  
-        // Comentarios
         row.insertCell(5).textContent = movement.comments || "";
   
-        // Acciones
         let actionsCell = row.insertCell(6);
         actionsCell.innerHTML = `
           <button class="btn btn-sm btn-danger" onclick="deleteMovement('${docu.id}')">
@@ -197,7 +178,7 @@ var firebaseConfig = {
   }
   
   /* =========================
-     ELIMINAR MOVIMIENTO Y REPOSTAR STOCK
+     ELIMINAR MOVIMIENTO
   ============================*/
   async function deleteMovement(movementId) {
     if (!confirm("¿Estás seguro de eliminar esta salida? Se repondrá el stock.")) return;
@@ -206,7 +187,6 @@ var firebaseConfig = {
       if (!docRef.exists) throw new Error("Movimiento no encontrado.");
       let movementData = docRef.data();
   
-      // Reponer stock del producto
       let productRef = db.collection("inventoryProducts").doc(movementData.productId);
       let productDoc = await productRef.get();
       if (!productDoc.exists) throw new Error("Producto no encontrado.");
@@ -214,7 +194,6 @@ var firebaseConfig = {
       let newStock = productData.stock + movementData.quantity;
       await productRef.update({ stock: newStock });
   
-      // Eliminar el movimiento
       await db.collection("inventoryMovements").doc(movementId).delete();
       alert("Movimiento eliminado y stock repuesto.");
       loadOutgoingHistory();
@@ -226,7 +205,7 @@ var firebaseConfig = {
   }
   
   /* =========================
-     VER STOCK ACTUAL
+     STOCK ACTUAL
   ============================*/
   async function loadStock() {
     try {
@@ -248,7 +227,6 @@ var firebaseConfig = {
   
   /* =========================
      REPORTES DE SALIDAS
-     (Filtrar por rango de fecha y sucursal, generar tabla y gráfico)
   ============================*/
   async function generateOutgoingReport() {
     try {
@@ -274,40 +252,35 @@ var firebaseConfig = {
   
       let snapshot = await query.get();
   
-      // Llenar la tabla de reporte
       let tbody = document.getElementById("reportOutgoingTable").getElementsByTagName("tbody")[0];
       tbody.innerHTML = "";
   
-      // Datos para el gráfico: suma de salidas por día
       let chartData = {};
-  
       for (let docu of snapshot.docs) {
         let movement = docu.data();
-        // Solo consideramos movimientos de tipo "salida"
         if (movement.type !== "salida") continue;
         let dateStr = "";
         if (movement.date) {
           dateStr = new Date(movement.date.seconds * 1000).toLocaleDateString();
         }
-        // Agregar fila a la tabla
         let row = tbody.insertRow();
         row.insertCell(0).textContent = dateStr;
         row.insertCell(1).textContent = movement.branch;
+  
         let productDoc = await db.collection("inventoryProducts").doc(movement.productId).get();
         let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
         row.insertCell(2).textContent = productName;
+  
         row.insertCell(3).textContent = movement.quantity;
         row.insertCell(4).textContent = movement.user;
         row.insertCell(5).textContent = movement.comments || "";
   
-        // Acumular para el gráfico
         if (!chartData[dateStr]) {
           chartData[dateStr] = 0;
         }
         chartData[dateStr] += movement.quantity;
       }
   
-      // Generar gráfico con Chart.js (tipo barra)
       let ctx = document.getElementById("reportChart").getContext("2d");
       let labels = Object.keys(chartData);
       let data = Object.values(chartData);
@@ -341,15 +314,141 @@ var firebaseConfig = {
   
   /* =========================
      EXPORTAR REPORTES
-     Funciones para exportar el reporte en Imagen, PDF y Excel (CSV)
   ============================*/
   
-  // Función que genera un elemento HTML para exportar
+  // Exportar a Imagen
+  function exportReportToImage() {
+    let table = document.getElementById("reportOutgoingTable");
+    if (!table) {
+      alert("No se encontró la tabla de reporte.");
+      return;
+    }
+    
+    let rows = table.rows;
+    if (rows.length === 0) {
+      alert("La tabla de reporte está vacía.");
+      return;
+    }
+    
+    let startDate = document.getElementById("reportStartDate").value;
+    let endDate = document.getElementById("reportEndDate").value;
+    let titleText = "Reportes de Salidas de Bodega";
+    if (startDate && endDate) {
+      titleText += " (" + startDate + " - " + endDate + ")";
+    }
+    
+    let titleFont = "bold 20px Arial";
+    let titleHeight = 50;
+    const cellPadding = 10;
+    const tableFont = "16px Arial";
+    const rowHeight = 30;
+  
+    let tempCanvas = document.createElement("canvas");
+    let tempCtx = tempCanvas.getContext("2d");
+    tempCtx.font = tableFont;
+    
+    const numCols = rows[0].cells.length;
+    let colWidths = [];
+    for (let col = 0; col < numCols; col++) {
+      let maxWidth = 0;
+      for (let r = 0; r < rows.length; r++) {
+        let cellText = rows[r].cells[col].innerText;
+        let metrics = tempCtx.measureText(cellText);
+        if (metrics.width > maxWidth) {
+          maxWidth = metrics.width;
+        }
+      }
+      colWidths[col] = maxWidth + cellPadding * 2;
+    }
+    
+    const tableWidth = colWidths.reduce((total, w) => total + w, 0);
+    const tableHeight = rowHeight * rows.length;
+    const canvasWidth = tableWidth;
+    const canvasHeight = titleHeight + tableHeight;
+    
+    let canvas = document.createElement("canvas");
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    let ctx = canvas.getContext("2d");
+    
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    ctx.font = titleFont;
+    ctx.fillStyle = "#333";
+    let titleMetrics = ctx.measureText(titleText);
+    let titleX = (canvasWidth - titleMetrics.width) / 2;
+    let titleY = titleHeight / 2;
+    ctx.fillText(titleText, titleX, titleY);
+    ctx.beginPath();
+    ctx.moveTo(0, titleHeight - 5);
+    ctx.lineTo(canvasWidth, titleHeight - 5);
+    ctx.strokeStyle = "#ccc";
+    ctx.stroke();
+    
+    let y = titleHeight;
+    for (let r = 0; r < rows.length; r++) {
+      let x = 0;
+      if (r === 0) {
+        ctx.fillStyle = "#f0f0f0";
+        ctx.fillRect(0, y, canvasWidth, rowHeight);
+      } else if (r % 2 === 1) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillRect(0, y, canvasWidth, rowHeight);
+      }
+      ctx.fillStyle = "#000";
+      for (let c = 0; c < numCols; c++) {
+        ctx.strokeRect(x, y, colWidths[c], rowHeight);
+        let cellText = rows[r].cells[c].innerText;
+        if (r === 0) {
+          ctx.font = "bold 16px Arial";
+          let textWidth = ctx.measureText(cellText).width;
+          let textX = x + (colWidths[c] - textWidth) / 2;
+          ctx.fillText(cellText, textX, y + rowHeight / 2);
+        } else if (c === 3) {
+          ctx.font = "16px Arial";
+          let textWidth = ctx.measureText(cellText).width;
+          let textX = x + (colWidths[c] - textWidth) / 2;
+          ctx.fillText(cellText, textX, y + rowHeight / 2);
+        } else {
+          ctx.font = "16px Arial";
+          ctx.textAlign = "left";
+          ctx.fillText(cellText, x + cellPadding, y + rowHeight / 2);
+        }
+        ctx.textAlign = "start";
+        x += colWidths[c];
+      }
+      y += rowHeight;
+    }
+    
+    let imageData = canvas.toDataURL("image/png");
+    let link = document.createElement("a");
+    link.href = imageData;
+    link.download = "reporte_salidas.png";
+    link.click();
+  }
+  
+  // Exportar a PDF (Stock Actual y Salidas de Bodega)
+  function exportReportToPDF() {
+    const { jsPDF } = window.jspdf;  // Asegura que jsPDF esté definido
+    var exportContent = generateExportContent();
+    document.body.appendChild(exportContent);
+    html2canvas(exportContent).then(function(canvas) {
+      let image = canvas.toDataURL("image/png");
+      var pdf = new jsPDF('p', 'mm', 'a4');
+      let pdfWidth = pdf.internal.pageSize.getWidth();
+      let pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(image, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save("reporte_salidas.pdf");
+      document.body.removeChild(exportContent);
+    });
+  }
+  
+  // Función para generar contenido del PDF
   function generateExportContent() {
-    // Crear contenedor temporal
     var container = document.createElement("div");
     container.style.position = "absolute";
-    container.style.top = "-10000px"; // fuera de la vista
+    container.style.top = "-10000px";
     container.style.left = "0";
     container.style.width = "100%";
     container.style.backgroundColor = "#fff";
@@ -357,62 +456,53 @@ var firebaseConfig = {
     container.style.border = "1px solid #ccc";
     container.style.fontFamily = "Arial, sans-serif";
   
-    // Título
-    var header = document.createElement("h2");
-    header.textContent = "Reportes de Salidas de Bodega";
-    container.appendChild(header);
+    var mainTitle = document.createElement("h2");
+    mainTitle.textContent = "Reporte de Inventario y Salidas de Bodega";
+    container.appendChild(mainTitle);
   
-    // Rango de fechas
+    var currentDate = new Date().toLocaleDateString();
+    var datePara = document.createElement("p");
+    datePara.textContent = "Fecha: " + currentDate;
+    container.appendChild(datePara);
+  
+    var stockTitle = document.createElement("h3");
+    stockTitle.textContent = "Stock Actual de Inventario";
+    container.appendChild(stockTitle);
+  
+    var stockTable = document.getElementById("stockTable");
+    if (stockTable) {
+      var stockClone = stockTable.cloneNode(true);
+      container.appendChild(stockClone);
+    } else {
+      var noStock = document.createElement("p");
+      noStock.textContent = "No se encontró información de stock actual.";
+      container.appendChild(noStock);
+    }
+  
+    var salidasTitle = document.createElement("h3");
+    salidasTitle.textContent = "Salidas de Bodega";
+    container.appendChild(salidasTitle);
+  
     var startDate = document.getElementById("reportStartDate").value || "";
     var endDate = document.getElementById("reportEndDate").value || "";
-    var dateInfo = document.createElement("p");
-    dateInfo.textContent = "Fecha Inicio: " + startDate + " - Fecha Fin: " + endDate;
-    container.appendChild(dateInfo);
+    var salidasDate = document.createElement("p");
+    salidasDate.textContent = "Fecha Inicio: " + startDate + " - Fecha Fin: " + endDate;
+    container.appendChild(salidasDate);
   
-    // Clonar la tabla de reportes
-    var originalTable = document.getElementById("reportOutgoingTable");
-    var tableClone = originalTable.cloneNode(true);
-    // Cambiar el encabezado de la primera columna a "Fecha de Salida"
-    var ths = tableClone.getElementsByTagName("th");
-    if (ths.length > 0) {
-      ths[0].textContent = "Fecha de Salida";
+    var reportTable = document.getElementById("reportOutgoingTable");
+    if (reportTable) {
+      var reportClone = reportTable.cloneNode(true);
+      container.appendChild(reportClone);
+    } else {
+      var noReport = document.createElement("p");
+      noReport.textContent = "No se encontró información de salidas.";
+      container.appendChild(noReport);
     }
-    container.appendChild(tableClone);
   
-    // Agregar el contenedor al body para que html2canvas pueda capturarlo
-    document.body.appendChild(container);
     return container;
   }
   
-  // Exportar el reporte como imagen (PNG) con la tabla y encabezados personalizados
-  function exportReportToImage() {
-    var exportContent = generateExportContent();
-    html2canvas(exportContent).then(function(canvas) {
-      let image = canvas.toDataURL("image/png");
-      let link = document.createElement("a");
-      link.href = image;
-      link.download = "reporte_salidas.png";
-      link.click();
-      document.body.removeChild(exportContent);
-    });
-  }
-  
-  // Exportar el reporte como PDF con encabezado y tabla personalizada
-  function exportReportToPDF() {
-    var exportContent = generateExportContent();
-    html2canvas(exportContent).then(function(canvas) {
-      let image = canvas.toDataURL("image/png");
-      var pdf = new jsPDF('p', 'mm', 'a4');
-      let imgProps = pdf.getImageProperties(image);
-      let pdfWidth = pdf.internal.pageSize.getWidth();
-      let pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      pdf.addImage(image, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save("reporte_salidas.pdf");
-      document.body.removeChild(exportContent);
-    });
-  }
-  
-  // Exportar el reporte a Excel (CSV) con el encabezado de "Fecha de Salida"
+  // Exportar a Excel (CSV)
   function exportReportToExcel() {
     let table = document.getElementById("reportOutgoingTable");
     let csv = [];
@@ -423,7 +513,7 @@ var firebaseConfig = {
       for (let j = 0; j < cols.length; j++) {
         let cellText = cols[j].innerText;
         if (i === 0 && j === 0) {
-          cellText = "Fecha de Salida"; // reemplazar encabezado
+          cellText = "Fecha de Salida";
         }
         rowData.push('"' + cellText.replace(/"/g, '""') + '"');
       }
@@ -442,9 +532,7 @@ var firebaseConfig = {
      INICIALIZACIÓN DE LA PÁGINA
   ============================*/
   window.onload = async function() {
-    // Mostrar la sección de registro por defecto
     showSection("register");
-    // Cargar productos y sucursales en los selects
     await populateOutgoingProducts();
     await populateBranches();
   };

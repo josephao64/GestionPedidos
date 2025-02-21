@@ -69,24 +69,36 @@
       <div class="offcanvas-body">
         <ul class="nav flex-column">
           <li class="nav-item mb-2">
-            <a href="#" class="nav-link" onclick="showSection('register'); closeOffcanvas()">
-              Registrar Salida
-            </a>
+            <a
+              href="#"
+              class="nav-link"
+              onclick="showSection('register'); closeOffcanvas()"
+              >Registrar Salida</a
+            >
           </li>
           <li class="nav-item mb-2">
-            <a href="#" class="nav-link" onclick="showSection('history'); closeOffcanvas()">
-              Historial de Salidas
-            </a>
+            <a
+              href="#"
+              class="nav-link"
+              onclick="showSection('history'); closeOffcanvas()"
+              >Historial de Salidas</a
+            >
           </li>
           <li class="nav-item mb-2">
-            <a href="#" class="nav-link" onclick="showSection('stock'); closeOffcanvas()">
-              Stock Actual
-            </a>
+            <a
+              href="#"
+              class="nav-link"
+              onclick="showSection('stock'); closeOffcanvas()"
+              >Stock Actual</a
+            >
           </li>
           <li class="nav-item mb-2">
-            <a href="#" class="nav-link" onclick="showSection('reports'); closeOffcanvas()">
-              Reportes de Salidas
-            </a>
+            <a
+              href="#"
+              class="nav-link"
+              onclick="showSection('reports'); closeOffcanvas()"
+              >Reportes de Salidas</a
+            >
           </li>
         </ul>
       </div>
@@ -231,7 +243,9 @@
                 </select>
               </div>
             </div>
-            <button class="btn btn-primary mb-3" onclick="generateOutgoingReport()">Generar Reporte</button>
+            <button class="btn btn-primary mb-3" onclick="generateOutgoingReport()">
+              Generar Reporte
+            </button>
             <!-- Botones de exportación -->
             <div class="mb-3">
               <button class="btn btn-success me-2" onclick="exportReportToImage()">
@@ -246,7 +260,7 @@
             </div>
             <canvas id="reportChart" class="my-3" style="max-height: 300px;"></canvas>
             <div class="table-responsive">
-              <table class="table table-striped" id="reportOutgoingTable">
+              <table class="table table-striped report-table" id="reportOutgoingTable">
                 <thead>
                   <tr>
                     <th>Fecha</th>
