@@ -430,6 +430,16 @@ function deleteNewOrderProduct(button) {
   }
 }
 
+function formatDateTime(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0'); // Mes (0-11, se suma 1)
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  const ss = String(date.getSeconds()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}
+
 async function saveNewOrder() {
   if (orderAlreadySaved) return;
   const providerId = document.getElementById('newOrderProviderSelect').value;
@@ -475,7 +485,9 @@ async function saveNewOrder() {
     return;
   }
 
-  const saveDate = new Date().toISOString().split('T')[0];
+  // Aquí se obtiene la fecha y hora actual formateada
+  const now = new Date();
+  const saveDate = formatDateTime(now);
 
   let details = {
     orderId: orderIdValue,
@@ -505,7 +517,7 @@ async function saveNewOrder() {
       <p><strong>Proveedor:</strong> ${escapeHtml(details.providerName)}</p>
       <p><strong>Sucursal:</strong> ${escapeHtml(details.sucursalName)}</p>
       <p><strong>Fecha de Pedido:</strong> ${escapeHtml(details.orderDate)}</p>
-      <p><strong>Fecha de Registro:</strong> ${escapeHtml(details.savedDate)}</p>
+      <p><strong>Fecha y Hora de Registro:</strong> ${escapeHtml(details.savedDate)}</p>
       <h3>Productos:</h3>
       <table border="1" style="width: 100%; text-align: left;">
         <tr>
@@ -637,7 +649,7 @@ function showOrderConfirmationModal(det) {
       <p><strong>Proveedor:</strong> ${escapeHtml(det.providerName)}</p>
       <p><strong>Sucursal:</strong> ${escapeHtml(det.sucursalName)}</p>
       <p><strong>Fecha de Pedido:</strong> ${escapeHtml(det.orderDate)}</p>
-      <p><strong>Fecha de Registro:</strong> ${escapeHtml(det.savedDate)}</p>
+      <p><strong>Fecha y Hora de Registro:</strong> ${escapeHtml(det.savedDate)}</p>
       <p><strong>Destino:</strong> ${escapeHtml(det.destination)}</p>
       <h3>Productos:</h3>
       <table border="1" style="width: 100%; text-align: left;">
