@@ -254,17 +254,51 @@
 
     // Función para ajustar el menú según el rol del usuario
     function ajustarMenuSegunRol(rol) {
-      const adminElements = document.querySelectorAll('.admin-only');
       if (rol === 'administrador') {
+        // Para administradores, mostramos los elementos exclusivos
+        const adminElements = document.querySelectorAll('.admin-only');
         adminElements.forEach(element => {
-          // Mostrar como inline-block para botones
           element.style.display = 'inline-block';
         });
-      } else {
-        // Ocultar elementos exclusivos para administradores
+      } else if (rol === 'bodega') {
+        // Para usuarios con rol "bodega":
+        // 1. Ocultar el menú izquierdo (clase .oe_menu)
+        const oeMenu = document.querySelector('.oe_menu');
+        if (oeMenu) {
+          oeMenu.style.display = 'none';
+        }
+        // 2. Ocultar botones exclusivos de administradores y el botón de cerrar sesión
+        const adminElements = document.querySelectorAll('.admin-only');
         adminElements.forEach(element => {
           element.style.display = 'none';
         });
+        if (logoutButton) {
+          logoutButton.style.display = 'none';
+        }
+        // 3. Mostrar o actualizar el botón de "Bodega" para inventario
+        const bodegaButton = document.getElementById('bodega-button');
+        if (bodegaButton) {
+          // Eliminar la clase 'admin-only' para evitar conflictos con el CSS
+          bodegaButton.classList.remove('admin-only');
+          bodegaButton.style.display = 'inline-block';
+          bodegaButton.textContent = 'Inventario Bodega';
+          bodegaButton.onclick = function() {
+            window.location.href = 'InventarioBodega/salidas encargado bodega/salidas.html';
+          };
+        } else {
+          // Si el botón no existe, se crea y se agrega al contenedor derecho
+          const rightMenu = document.querySelector('.right-menu');
+          if (rightMenu) {
+            const newButton = document.createElement('button');
+            newButton.className = 'menu-button';
+            newButton.id = 'bodega-button';
+            newButton.textContent = 'Inventario Bodega';
+            newButton.onclick = function() {
+              window.location.href = 'InventarioBodega/salidas encargado bodega/salidas.html';
+            };
+            rightMenu.appendChild(newButton);
+          }
+        }
       }
     }
 

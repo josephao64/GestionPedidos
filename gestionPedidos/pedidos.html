@@ -10,8 +10,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- Archivo de conexión a la base de datos (ubicado en la carpeta database en el directorio raíz) -->
+  <!-- Archivo de conexión a la base de datos -->
   <script src="../database/connection.js"></script>
+  <!-- Archivo JavaScript de la aplicación -->
   <script defer src="pedidos.js"></script>
 </head>
 <body>
@@ -45,13 +46,17 @@
   <!-- Contenedor Pedidos en Proceso -->
   <div id="inProcessOrdersContainer" class="container">
     <h2>Pedidos en Proceso</h2>
-    <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
+    <div id="inProcessOrdersAdminCards" class="order-cards-container">
+      <!-- Las tarjetas se generan dinámicamente sin botón de editar -->
+    </div>
   </div>
 
   <!-- Contenedor Pedidos Completados -->
   <div id="completedOrdersContainer" class="container" style="display: none;">
     <h2>Pedidos Completados</h2>
-    <div id="completedOrdersAdminCards" class="order-cards-container"></div>
+    <div id="completedOrdersAdminCards" class="order-cards-container">
+      <!-- Las tarjetas se generan dinámicamente sin botón de editar -->
+    </div>
   </div>
 
   <!-- Modal: Detalles del Pedido -->
@@ -60,8 +65,10 @@
       <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
       <h2>Detalles del Pedido</h2>
       <div id="orderDetails"></div>
-      <!-- Se utiliza únicamente el botón "Exportar Pedido como Imagen" -->
+      <!-- Botón para exportar pedido como imagen -->
       <button id="exportOrderImageButton" style="margin-top: 1rem;">Exportar Pedido como Imagen</button>
+      <!-- Botón para editar pedido (único lugar para edición) -->
+      <button onclick="openEditOrderModal(currentOrder)">Editar Pedido</button>
     </div>
   </div>
 
@@ -87,7 +94,6 @@
           <p><strong>ID Pedido:</strong> <span id="editOrderIdDisplay"></span></p>
           <p>
             <strong>Destino:</strong>
-            <!-- Campo select para elegir entre Bodega y Tienda -->
             <select id="editOrderDestination">
               <option value="Bodega">Bodega</option>
               <option value="Tienda">Tienda</option>
@@ -185,7 +191,7 @@
     </div>
   </div>
 
-  <!-- Hidden Containers for Export -->
+  <!-- Contenedores ocultos para exportación -->
   <div id="exportHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 400px;">
     <img id="exportLogo" src="../resources/images/logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
     <h2>Detalles del Pedido</h2>
@@ -234,7 +240,7 @@
     <div style="margin-top: 20px; font-weight: bold; text-align: center;">¡Gracias por su pedido!</div>
   </div>
 
-  <!-- Ticket oculto para exportar como imagen, idéntico al de "Realizar Pedido" -->
+  <!-- Ticket oculto para exportar como imagen -->
   <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
     <div class="ticket-header">
       <img src="../resources/images/logo.png" alt="Logo" />
