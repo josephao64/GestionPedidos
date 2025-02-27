@@ -267,14 +267,11 @@
         if (oeMenu) {
           oeMenu.style.display = 'none';
         }
-        // 2. Ocultar botones exclusivos de administradores y el botón de cerrar sesión
+        // 2. Ocultar botones exclusivos de administradores (se mantiene el botón de cerrar sesión)
         const adminElements = document.querySelectorAll('.admin-only');
         adminElements.forEach(element => {
           element.style.display = 'none';
         });
-        if (logoutButton) {
-          logoutButton.style.display = 'none';
-        }
         // 3. Mostrar o actualizar el botón de "Bodega" para inventario
         const bodegaButton = document.getElementById('bodega-button');
         if (bodegaButton) {
