@@ -336,10 +336,8 @@
                     <th>Fecha</th>
                     <th>Empresa</th>
                     <th>Proveedor</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio Unitario</th>
-                    <th>Total</th>
+                    <th>Productos</th>
+                    <th>Total Factura</th>
                     <th id="actionsHeader">Acciones</th>
                   </tr>
                 </thead>
@@ -348,6 +346,7 @@
                 </tbody>
               </table>
             </div>
+            <!-- Contenedor oculto para exportar facturas en imagen -->
             <div id="exportInvoicesContainer" style="display: none;">
               <h3 style="text-align:center;">Facturas Registradas</h3>
               <table
@@ -360,10 +359,8 @@
                     <th>Fecha</th>
                     <th>Empresa</th>
                     <th>Proveedor</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio Unitario</th>
-                    <th>Total</th>
+                    <th>Productos</th>
+                    <th>Total Factura</th>
                   </tr>
                 </thead>
                 <tbody id="exportInvoicesBody">
@@ -395,7 +392,7 @@
       </div>
     </div>
 
-    <!-- Contenedor oculto para exportar diseño de factura -->
+    <!-- Contenedor oculto para exportar diseño de factura (ahora con varios productos) -->
     <div
       id="exportInvoiceContainer"
       style="display:none; padding:20px; border:1px solid #ccc; max-width:600px; margin:20px auto; font-family: Arial, sans-serif;"
@@ -411,24 +408,19 @@
         <strong>Proveedor:</strong> <span id="exportInvoiceSupplier"></span>
       </div>
       <div style="margin-bottom:10px;">
-        <strong>Producto:</strong> <span id="exportInvoiceProduct"></span>
+        <strong>Productos:</strong>
+        <div id="exportInvoiceProducts"></div>
       </div>
       <div style="margin-bottom:10px;">
-        <strong>Cantidad:</strong> <span id="exportInvoiceQuantity"></span>
-      </div>
-      <div style="margin-bottom:10px;">
-        <strong>Precio Unitario:</strong> Q.<span id="exportInvoiceUnitPrice"></span>
-      </div>
-      <div style="margin-bottom:10px;">
-        <strong>Total:</strong> Q.<span id="exportInvoiceTotal"></span>
+        <strong>Total Factura:</strong> Q.<span id="exportInvoiceOverallTotal"></span>
       </div>
       <div style="text-align:center; margin-top:20px;">
         <em>Gracias por su compra</em>
       </div>
     </div>
 
-    <!-- MODALES (se mantienen sin cambios) -->
-    <!-- Modal para Agregar/Editar Producto -->
+    <!-- MODALES -->
+    <!-- Modal para Agregar/Editar Producto (sin cambios) -->
     <div
       class="modal fade"
       id="productModal"
@@ -535,7 +527,7 @@
       </div>
     </div>
 
-    <!-- Modal para Registrar/Editar Movimiento -->
+    <!-- Modal para Registrar/Editar Movimiento (sin cambios) -->
     <div
       class="modal fade"
       id="movementModal"
@@ -654,7 +646,7 @@
       </div>
     </div>
 
-    <!-- Modal para Reajuste -->
+    <!-- Modal para Reajuste (sin cambios) -->
     <div
       class="modal fade"
       id="adjustmentModal"
@@ -752,7 +744,7 @@
       </div>
     </div>
 
-    <!-- Modal para Cargar Producto desde Catálogo -->
+    <!-- Modal para Cargar Producto desde Catálogo (sin cambios) -->
     <div
       class="modal fade"
       id="catalogModal"
@@ -801,7 +793,7 @@
       </div>
     </div>
 
-    <!-- Modal para Facturas -->
+    <!-- Modal para Facturas (Modificado para múltiples productos) -->
     <div
       class="modal fade"
       id="invoiceModal"
@@ -809,7 +801,7 @@
       aria-labelledby="invoiceModalLabel"
       aria-hidden="true"
     >
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <form id="invoiceForm" novalidate>
             <div class="modal-header">
@@ -881,53 +873,37 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="invoiceProductSelect" class="form-label"
-                  >Producto</label
+                <label class="form-label">Productos de la Factura</label>
+                <table class="table table-bordered" id="invoiceItemsTable">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Cantidad</th>
+                      <th>Precio Unitario</th>
+                      <th>Total</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Se agregarán filas dinámicamente -->
+                  </tbody>
+                </table>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="addInvoiceItem()"
                 >
-                <select class="form-select" id="invoiceProductSelect" required></select>
-                <div class="invalid-feedback">
-                  Seleccione un producto.
-                </div>
+                  Agregar Producto
+                </button>
               </div>
               <div class="mb-3">
-                <label for="invoiceQuantity" class="form-label"
-                  >Cantidad</label
+                <label for="invoiceOverallTotal" class="form-label"
+                  >Total Factura</label
                 >
                 <input
                   type="number"
                   class="form-control"
-                  id="invoiceQuantity"
-                  required
-                  oninput="updateInvoiceTotal()"
-                />
-                <div class="invalid-feedback">
-                  Ingrese la cantidad (entrada).
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="invoiceUnitPrice" class="form-label"
-                  >Precio por Unidad</label
-                >
-                <input
-                  type="number"
-                  step="0.01"
-                  class="form-control"
-                  id="invoiceUnitPrice"
-                  required
-                  oninput="updateInvoiceTotal()"
-                />
-                <div class="invalid-feedback">
-                  Ingrese el precio por unidad.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="invoiceTotal" class="form-label"
-                  >Total</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="invoiceTotal"
+                  id="invoiceOverallTotal"
                   readonly
                 />
               </div>
@@ -953,7 +929,7 @@
       </div>
     </div>
 
-    <!-- Modal para Reporte de Producto -->
+    <!-- Modal para Reporte de Producto (sin cambios) -->
     <div
       class="modal fade"
       id="reportModal"
