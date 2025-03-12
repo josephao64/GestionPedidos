@@ -434,6 +434,14 @@
     padding: 8px;
   }
   
+  /* Para que el texto con comentarios se parta y no se corte. */
+  .products-table th,
+  .products-table td {
+    white-space: normal;       /* Permite múltiples líneas */
+    word-wrap: break-word;     /* Soporte para partir la palabra */
+    overflow-wrap: break-word; /* Soporte más amplio para partir palabra */
+  }
+  
   .products-table th {
     text-align: center;
     white-space: nowrap;
@@ -449,5 +457,28 @@
     font-size: 14px;
     color: #777777;
     margin-top: 10px;
+  }
+  
+  
+  /* =========================================================
+     Forzar visibilidad y ajuste de ancho/alto al exportar
+     ========================================================= */
+  /* El contenedor donde se genera la imagen de la recepción */
+  #exportReceptionHiddenContainer {
+    /* Aseguramos que nada se corte dentro de la tabla */
+    overflow: visible !important;
+  }
+  
+  #exportReceptionHiddenContainer table {
+    table-layout: auto !important;  /* Permite crecer la tabla */
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  #exportReceptionHiddenContainer td,
+  #exportReceptionHiddenContainer th {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
   }
   

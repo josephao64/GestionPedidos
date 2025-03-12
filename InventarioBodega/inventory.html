@@ -3,875 +3,119 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Inventario de Productos de Bodega</title>
+    <title>Registro de Facturas</title>
     <!-- Bootstrap CSS -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
-    <!-- Font Awesome -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="stylesInventario.css" />
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Firebase (v8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <!-- html2canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+      body {
+        padding: 20px;
+      }
+      /* Opcional: resaltar fila de factura anulada */
+      .table-warning {
+        background-color: #ffeeba !important;
+      }
+    </style>
+    <script>
+      // Conexión a Firebase con la configuración proporcionada (se incluye siempre)
+      var firebaseConfig = {
+        apiKey: "AIzaSyAjVTKBJwZ8qql32ZrZBy0Q1NFUYMu-Xzk",
+        authDomain: "gleedb-5d36a.firebaseapp.com",
+        projectId: "gleedb-5d36a",
+        storageBucket: "gleedb-5d36a.firebasestorage.app",
+        messagingSenderId: "1090238022032",
+        appId: "1:1090238022032:web:c637b0a6dfe06be5287315"
+      };
+      firebase.initializeApp(firebaseConfig);
+      var db = firebase.firestore();
+    </script>
   </head>
   <body>
-    <div class="container-fluid">
-      <div class="row">
-        <!-- Sidebar (Menú Lateral) -->
-        <nav
-          id="sidebarMenu"
-          class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"
-        >
-          <div class="position-sticky pt-3">
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <a
-                  class="nav-link active"
-                  href="#"
-                  onclick="showSection('products')"
-                >
-                  <i class="fa-solid fa-box"></i> Productos
-                </a>
-              </li>
-              <li class="nav-item">
-                <a
-                  class="nav-link"
-                  href="#"
-                  onclick="showSection('movements')"
-                >
-                  <i class="fa-solid fa-exchange-alt"></i> Movimientos
-                </a>
-              </li>
-              <li class="nav-item">
-                <a
-                  class="nav-link"
-                  href="#"
-                  onclick="showSection('adjustments')"
-                >
-                  <i class="fa-solid fa-arrows-rotate"></i> Reajustes
-                </a>
-              </li>
-              <li class="nav-item">
-                <a
-                  class="nav-link"
-                  href="#"
-                  onclick="showSection('invoices')"
-                >
-                  <i class="fa-solid fa-file-invoice"></i> Facturas
-                </a>
-              </li>
-              <li class="nav-item">
-                <a
-                  class="nav-link"
-                  href="#"
-                  onclick="showSection('reports')"
-                >
-                  <i class="fa-solid fa-chart-line"></i> Reportes
-                </a>
-              </li>
-              <!-- NUEVO ÍTEM PARA SALIDAS ENCARGADO -->
-              <li class="nav-item">
-                <a
-                  class="nav-link"
-                  href="salidas encargado bodega/salidas.html"
-                >
-                  <i class="fa-solid fa-dolly"></i> Salidas Encargado
-                </a>
-              </li>
-              <!-- FIN NUEVO ÍTEM -->
-            </ul>
-          </div>
-        </nav>
-
-        <!-- Contenido Principal -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-          <!-- Sección: Productos -->
-          <section id="productsSection" class="my-4">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
-              <h2>Gestión de Productos</h2>
-              <!-- BOTÓN PARA REGRESAR A INICIO -->
-              <div>
-                <a href="../INDEX.HTML" class="btn btn-secondary me-2">
-                  <i class="fa-solid fa-arrow-left"></i> Regresar a Inicio
-                </a>
-                <button
-                  class="btn btn-primary me-2"
-                  data-bs-toggle="modal"
-                  data-bs-target="#productModal"
-                  onclick="showAddProductForm()"
-                >
-                  <i class="fa-solid fa-plus"></i> Agregar Producto
-                </button>
-                <button
-                  class="btn btn-secondary me-2"
-                  onclick="showCatalogModal()"
-                >
-                  <i class="fa-solid fa-upload"></i> Cargar desde Catálogo
-                </button>
-                <button
-                  class="btn btn-info"
-                  onclick="exportProductsStockImage()"
-                >
-                  <i class="fa-solid fa-file-export"></i> Exportar Stock
-                </button>
-              </div>
-            </div>
-            <div class="mb-3">
-              <input
-                type="text"
-                id="productSearchInput"
-                class="form-control"
-                placeholder="Buscar producto por nombre o ID..."
-                onkeyup="filterProducts()"
-              />
-            </div>
-            <div class="table-responsive">
-              <table class="table table-striped" id="productsTable">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Unidad</th>
-                    <th>Stock Actual</th>
-                    <th>Stock Mínimo</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
-              </table>
-            </div>
-            <!-- Contenedor oculto para exportar stock en imagen -->
-            <div
-              id="exportProductsContainer"
-              style="display: none;"
-            >
-              <h3 id="exportHeader"></h3>
-              <table
-                class="table table-striped"
-                style="width: 100%; text-align: center;"
-              >
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Stock Actual</th>
-                  </tr>
-                </thead>
-                <tbody id="exportProductsBody">
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <!-- Sección: Movimientos -->
-          <section id="movementsSection" class="my-4" style="display: none;">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
-              <h2>Historial de Movimientos</h2>
-              <button
-                class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#movementModal"
-                onclick="showAddMovementForm()"
-              >
-                <i class="fa-solid fa-plus"></i> Registrar Movimiento
-              </button>
-            </div>
-            <!-- Filtros para Movimientos -->
-            <div class="row mb-3">
-              <div class="col-md-3">
-                <label for="movementSortOrder" class="form-label"
-                  >Orden</label
-                >
-                <select
-                  id="movementSortOrder"
-                  class="form-select"
-                  onchange="loadMovements()"
-                >
-                  <option value="desc">Más reciente primero</option>
-                  <option value="asc">Más antiguo primero</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <label for="movementFilterUser" class="form-label"
-                  >Responsable</label
-                >
-                <input
-                  type="text"
-                  id="movementFilterUser"
-                  class="form-control"
-                  placeholder="Buscar por responsable"
-                  onkeyup="loadMovements()"
-                />
-              </div>
-              <div class="col-md-3">
-                <label for="movementFilterProduct" class="form-label"
-                  >Producto</label
-                >
-                <select
-                  id="movementFilterProduct"
-                  class="form-select"
-                  onchange="loadMovements()"
-                >
-                  <option value="">Todos los productos</option>
-                  <!-- Se poblará dinámicamente -->
-                </select>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-striped" id="movementsTable">
-                <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th>Tipo</th>
-                    <th>Cantidad</th>
-                    <th>Fecha y Hora</th>
-                    <th>Responsable</th>
-                    <th>Motivo</th>
-                    <th>Comentarios</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <!-- Sección: Reajustes -->
-          <section id="adjustmentsSection" class="my-4" style="display: none;">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
-              <h2>Reajustes de Inventario</h2>
-              <button
-                class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#adjustmentModal"
-                onclick="showAdjustmentModal()"
-              >
-                <i class="fa-solid fa-plus"></i> Realizar Reajuste
-              </button>
-            </div>
-            <div id="adjustmentsList">
-              <!-- Contenido dinámico -->
-            </div>
-          </section>
-
-          <!-- Sección: Facturas -->
-          <section id="invoicesSection" class="my-4" style="display: none;">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
-              <h2>Registro de Facturas</h2>
-              <div>
-                <button
-                  class="btn btn-primary me-2"
-                  onclick="showAddInvoiceForm()"
-                >
-                  <i class="fa-solid fa-plus"></i> Agregar Factura
-                </button>
-                <button
-                  class="btn btn-success"
-                  onclick="exportInvoicesImage()"
-                >
-                  <i class="fa-solid fa-file-export"></i> Exportar Facturas
-                </button>
-              </div>
-            </div>
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <select
-                  id="invoiceFilterCompany"
-                  class="form-select"
-                  onchange="loadInvoices()"
-                >
-                  <option value="">Todas las Empresas</option>
-                  <option value="AMERICAN PIZZA">AMERICAN PIZZA</option>
-                  <option value="BRENDA ELIZABETH HERNANDEZ">
-                    BRENDA ELIZABETH HERNANDEZ
-                  </option>
-                  <option value="CORPORACION DE ALIMENTOS. S.A.">
-                    CORPORACION DE ALIMENTOS. S.A.
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <div class="form-check">
-                  <input
-                    type="checkbox"
-                    id="groupByCompanyCheckbox"
-                    class="form-check-input"
-                    onchange="loadInvoices()"
-                  />
-                  <label
-                    for="groupByCompanyCheckbox"
-                    class="form-check-label"
-                    >Agrupar por Empresa</label
-                  >
-                </div>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-striped" id="invoicesTable">
-                <thead>
-                  <tr>
-                    <th>Número</th>
-                    <th>Fecha</th>
-                    <th>Empresa</th>
-                    <th>Proveedor</th>
-                    <th>Productos</th>
-                    <th>Total Factura</th>
-                    <th id="actionsHeader">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
-              </table>
-            </div>
-            <!-- Contenedor oculto para exportar facturas en imagen -->
-            <div id="exportInvoicesContainer" style="display: none;">
-              <h3 style="text-align:center;">Facturas Registradas</h3>
-              <table
-                class="table table-striped"
-                style="width: 100%; text-align: center;"
-              >
-                <thead>
-                  <tr>
-                    <th>Número</th>
-                    <th>Fecha</th>
-                    <th>Empresa</th>
-                    <th>Proveedor</th>
-                    <th>Productos</th>
-                    <th>Total Factura</th>
-                  </tr>
-                </thead>
-                <tbody id="exportInvoicesBody">
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <!-- Sección: Reportes -->
-          <section id="reportsSection" class="my-4" style="display: none;">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
-              <h2>Reportes</h2>
-              <button
-                class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#reportModal"
-              >
-                <i class="fa-solid fa-chart-line"></i> Generar Reporte
-              </button>
-            </div>
-            <div id="reportsDashboard">
-              <!-- Contenido dinámico (opcional) -->
-            </div>
-          </section>
-        </main>
+    <div class="container my-4">
+      <h1 class="mb-4">Registro de Facturas</h1>
+      <div class="mb-3">
+        <button class="btn btn-primary me-2" onclick="showAddInvoiceForm()">Agregar Factura</button>
+        <button class="btn btn-success" onclick="exportInvoicesImage()">Exportar Listado</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped" id="facturasTable">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Fecha</th>
+              <th>Tienda</th>
+              <th>Estado</th>
+              <th>Productos</th>
+              <th>Total Factura</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Se llenará dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+      <!-- Contenedor oculto para exportar listado de facturas como imagen -->
+      <div id="exportFacturasContainer" style="display: none;">
+        <h3 class="text-center">Facturas Registradas</h3>
+        <table class="table table-striped text-center">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Fecha</th>
+              <th>Tienda</th>
+              <th>Estado</th>
+              <th>Productos</th>
+              <th>Total Factura</th>
+            </tr>
+          </thead>
+          <tbody id="exportFacturasBody">
+            <!-- Se llenará dinámicamente -->
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Contenedor oculto para exportar diseño de factura (ahora con varios productos) -->
-    <div
-      id="exportInvoiceContainer"
-      style="display:none; padding:20px; border:1px solid #ccc; max-width:600px; margin:20px auto; font-family: Arial, sans-serif;"
-    >
-      <h2 style="text-align:center; margin-bottom:20px;">Factura</h2>
-      <div style="margin-bottom:10px;">
-        <strong>Número:</strong> <span id="exportInvoiceNum"></span>
-      </div>
-      <div style="margin-bottom:10px;">
-        <strong>Fecha:</strong> <span id="exportInvoiceDate"></span>
-      </div>
-      <div style="margin-bottom:10px;">
-        <strong>Proveedor:</strong> <span id="exportInvoiceSupplier"></span>
-      </div>
-      <div style="margin-bottom:10px;">
-        <strong>Productos:</strong>
-        <div id="exportInvoiceProducts"></div>
-      </div>
-      <div style="margin-bottom:10px;">
-        <strong>Total Factura:</strong> Q.<span id="exportInvoiceOverallTotal"></span>
-      </div>
-      <div style="text-align:center; margin-top:20px;">
-        <em>Gracias por su compra</em>
-      </div>
-    </div>
-
-    <!-- MODALES -->
-    <!-- Modal para Agregar/Editar Producto (sin cambios) -->
-    <div
-      class="modal fade"
-      id="productModal"
-      tabindex="-1"
-      aria-labelledby="productModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <form id="productForm" novalidate>
-            <div class="modal-header">
-              <h5 class="modal-title" id="productModalLabel">Agregar Producto</h5>
-              <button
-                type="button"
-                class="btn btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <input type="hidden" id="productId" />
-              <div class="mb-3">
-                <label for="productName" class="form-label"
-                  >Nombre del Producto</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  id="productName"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Por favor ingrese el nombre del producto.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="productDescription" class="form-label"
-                  >Descripción</label
-                >
-                <textarea
-                  class="form-control"
-                  id="productDescription"
-                ></textarea>
-              </div>
-              <div class="mb-3">
-                <label for="productUnit" class="form-label">Unidad</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="productUnit"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese la unidad de medida.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="productStock" class="form-label"
-                  >Stock Inicial</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="productStock"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese un stock válido.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="productStockMin" class="form-label"
-                  >Stock Mínimo</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="productStockMin"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese el stock mínimo.
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Cerrar
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="saveProduct()"
-              >
-                Guardar Producto
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para Registrar/Editar Movimiento (sin cambios) -->
-    <div
-      class="modal fade"
-      id="movementModal"
-      tabindex="-1"
-      aria-labelledby="movementModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <form id="movementForm" novalidate>
-            <div class="modal-header">
-              <h5 class="modal-title" id="movementModalLabel">
-                Registrar Movimiento
-              </h5>
-              <button
-                type="button"
-                class="btn btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <input type="hidden" id="movementId" />
-              <div class="mb-3">
-                <label for="movementProductSelect" class="form-label"
-                  >Producto</label
-                >
-                <select
-                  class="form-select"
-                  id="movementProductSelect"
-                  required
-                ></select>
-                <div class="invalid-feedback">
-                  Seleccione un producto.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="movementType" class="form-label">Tipo</label>
-                <select class="form-select" id="movementType" required>
-                  <option value="entrada">Entrada</option>
-                  <option value="salida">Salida</option>
-                  <option value="ajuste">Ajuste</option>
-                </select>
-                <div class="invalid-feedback">
-                  Seleccione el tipo de movimiento.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="movementQuantity" class="form-label"
-                  >Cantidad</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="movementQuantity"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese una cantidad válida.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="movementUser" class="form-label"
-                  >Usuario Responsable</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  id="movementUser"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese el nombre del usuario.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="movementReason" class="form-label">Motivo</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="movementReason"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese el motivo.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="movementComments" class="form-label"
-                  >Comentarios</label
-                >
-                <textarea
-                  class="form-control"
-                  id="movementComments"
-                ></textarea>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Cerrar
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="saveMovement()"
-              >
-                Guardar Movimiento
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para Reajuste (sin cambios) -->
-    <div
-      class="modal fade"
-      id="adjustmentModal"
-      tabindex="-1"
-      aria-labelledby="adjustmentModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <form id="adjustmentForm" novalidate>
-            <div class="modal-header">
-              <h5 class="modal-title" id="adjustmentModalLabel">
-                Realizar Reajuste
-              </h5>
-              <button
-                type="button"
-                class="btn btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <div class="mb-3">
-                <label for="adjustmentProductSelect" class="form-label"
-                  >Producto</label
-                >
-                <select
-                  class="form-select"
-                  id="adjustmentProductSelect"
-                  required
-                ></select>
-                <div class="invalid-feedback">
-                  Seleccione un producto.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="adjustmentQuantity" class="form-label"
-                  >Cantidad a ajustar</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="adjustmentQuantity"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese una cantidad válida.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="adjustmentUser" class="form-label"
-                  >Usuario Responsable</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  id="adjustmentUser"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese el nombre del usuario.
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="adjustmentReason" class="form-label">Motivo</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="adjustmentReason"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese el motivo.
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Cerrar
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="saveAdjustment()"
-              >
-                Guardar Ajuste
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para Cargar Producto desde Catálogo (sin cambios) -->
-    <div
-      class="modal fade"
-      id="catalogModal"
-      tabindex="-1"
-      aria-labelledby="catalogModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="catalogModalLabel">
-              Cargar Producto desde Catálogo
-            </h5>
-            <button
-              type="button"
-              class="btn btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-              onclick="closeModal('catalogModal')"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <input
-              type="text"
-              id="catalogSearchInput"
-              class="form-control mb-3"
-              placeholder="Buscar producto..."
-              onkeyup="filterCatalogProducts()"
-            />
-            <div class="table-responsive">
-              <table class="table table-striped" id="catalogProductsTable">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para Facturas (Modificado para múltiples productos) -->
-    <div
-      class="modal fade"
-      id="invoiceModal"
-      tabindex="-1"
-      aria-labelledby="invoiceModalLabel"
-      aria-hidden="true"
-    >
+    <!-- Modal para Agregar/Editar Factura -->
+    <div class="modal fade" id="invoiceModal" tabindex="-1" aria-labelledby="invoiceModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <form id="invoiceForm" novalidate>
             <div class="modal-header">
-              <h5 class="modal-title" id="invoiceModalLabel">
-                Agregar Factura
-              </h5>
-              <button
-                type="button"
-                class="btn btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
+              <h5 class="modal-title" id="invoiceModalLabel">Agregar Factura</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
               <input type="hidden" id="invoiceId" />
               <div class="mb-3">
-                <label for="invoiceNumber" class="form-label"
-                  >Número de Factura</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  id="invoiceNumber"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese el número de factura.
-                </div>
+                <label for="invoiceNumber" class="form-label">Número de Factura</label>
+                <input type="text" id="invoiceNumber" class="form-control" required />
+                <div class="invalid-feedback">Ingrese el número de factura.</div>
               </div>
               <div class="mb-3">
-                <label for="invoiceDate" class="form-label"
-                  >Fecha de Factura</label
-                >
-                <input
-                  type="date"
-                  class="form-control"
-                  id="invoiceDate"
-                  required
-                />
-                <div class="invalid-feedback">
-                  Ingrese la fecha.
-                </div>
+                <label for="invoiceDate" class="form-label">Fecha de Factura</label>
+                <input type="date" id="invoiceDate" class="form-control" required />
+                <div class="invalid-feedback">Ingrese la fecha.</div>
               </div>
+              <!-- Campo para seleccionar la tienda asociada a la factura -->
               <div class="mb-3">
-                <label for="invoiceCompany" class="form-label"
-                  >Empresa</label
-                >
-                <select class="form-select" id="invoiceCompany" required>
-                  <option value="">Seleccione la empresa</option>
-                  <option value="AMERICAN PIZZA">AMERICAN PIZZA</option>
-                  <option value="BRENDA ELIZABETH HERNANDEZ">
-                    BRENDA ELIZABETH HERNANDEZ
-                  </option>
-                  <option value="CORPORACION DE ALIMENTOS. S.A.">
-                    CORPORACION DE ALIMENTOS. S.A.
-                  </option>
+                <label for="invoiceStore" class="form-label">Tienda</label>
+                <select id="invoiceStore" class="form-select" required>
+                  <option value="">Seleccione tienda</option>
+                  <!-- Se cargarán las tiendas -->
                 </select>
-                <div class="invalid-feedback">
-                  Seleccione la empresa.
-                </div>
+                <div class="invalid-feedback">Seleccione la tienda.</div>
               </div>
-              <div class="mb-3">
-                <label for="invoiceSupplier" class="form-label"
-                  >Proveedor</label
-                >
-                <select class="form-select" id="invoiceSupplier" required></select>
-                <div class="invalid-feedback">
-                  Seleccione un proveedor.
-                </div>
-              </div>
+              <!-- Ítems de la Factura -->
               <div class="mb-3">
                 <label class="form-label">Productos de la Factura</label>
                 <table class="table table-bordered" id="invoiceItemsTable">
@@ -888,161 +132,64 @@
                     <!-- Se agregarán filas dinámicamente -->
                   </tbody>
                 </table>
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  onclick="addInvoiceItem()"
-                >
-                  Agregar Producto
-                </button>
+                <button type="button" class="btn btn-secondary" onclick="addInvoiceItem()">Agregar Producto</button>
               </div>
               <div class="mb-3">
-                <label for="invoiceOverallTotal" class="form-label"
-                  >Total Factura</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="invoiceOverallTotal"
-                  readonly
-                />
+                <label for="invoiceOverallTotal" class="form-label">Total Factura</label>
+                <input type="number" id="invoiceOverallTotal" class="form-control" readonly />
               </div>
             </div>
             <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Cerrar
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="saveInvoice()"
-              >
-                Guardar Factura
-              </button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+              <button type="button" class="btn btn-primary" onclick="saveInvoice()">Guardar Factura</button>
             </div>
           </form>
         </div>
       </div>
     </div>
 
-    <!-- Modal para Reporte de Producto (sin cambios) -->
-    <div
-      class="modal fade"
-      id="reportModal"
-      tabindex="-1"
-      aria-labelledby="reportModalLabel"
-      aria-hidden="true"
-    >
+    <!-- Modal para Ver Detalles de Factura y Exportar Comprobante -->
+    <div class="modal fade" id="invoiceDetailsModal" tabindex="-1" aria-labelledby="invoiceDetailsModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-xl">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="reportModalLabel">
-              Reporte de Producto
-            </h5>
-            <button
-              type="button"
-              class="btn btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
+            <h5 class="modal-title" id="invoiceDetailsModalLabel">Detalles de Factura</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
           <div class="modal-body">
-            <div class="row">
-              <div class="col-md-6">
-                <form id="reportForm" class="mb-3">
-                  <div class="mb-3">
-                    <label for="reportProduct" class="form-label"
-                      >Producto</label
-                    >
-                    <select class="form-select" id="reportProduct" required></select>
-                  </div>
-                  <div class="mb-3">
-                    <label for="reportStartDate" class="form-label"
-                      >Fecha de Inicio</label
-                    >
-                    <input
-                      type="date"
-                      class="form-control"
-                      id="reportStartDate"
-                      required
-                    />
-                  </div>
-                  <div class="mb-3">
-                    <label for="reportEndDate" class="form-label"
-                      >Fecha de Fin</label
-                    >
-                    <input
-                      type="date"
-                      class="form-control"
-                      id="reportEndDate"
-                      required
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    class="btn btn-primary"
-                    onclick="generateProductReport()"
-                  >
-                    Generar Reporte
-                  </button>
-                </form>
-                <div id="reportDetails">
-                  <h4 id="reportTitle"></h4>
-                  <p id="reportProductInfo"></p>
-                  <p id="reportDateRange"></p>
-                </div>
-                <div class="mt-3">
-                  <button
-                    class="btn btn-success me-2"
-                    onclick="exportReportCSV()"
-                  >
-                    Exportar CSV
-                  </button>
-                  <button
-                    class="btn btn-info"
-                    onclick="exportReportImage()"
-                  >
-                    Exportar Imagen (PNG)
-                  </button>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <canvas id="reportChart"></canvas>
-              </div>
+            <!-- Contenedor de detalles para exportar comprobante -->
+            <div id="invoiceDetailsContainer">
+              <p><strong>Número:</strong> <span id="detailInvoiceNumber"></span></p>
+              <p><strong>Fecha:</strong> <span id="detailInvoiceDate"></span></p>
+              <p><strong>Tienda:</strong> <span id="detailInvoiceStore"></span></p>
+              <p><strong>Estado:</strong> <span id="detailInvoiceStatus"></span></p>
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody id="detailInvoiceItems">
+                  <!-- Se llenará dinámicamente -->
+                </tbody>
+              </table>
+              <p class="text-end"><strong>Total Factura:</strong> Q. <span id="detailInvoiceOverallTotal"></span></p>
             </div>
-            <div class="mt-3">
-              <div class="table-responsive">
-                <table class="table table-striped" id="reportTable">
-                  <thead>
-                    <tr>
-                      <th>Tipo</th>
-                      <th>Cantidad</th>
-                      <th>Stock Después</th>
-                      <th>Fecha</th>
-                      <th>Usuario</th>
-                      <th>Motivo</th>
-                      <th>Comentarios</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <!-- Se llenará dinámicamente -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-info" onclick="exportInvoiceComprobante()">Exportar Comprobante</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Bootstrap JS Bundle (incluye Popper) -->
+    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Cargar los archivos JS (orden importante) -->
-    <script defer src="inventario.js"></script>
-    <script defer src="movimientos.js"></script>
+    <!-- Archivo JS de facturas (separado) -->
+    <script src="facturas.js"></script>
   </body>
 </html>
