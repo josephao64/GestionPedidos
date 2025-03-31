@@ -19,22 +19,46 @@
   <div class="header">
     <h1>Gestión de Pedidos</h1>
     <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
+    <!-- Botón para volver al menú principal -->
     <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
+    <!-- Nuevo botón para exportar pedidos -->
+    <button class="export-orders-button" onclick="window.location.href='exportPedidos.html'">
+      Exportar Pedidos
+    </button>
   </div>
 
   <!-- Filtros para administrador -->
   <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
     <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
     <select id="sucursalFilter" onchange="reloadOrders()"></select>
+    
     <label for="providerFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Proveedor:</label>
     <select id="providerFilter" onchange="reloadOrders()"></select>
+    
+    <label for="estadoFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Estado:</label>
+    <select id="estadoFilter" onchange="reloadOrders()">
+      <option value="all" selected>Todos</option>
+      <option value="pending">Pendiente</option>
+      <option value="delivery">Entrega en Bodega/Tienda</option>
+    </select>
+    
+    <!-- Filtro adicional: Tipo de Entrega -->
+    <label for="deliveryTypeFilter" style="font-weight: bold; margin-left: 1rem;">Tipo de Entrega:</label>
+    <select id="deliveryTypeFilter" onchange="reloadOrders()">
+      <option value="all" selected>Todos</option>
+      <option value="Tienda">Entrega en Tienda</option>
+      <option value="Bodega">Entrega en Bodega</option>
+    </select>
+    
     <label for="sortOrder" style="font-weight: bold; margin-left: 1rem;">Ordenar por:</label>
     <select id="sortOrder" onchange="reloadOrders()">
       <option value="masReciente" selected>Más Reciente</option>
       <option value="masAntiguo">Más Antiguo</option>
     </select>
+    
     <label for="idSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por ID:</label>
     <input type="text" id="idSearchInput" placeholder="Ej. 123" oninput="reloadOrders()" style="width: 100px;"/>
+    
     <!-- Filtro por fecha -->
     <label for="dateSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por Fecha:</label>
     <input type="date" id="dateSearchInput" onchange="reloadOrders()" />
@@ -180,11 +204,6 @@
       <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
       <h2>Detalles del Pedido Recibido</h2>
       <div id="receivedOrderDetails"></div>
-      <!--
-        Se comentan o eliminan para que NO haya vista previa de la imagen
-        <div id="receivedOrderModalPreview" style="margin-top: 1rem;"></div>
-        <button id="downloadReceivedOrderImg" style="margin-top: 1rem;">Descargar Imagen</button>
-      -->
     </div>
   </div>
 
@@ -204,7 +223,6 @@
   </div>
 
   <!-- Contenedor oculto para exportar recepción (se usa para generar la imagen a descargar) -->
-  <!-- Se aumenta el ancho a 1200px para no recortar comentarios -->
   <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 1200px;">
     <img id="exportReceptionLogo" src="../resources/images/logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
     <h2>Recepción de Pedido</h2>
@@ -261,8 +279,6 @@
     </div>
   </div>
   
-  <!-- Si tu JS todavía necesita exponer la función, la dejamos, 
-       pero ya no la usaríamos dentro del modal (ahora está comentada) -->
   <script>
     // Se expone la función global en caso de que otras secciones la requieran
     window.downloadExportReceptionImage = downloadExportReceptionImage;

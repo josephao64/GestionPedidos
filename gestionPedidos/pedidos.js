@@ -19,6 +19,46 @@ let currentOrderForStatusChange = null;
 window.exportReceptionDownloadFileName = "";
 
 /**********************************************************
+ * FUNCIONES PARA MODAL DE CAMBIO DE ESTADO
+ **********************************************************/
+function openChangeStatusModal(orderDocId) {
+  currentOrderForStatusChange = orderDocId;
+  document.getElementById("changeStatusModal").style.display = "block";
+}
+
+function closeChangeStatusModal() {
+  document.getElementById("changeStatusModal").style.display = "none";
+  currentOrderForStatusChange = null;
+}
+
+/**********************************************************
+ * CAMBIAR ESTADO MANUALMENTE
+ **********************************************************/
+function changeOrderStatusManually(newStatus) {
+  if (!currentOrderForStatusChange) {
+    Swal.fire({ icon: "error", title: "Error", text: "No se ha seleccionado ningún pedido para cambiar el estado." });
+    return;
+  }
+  Swal.fire({
+    title: `¿Cambiar estado a '${newStatus}'?`,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Sí",
+    cancelButtonText: "Cancelar"
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        await db.collection("orders").doc(currentOrderForStatusChange).update({ status: newStatus });
+        Swal.fire({ icon: "success", title: "Estado actualizado", text: `El pedido se actualizó a '${newStatus}'.` });
+        closeChangeStatusModal();
+      } catch (error) {
+        Swal.fire({ icon: "error", title: "Error", text: error.message });
+      }
+    }
+  });
+}
+
+/**********************************************************
  * DOMContentLoaded: Inicializa la carga de pedidos y otros
  * datos al cargar la página
  **********************************************************/
@@ -190,20 +230,29 @@ function goToMainMenu() {
  **********************************************************/
 function attachInProcessListener() {
   if (inProcessUnsubscribe) inProcessUnsubscribe();
-  const statuses = [
-    "pending",
-    "pedidoTomado",
-    "pedidoEnBodega",
-    "bodegaEnvioPedido",
-    "caminoATienda"
-  ];
-  let query = null;
-
+  let query;
   const idSearch = document.getElementById("idSearchInput")?.value?.trim();
+  
   if (idSearch) {
     query = db.collection("orders").where("orderId", "==", idSearch);
   } else {
-    query = db.collection("orders").where("status", "in", statuses);
+    // Filtro por estado
+    const estadoFilter = document.getElementById("estadoFilter")?.value || "all";
+    if (estadoFilter === "pending") {
+      query = db.collection("orders").where("status", "==", "pending");
+    } else if (estadoFilter === "delivery") {
+      query = db.collection("orders").where("status", "in", ["bodegaEnvioPedido", "caminoATienda"]);
+    } else {
+      query = db.collection("orders").where("status", "in", [
+        "pending",
+        "pedidoTomado",
+        "pedidoEnBodega",
+        "bodegaEnvioPedido",
+        "caminoATienda"
+      ]);
+    }
+    
+    // Filtros adicionales según rol
     if (userRole === "administrador") {
       const selSuc = document.getElementById("sucursalFilter").value;
       if (selSuc !== "all") {
@@ -216,23 +265,25 @@ function attachInProcessListener() {
     } else {
       query = query.where("sucursalId", "==", userSucursalId);
     }
-
+    
+    // Filtro: Tipo de Entrega (Entrega en Tienda o Bodega)
+    const deliveryType = document.getElementById("deliveryTypeFilter")?.value || "all";
+    if (deliveryType !== "all") {
+      query = query.where("destination", "==", deliveryType);
+    }
+    
+    // Filtro por fecha
     const dateValue = document.getElementById("dateSearchInput")?.value;
     if (dateValue) {
       const startDate = new Date(dateValue);
       const endDate = new Date(dateValue);
       endDate.setDate(endDate.getDate() + 1);
-      query = query
-        .where("timestamp", ">=", startDate)
-        .where("timestamp", "<", endDate);
+      query = query.where("timestamp", ">=", startDate).where("timestamp", "<", endDate);
     }
   }
-
+  
   const sortValue = document.getElementById("sortOrder")?.value || "masReciente";
-  query =
-    sortValue === "masReciente"
-      ? query.orderBy("timestamp", "desc")
-      : query.orderBy("timestamp", "asc");
+  query = sortValue === "masReciente" ? query.orderBy("timestamp", "desc") : query.orderBy("timestamp", "asc");
 
   inProcessUnsubscribe = query.onSnapshot(
     snapshot => {
@@ -240,7 +291,7 @@ function attachInProcessListener() {
       cont.innerHTML = "";
       snapshot.forEach(doc => {
         const order = doc.data();
-        if (statuses.includes(order.status)) {
+        if (["pending", "pedidoTomado", "pedidoEnBodega", "bodegaEnvioPedido", "caminoATienda"].includes(order.status)) {
           const card = createOrderCard(doc.id, order);
           cont.appendChild(card);
         }
@@ -259,7 +310,7 @@ function attachInProcessListener() {
 function attachCompletedListener() {
   if (completedUnsubscribe) completedUnsubscribe();
   const idSearch = document.getElementById("idSearchInput")?.value?.trim();
-  let query = null;
+  let query;
 
   if (idSearch) {
     query = db
@@ -288,17 +339,12 @@ function attachCompletedListener() {
       const startDate = new Date(dateValue);
       const endDate = new Date(dateValue);
       endDate.setDate(endDate.getDate() + 1);
-      query = query
-        .where("timestamp", ">=", startDate)
-        .where("timestamp", "<", endDate);
+      query = query.where("timestamp", ">=", startDate).where("timestamp", "<", endDate);
     }
   }
 
   const sortValue = document.getElementById("sortOrder")?.value || "masReciente";
-  query =
-    sortValue === "masReciente"
-      ? query.orderBy("timestamp", "desc")
-      : query.orderBy("timestamp", "asc");
+  query = sortValue === "masReciente" ? query.orderBy("timestamp", "desc") : query.orderBy("timestamp", "asc");
 
   completedUnsubscribe = query.onSnapshot(
     snapshot => {
@@ -527,9 +573,7 @@ function createProgressBarHTML(flowArray, currentStatus) {
       </div>
     `;
     if (idx < flowArray.length - 1) {
-      progressHTML += `<div class="progress-line ${
-        idx < currentIndex ? "completed" : ""
-      }"></div>`;
+      progressHTML += `<div class="progress-line ${idx < currentIndex ? "completed" : ""}"></div>`;
     }
   });
   progressHTML += `</div>`;
@@ -883,14 +927,12 @@ function exportAsImage(order, fileName) {
     });
   }
 
-  // Ajuste de ancho para más espacio
-  hiddenDiv.style.width = "1200px"; // Ajusta según necesites
+  hiddenDiv.style.width = "1200px";
   hiddenDiv.style.display = "block";
   hiddenDiv.style.left = "50%";
   hiddenDiv.style.top = "50%";
   hiddenDiv.style.transform = "translate(-50%, -50%)";
 
-  // Aumentamos la escala para mayor nitidez
   html2canvas(hiddenDiv, { scale: 3 })
     .then(canvas => {
       const imgData = canvas.toDataURL("image/png");
@@ -909,7 +951,6 @@ function exportAsImage(order, fileName) {
       });
     })
     .finally(() => {
-      // Restablecemos estilos
       hiddenDiv.style.display = "none";
       hiddenDiv.style.width = "";
       hiddenDiv.style.left = "-9999px";
@@ -1274,7 +1315,6 @@ function showReceivedOrder(orderId) {
       }
       const order = docSnap.data();
 
-      // Construir el HTML de detalles
       let html = `
         <p><strong>ID Pedido:</strong> ${order.orderId}</p>
         <p><strong>Proveedor:</strong> ${order.providerName}</p>
@@ -1300,7 +1340,6 @@ function showReceivedOrder(orderId) {
         html += `<p style="color:red;"><strong>${prefix}</strong> ${order.mismatchComment}</p>`;
       }
 
-      // Tabla de productos recibidos
       html += `<table>
                  <thead>
                    <tr>
@@ -1329,14 +1368,11 @@ function showReceivedOrder(orderId) {
       }
       html += `</tbody></table>`;
 
-      // Insertar en el modal
       document.getElementById("receivedOrderDetails").innerHTML = html;
       document.getElementById("receivedOrderModal").style.display = "block";
 
-      // Descargar la imagen de inmediato (sin preview)
       const fileName = `Recepcion_Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
       exportAsReceptionImageNoPreview(order, fileName);
-
     })
     .catch(err => {
       Swal.fire({ icon: "error", title: "Error", text: err.message });
@@ -1367,13 +1403,11 @@ async function exportReception(orderId) {
 }
 
 async function exportReceptionAsImageNoPreview(order, fileName) {
-  // Ajusta si fuera necesario obtener 'order' desde DB
   exportAsReceptionImageNoPreview(order, fileName);
 }
 
 /**
- * exportAsReceptionImageNoPreview: 
- * Genera y descarga la imagen directamente, sin vista previa
+ * exportAsReceptionImageNoPreview: Genera y descarga la imagen directamente, sin vista previa
  */
 function exportAsReceptionImageNoPreview(order, fileName) {
   const hiddenDiv = document.getElementById("exportReceptionHiddenContainer");
@@ -1408,7 +1442,6 @@ function exportAsReceptionImageNoPreview(order, fileName) {
     return;
   }
 
-  // Ajustamos ancho extra
   hiddenDiv.style.width = "1200px";
 
   exportReceptionOrderIdHidden.textContent = order.orderId;
@@ -1479,7 +1512,6 @@ function exportAsReceptionImageNoPreview(order, fileName) {
   hiddenDiv.style.top = "50%";
   hiddenDiv.style.transform = "translate(-50%, -50%)";
 
-  // Usamos una escala mayor para más nitidez
   html2canvas(hiddenDiv, { scale: 3 })
     .then(canvas => {
       const imgData = canvas.toDataURL("image/png");
@@ -1498,7 +1530,6 @@ function exportAsReceptionImageNoPreview(order, fileName) {
       });
     })
     .finally(() => {
-      // Restauramos estilos
       hiddenDiv.style.display = "none";
       hiddenDiv.style.width = "";
       hiddenDiv.style.left = "-9999px";

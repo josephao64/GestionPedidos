@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Exportar Pedidos</title>
+  <link rel="stylesheet" href="exportPedidos.css" />
+  <!-- Firebase y dependencias -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <!-- XLSX para exportar a Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <!-- jsPDF y AutoTable para exportar a PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- html2canvas para exportar imágenes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- SweetAlert2 para alertas -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Conexión a la base de datos (Firebase) -->
+  <script src="../database/connection.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 1rem;
+      background-color: #f8f9fa;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    #filters {
+      margin: 1rem 0;
+      background-color: #fff;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #filters label {
+      margin-right: 0.5rem;
+      font-weight: bold;
+    }
+    #filters select,
+    #filters input[type="date"] {
+      margin-right: 1rem;
+      padding: 0.3rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .download-btn {
+      padding: 0.4rem 0.8rem;
+      margin-left: 1rem;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .excel-btn {
+      background-color: #28a745;
+    }
+    .pdf-btn {
+      background-color: #dc3545;
+    }
+    .img-btn {
+      background-color: #007bff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      background-color: #fff;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    th {
+      background-color: #e9ecef;
+    }
+    /* Contenedor oculto para PDF export (detalle) */
+    #pdfExportContainer {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Exportar Pedidos</h1>
+    <button onclick="window.location.href='pedidos.html'">Volver a Gestión de Pedidos</button>
+  </header>
+
+  <!-- Filtros para exportar pedidos -->
+  <section id="filters">
+    <label for="sucursalFilter">Sucursal:</label>
+    <select id="sucursalFilter" onchange="reloadExportOrders()">
+      <option value="all">Todas</option>
+    </select>
+    
+    <label for="providerFilter">Proveedor:</label>
+    <select id="providerFilter" onchange="reloadExportOrders()">
+      <option value="all">Todos</option>
+    </select>
+    
+    <label for="estadoFilter">Estado:</label>
+    <select id="estadoFilter" onchange="reloadExportOrders()">
+      <option value="all" selected>Todos</option>
+      <option value="pending">Pendiente</option>
+      <option value="pedidoTomado">Pedido Tomado</option>
+      <option value="pedidoEnBodega">Pedido en Bodega</option>
+      <option value="bodegaEnvioPedido">Bodega Envío Pedido</option>
+      <option value="caminoATienda">Camino a Tienda</option>
+      <option value="sucursalRecibioPedido">Sucursal Recibió Pedido</option>
+    </select>
+    
+    <label for="deliveryTypeFilter">Tipo de Entrega:</label>
+    <select id="deliveryTypeFilter" onchange="reloadExportOrders()">
+      <option value="all">Todos</option>
+      <option value="Tienda">Entrega en Tienda</option>
+      <option value="Bodega">Entrega en Bodega</option>
+    </select>
+    
+    <label for="dateFilter">Fecha:</label>
+    <input type="date" id="dateFilter" onchange="reloadExportOrders()">
+    
+    <button onclick="exportOrdersExcel()" class="download-btn excel-btn">Descargar Excel</button>
+    <button onclick="exportOrdersPDF()" class="download-btn pdf-btn">Descargar PDF</button>
+    <button onclick="exportAllOrderImages()" class="download-btn img-btn">Descargar Imágenes Individuales</button>
+  </section>
+
+  <!-- Tabla de Pedidos Generales -->
+  <section id="generalSection">
+    <h2>Pedidos Generales</h2>
+    <table id="ordersGeneralTable">
+      <thead>
+        <tr>
+          <th>ID Pedido</th>
+          <th>Proveedor</th>
+          <th>Sucursal</th>
+          <th>Fecha</th>
+          <th>Destino</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Se llenará dinámicamente -->
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Contenedor oculto para exportar PDF (detallado) -->
+  <div id="pdfExportContainer">
+    <h2>Pedidos Detallados</h2>
+    <div id="detailedOrdersContainer">
+      <!-- Cada pedido se insertará como un bloque con detalle -->
+    </div>
+  </div>
+
+  <!-- Contenedor oculto para exportar imagen (formato similar a la gestión de pedidos) -->
+  <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
+    <div class="ticket-header">
+      <img src="../resources/images/logo.png" alt="Logo" />
+      <h1>Pedido</h1>
+      <h2>ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
+    </div>
+    <div class="ticket-body">
+      <p><strong>Proveedor:</strong> <span id="imgProviderName"></span></p>
+      <p><strong>Sucursal:</strong> <span id="imgSucursalName"></span></p>
+      <p><strong>Entrega en:</strong> <span id="imgDestination"></span></p>
+      <p><strong>Fecha de Registro:</strong> <span id="imgSaveDate"></span></p>
+      <h3>Productos:</h3>
+      <table class="products-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Presentación</th>
+            <th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody id="imgProductsTableBody"></tbody>
+      </table>
+    </div>
+    <div class="ticket-footer">
+      <p>Gracias por su pedido.</p>
+    </div>
+  </div>
+
+  <script>
+    // Función para cargar los filtros: sucursales, proveedores.
+    async function loadFilters() {
+      try {
+        const sucursalSelect = document.getElementById("sucursalFilter");
+        const sucSnap = await db.collection("sucursales").get();
+        sucSnap.forEach(doc => {
+          const opt = document.createElement("option");
+          opt.value = doc.id;
+          opt.textContent = doc.data().name;
+          sucursalSelect.appendChild(opt);
+        });
+        const providerSelect = document.getElementById("providerFilter");
+        const ordersSnap = await db.collection("orders").get();
+        const providers = new Set();
+        ordersSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.providerName) providers.add(data.providerName);
+        });
+        providers.forEach(provider => {
+          const opt = document.createElement("option");
+          opt.value = provider;
+          opt.textContent = provider;
+          providerSelect.appendChild(opt);
+        });
+      } catch (error) {
+        Swal.fire({ icon: "error", title: "Error", text: error.message });
+      }
+    }
+
+    // Función para recargar pedidos según filtros y llenar la tabla general y la sección para PDF.
+    async function reloadExportOrders() {
+      try {
+        let query = db.collection("orders");
+        const sucursal = document.getElementById("sucursalFilter").value;
+        if (sucursal !== "all") {
+          query = query.where("sucursalId", "==", sucursal);
+        }
+        const provider = document.getElementById("providerFilter").value;
+        if (provider !== "all") {
+          query = query.where("providerName", "==", provider);
+        }
+        const estado = document.getElementById("estadoFilter").value;
+        if (estado !== "all") {
+          query = query.where("status", "==", estado);
+        }
+        const deliveryType = document.getElementById("deliveryTypeFilter").value;
+        if (deliveryType !== "all") {
+          query = query.where("destination", "==", deliveryType);
+        }
+        const dateVal = document.getElementById("dateFilter").value;
+        if (dateVal) {
+          const startDate = new Date(dateVal);
+          const endDate = new Date(dateVal);
+          endDate.setDate(endDate.getDate() + 1);
+          query = query.where("timestamp", ">=", startDate).where("timestamp", "<", endDate);
+        }
+        const snapshot = await query.get();
+        // Llenar tabla general
+        const tbodyGeneral = document.querySelector("#ordersGeneralTable tbody");
+        tbodyGeneral.innerHTML = "";
+        // Llenar sección detallada para PDF (oculta)
+        const detailedContainer = document.getElementById("detailedOrdersContainer");
+        detailedContainer.innerHTML = "";
+        snapshot.forEach(doc => {
+          const order = doc.data();
+          // Llenar tabla general
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${order.orderId || "-"}</td>
+            <td>${order.providerName || "-"}</td>
+            <td>${order.sucursalName || "-"}</td>
+            <td>${order.orderDate || "-"}</td>
+            <td>${order.destination || "-"}</td>
+            <td>${order.status || "-"}</td>
+          `;
+          tbodyGeneral.appendChild(row);
+          // Bloque detallado para PDF
+          const orderBlock = document.createElement("div");
+          orderBlock.style.border = "1px solid #ccc";
+          orderBlock.style.padding = "1rem";
+          orderBlock.style.marginBottom = "1rem";
+          orderBlock.innerHTML = `
+            <h3>Pedido ${order.orderId || "-"}</h3>
+            <p><strong>Proveedor:</strong> ${order.providerName || "-"}</p>
+            <p><strong>Sucursal:</strong> ${order.sucursalName || "-"}</p>
+            <p><strong>Fecha:</strong> ${order.orderDate || "-"}</p>
+            <p><strong>Destino:</strong> ${order.destination || "-"}</p>
+            <p><strong>Estado:</strong> ${order.status || "-"}</p>
+            <h4>Productos</h4>
+          `;
+          if (order.products && order.products.length > 0) {
+            const prodTable = document.createElement("table");
+            prodTable.style.width = "100%";
+            prodTable.style.borderCollapse = "collapse";
+            prodTable.innerHTML = `
+              <thead>
+                <tr>
+                  <th style="border: 1px solid #ccc; padding: 0.3rem;">Producto</th>
+                  <th style="border: 1px solid #ccc; padding: 0.3rem;">Presentación</th>
+                  <th style="border: 1px solid #ccc; padding: 0.3rem;">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            `;
+            const tbodyProd = prodTable.querySelector("tbody");
+            order.products.forEach(prod => {
+              const prodRow = document.createElement("tr");
+              prodRow.innerHTML = `
+                <td style="border: 1px solid #ccc; padding: 0.3rem;">${prod.name || "-"}</td>
+                <td style="border: 1px solid #ccc; padding: 0.3rem;">${prod.presentation || "-"}</td>
+                <td style="border: 1px solid #ccc; padding: 0.3rem;">${prod.quantity || "-"}</td>
+              `;
+              tbodyProd.appendChild(prodRow);
+            });
+            orderBlock.appendChild(prodTable);
+          } else {
+            orderBlock.innerHTML += `<p>No hay productos.</p>`;
+          }
+          detailedContainer.appendChild(orderBlock);
+        });
+      } catch (error) {
+        Swal.fire({ icon: "error", title: "Error", text: error.message });
+      }
+    }
+
+    // Exportar a Excel usando la tabla general
+    function exportOrdersExcel() {
+      const wb = XLSX.utils.book_new();
+      const ws_data = [
+        ["ID Pedido", "Proveedor", "Sucursal", "Fecha", "Destino", "Estado"]
+      ];
+      const rows = document.querySelectorAll("#ordersGeneralTable tbody tr");
+      rows.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        const rowData = [];
+        cells.forEach(cell => rowData.push(cell.textContent));
+        ws_data.push(rowData);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Pedidos Generales");
+      XLSX.writeFile(wb, "Pedidos.xlsx");
+    }
+
+    // Exportar a PDF con pedidos detallados
+    async function exportOrdersPDF() {
+      try {
+        await reloadExportOrders();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        let yPosition = 10;
+        doc.setFontSize(16);
+        doc.text("Listado de Pedidos Detallados", 14, yPosition);
+        yPosition += 10;
+        // Incluir filtro por proveedor en el título, si aplica
+        const provider = document.getElementById("providerFilter").value;
+        if (provider !== "all") {
+          doc.setFontSize(12);
+          doc.text(`Filtrado por Proveedor: ${provider}`, 14, yPosition);
+          yPosition += 10;
+        }
+        const detailedContainer = document.getElementById("detailedOrdersContainer");
+        const orderBlocks = detailedContainer.children;
+        for (let i = 0; i < orderBlocks.length; i++) {
+          const block = orderBlocks[i];
+          const headerElements = block.querySelectorAll("h3, p");
+          let orderInfo = "";
+          headerElements.forEach(el => {
+            orderInfo += el.textContent + "\n";
+          });
+          doc.setFontSize(12);
+          doc.text(orderInfo, 14, yPosition);
+          yPosition += 25;
+          const prodTable = block.querySelector("table");
+          if (prodTable) {
+            doc.autoTable({ html: prodTable, startY: yPosition, theme: 'grid', styles: { fontSize: 10 } });
+            yPosition = doc.lastAutoTable.finalY + 10;
+          }
+          doc.setLineWidth(0.5);
+          doc.line(14, yPosition, 196, yPosition);
+          yPosition += 10;
+          if (yPosition > 270 && i < orderBlocks.length - 1) {
+            doc.addPage();
+            yPosition = 10;
+          }
+        }
+        doc.save("PedidosDetallados.pdf");
+      } catch (error) {
+        Swal.fire({ icon: "error", title: "Error en PDF", text: error.message });
+      }
+    }
+
+    // Función para exportar imágenes individuales de cada pedido
+    async function exportAllOrderImages() {
+      try {
+        let query = db.collection("orders");
+        const sucursal = document.getElementById("sucursalFilter").value;
+        if (sucursal !== "all") {
+          query = query.where("sucursalId", "==", sucursal);
+        }
+        const provider = document.getElementById("providerFilter").value;
+        if (provider !== "all") {
+          query = query.where("providerName", "==", provider);
+        }
+        const estado = document.getElementById("estadoFilter").value;
+        if (estado !== "all") {
+          query = query.where("status", "==", estado);
+        }
+        const deliveryType = document.getElementById("deliveryTypeFilter").value;
+        if (deliveryType !== "all") {
+          query = query.where("destination", "==", deliveryType);
+        }
+        const dateVal = document.getElementById("dateFilter").value;
+        if (dateVal) {
+          const startDate = new Date(dateVal);
+          const endDate = new Date(dateVal);
+          endDate.setDate(endDate.getDate() + 1);
+          query = query.where("timestamp", ">=", startDate).where("timestamp", "<", endDate);
+        }
+        const snapshot = await query.get();
+        if (snapshot.empty) {
+          Swal.fire("No se encontraron pedidos para exportar imágenes.");
+          return;
+        }
+        const orders = [];
+        snapshot.forEach(doc => {
+          orders.push(doc.data());
+        });
+        for (const order of orders) {
+          await exportOrderImage(order);
+          await new Promise(r => setTimeout(r, 500)); // pequeño retardo
+        }
+        Swal.fire("Descarga de imágenes completada.");
+      } catch (error) {
+        Swal.fire({ icon: "error", title: "Error", text: error.message });
+      }
+    }
+
+    // Función para exportar imagen de un pedido individual usando el formato de imagen (similar a exportAsImageTicket)
+    async function exportOrderImage(order) {
+      return new Promise((resolve, reject) => {
+        try {
+          document.getElementById("imgOrderId").textContent = order.orderId;
+          document.getElementById("imgProviderName").textContent = order.providerName;
+          document.getElementById("imgSucursalName").textContent = order.sucursalName;
+          document.getElementById("imgDestination").textContent = order.destination;
+          const regDate = order.savedDate || order.orderDate;
+          document.getElementById("imgSaveDate").textContent = regDate;
+          const tbody = document.getElementById("imgProductsTableBody");
+          tbody.innerHTML = "";
+          if (order.products && order.products.length > 0) {
+            order.products.forEach(prod => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${prod.name}</td>
+                <td>${prod.presentation}</td>
+                <td>${prod.quantity}</td>
+              `;
+              tbody.appendChild(row);
+            });
+          }
+          const ticket = document.getElementById("orderDetailsForImage");
+          ticket.style.display = "block";
+          ticket.style.left = "50%";
+          ticket.style.top = "50%";
+          ticket.style.transform = "translate(-50%, -50%)";
+          html2canvas(ticket, { scale: 3 })
+            .then(canvas => {
+              const imgData = canvas.toDataURL("image/png");
+              const link = document.createElement("a");
+              link.href = imgData;
+              link.download = `Pedido_${order.orderId}.png`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              ticket.style.display = "none";
+              resolve();
+            })
+            .catch(err => {
+              Swal.fire({ icon: "error", title: "Error", text: "No se pudo exportar la imagen" });
+              reject(err);
+            });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    // Inicializar filtros y cargar pedidos al cargar la página
+    loadFilters().then(reloadExportOrders);
+  </script>
+</body>
+</html>

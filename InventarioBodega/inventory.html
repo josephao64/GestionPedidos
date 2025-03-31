@@ -128,6 +128,18 @@
                 </button>
               </div>
             </div>
+
+            <!-- Nuevo filtro de orden -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label for="productSortOrder" class="form-label">Ordenar por</label>
+                <select id="productSortOrder" class="form-select" onchange="loadProducts()">
+                  <option value="desc">Más reciente primero</option>
+                  <option value="asc">Menos reciente primero</option>
+                </select>
+              </div>
+            </div>
+
             <div class="mb-3">
               <input
                 type="text"
@@ -195,9 +207,7 @@
             <!-- Filtros para Movimientos -->
             <div class="row mb-3">
               <div class="col-md-3">
-                <label for="movementSortOrder" class="form-label"
-                  >Orden</label
-                >
+                <label for="movementSortOrder" class="form-label">Orden</label>
                 <select
                   id="movementSortOrder"
                   class="form-select"
@@ -208,9 +218,7 @@
                 </select>
               </div>
               <div class="col-md-3">
-                <label for="movementFilterUser" class="form-label"
-                  >Responsable</label
-                >
+                <label for="movementFilterUser" class="form-label">Responsable</label>
                 <input
                   type="text"
                   id="movementFilterUser"
@@ -220,9 +228,7 @@
                 />
               </div>
               <div class="col-md-3">
-                <label for="movementFilterProduct" class="form-label"
-                  >Producto</label
-                >
+                <label for="movementFilterProduct" class="form-label">Producto</label>
                 <select
                   id="movementFilterProduct"
                   class="form-select"
@@ -349,10 +355,7 @@
             <!-- Contenedor oculto para exportar facturas en imagen -->
             <div id="exportInvoicesContainer" style="display: none;">
               <h3 style="text-align:center;">Facturas Registradas</h3>
-              <table
-                class="table table-striped"
-                style="width: 100%; text-align: center;"
-              >
+              <table class="table table-striped" style="width: 100%; text-align: center;">
                 <thead>
                   <tr>
                     <th>Número</th>
@@ -420,7 +423,7 @@
     </div>
 
     <!-- MODALES -->
-    <!-- Modal para Agregar/Editar Producto (sin cambios) -->
+    <!-- Modal para Agregar/Editar Producto -->
     <div
       class="modal fade"
       id="productModal"
@@ -527,7 +530,7 @@
       </div>
     </div>
 
-    <!-- Modal para Registrar/Editar Movimiento (sin cambios) -->
+    <!-- Modal para Registrar/Editar Movimiento -->
     <div
       class="modal fade"
       id="movementModal"
@@ -646,7 +649,7 @@
       </div>
     </div>
 
-    <!-- Modal para Reajuste (sin cambios) -->
+    <!-- Modal para Reajuste -->
     <div
       class="modal fade"
       id="adjustmentModal"
@@ -744,7 +747,7 @@
       </div>
     </div>
 
-    <!-- Modal para Cargar Producto desde Catálogo (sin cambios) -->
+    <!-- Modal para Cargar Producto desde Catálogo -->
     <div
       class="modal fade"
       id="catalogModal"
@@ -818,9 +821,8 @@
             <div class="modal-body">
               <input type="hidden" id="invoiceId" />
               <div class="mb-3">
-                <label for="invoiceNumber" class="form-label"
-                  >Número de Factura</label
-                >
+                <label for="invoiceNumber" class="form-label">
+                  Número de Factura</label>
                 <input
                   type="text"
                   class="form-control"
@@ -832,9 +834,8 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="invoiceDate" class="form-label"
-                  >Fecha de Factura</label
-                >
+                <label for="invoiceDate" class="form-label">
+                  Fecha de Factura</label>
                 <input
                   type="date"
                   class="form-control"
@@ -846,9 +847,8 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="invoiceCompany" class="form-label"
-                  >Empresa</label
-                >
+                <label for="invoiceCompany" class="form-label">
+                  Empresa</label>
                 <select class="form-select" id="invoiceCompany" required>
                   <option value="">Seleccione la empresa</option>
                   <option value="AMERICAN PIZZA">AMERICAN PIZZA</option>
@@ -864,9 +864,8 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="invoiceSupplier" class="form-label"
-                  >Proveedor</label
-                >
+                <label for="invoiceSupplier" class="form-label">
+                  Proveedor</label>
                 <select class="form-select" id="invoiceSupplier" required></select>
                 <div class="invalid-feedback">
                   Seleccione un proveedor.
@@ -897,9 +896,8 @@
                 </button>
               </div>
               <div class="mb-3">
-                <label for="invoiceOverallTotal" class="form-label"
-                  >Total Factura</label
-                >
+                <label for="invoiceOverallTotal" class="form-label">
+                  Total Factura</label>
                 <input
                   type="number"
                   class="form-control"
@@ -929,7 +927,7 @@
       </div>
     </div>
 
-    <!-- Modal para Reporte de Producto (sin cambios) -->
+    <!-- Modal para Reporte de Producto -->
     <div
       class="modal fade"
       id="reportModal"
@@ -955,15 +953,13 @@
               <div class="col-md-6">
                 <form id="reportForm" class="mb-3">
                   <div class="mb-3">
-                    <label for="reportProduct" class="form-label"
-                      >Producto</label
-                    >
+                    <label for="reportProduct" class="form-label">
+                      Producto</label>
                     <select class="form-select" id="reportProduct" required></select>
                   </div>
                   <div class="mb-3">
-                    <label for="reportStartDate" class="form-label"
-                      >Fecha de Inicio</label
-                    >
+                    <label for="reportStartDate" class="form-label">
+                      Fecha de Inicio</label>
                     <input
                       type="date"
                       class="form-control"
@@ -972,9 +968,8 @@
                     />
                   </div>
                   <div class="mb-3">
-                    <label for="reportEndDate" class="form-label"
-                      >Fecha de Fin</label
-                    >
+                    <label for="reportEndDate" class="form-label">
+                      Fecha de Fin</label>
                     <input
                       type="date"
                       class="form-control"

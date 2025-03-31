@@ -40,7 +40,6 @@ function showSection(section) {
     loadProducts();
   } else if (section === "movements") {
     document.getElementById("movementsSection").style.display = "block";
-    // La función loadMovements() se encuentra en movimientos.js
     loadMovements();
   } else if (section === "adjustments") {
     document.getElementById("adjustmentsSection").style.display = "block";
@@ -77,7 +76,7 @@ async function saveProduct() {
 
     if (!name) throw new Error("El nombre del producto es obligatorio.");
 
-    // Si es nuevo, asignar un número entero único
+    // Si es nuevo, asignar un número entero único basado en la fecha
     var idNum = id ? null : Date.now();
 
     var productData = {
@@ -104,10 +103,15 @@ async function saveProduct() {
   }
 }
 
+// Lee el valor del dropdown "productSortOrder" para ordenar los productos
 async function loadProducts() {
   try {
-    let snapshot = await db.collection("inventoryProducts").get();
-    let tbody = document.getElementById("productsTable").getElementsByTagName("tbody")[0];
+    let sortOrderSelect = document.getElementById("productSortOrder");
+    let order = sortOrderSelect ? sortOrderSelect.value : "desc";
+
+    let snapshot = await db.collection("inventoryProducts").orderBy("idNum", order).get();
+
+    let tbody = document.getElementById("productsTable").querySelector("tbody");
     tbody.innerHTML = "";
     snapshot.forEach(doc => {
       let product = doc.data();
@@ -131,20 +135,23 @@ async function loadProducts() {
   }
 }
 
+// Filtra los productos buscando en todas las celdas de cada fila del tbody
 function filterProducts() {
   var input = document.getElementById("productSearchInput");
   var filter = input.value.toUpperCase();
-  var table = document.getElementById("productsTable");
-  var tr = table.getElementsByTagName("tr");
-  for (var i = 1; i < tr.length; i++) {
+  var tbody = document.getElementById("productsTable").querySelector("tbody");
+  var tr = tbody.getElementsByTagName("tr");
+  for (var i = 0; i < tr.length; i++) {
     let cells = tr[i].getElementsByTagName("td");
-    if (cells.length > 0) {
-      let text = cells[0].textContent + " " + cells[1].textContent;
-      tr[i].style.display = text.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+    let rowText = "";
+    for (var j = 0; j < cells.length; j++) {
+      rowText += cells[j].textContent + " ";
     }
+    tr[i].style.display = rowText.toUpperCase().indexOf(filter) > -1 ? "" : "none";
   }
 }
 
+// Carga los datos del producto en el modal y muestra el modal para editar
 async function editProduct(id) {
   try {
     let doc = await db.collection("inventoryProducts").doc(id).get();
@@ -157,6 +164,9 @@ async function editProduct(id) {
       document.getElementById("productUnit").value = product.unit;
       document.getElementById("productStock").value = product.stock;
       document.getElementById("productStockMin").value = product.stockMin;
+      
+      // Muestra el modal de producto para edición
+      new bootstrap.Modal(document.getElementById("productModal")).show();
     } else {
       alert("Producto no encontrado.");
     }
@@ -254,7 +264,7 @@ async function saveAdjustment() {
 async function showCatalogModal() {
   try {
     let snapshot = await db.collection("products").get();
-    let tbody = document.getElementById("catalogProductsTable").getElementsByTagName("tbody")[0];
+    let tbody = document.getElementById("catalogProductsTable").querySelector("tbody");
     tbody.innerHTML = "";
     snapshot.forEach(doc => {
       let product = doc.data();
@@ -562,7 +572,7 @@ async function saveInvoice() {
 async function loadInvoices() {
   try {
     let snapshot = await db.collection("invoices").orderBy("date", "desc").get();
-    let tbody = document.getElementById("invoicesTable").getElementsByTagName("tbody")[0];
+    let tbody = document.getElementById("invoicesTable").querySelector("tbody");
     tbody.innerHTML = "";
 
     let actionsHeader = document.getElementById("actionsHeader");
