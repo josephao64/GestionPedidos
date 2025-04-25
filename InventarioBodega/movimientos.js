@@ -12,8 +12,9 @@ function showAddMovementForm() {
   document.getElementById("movementUser").value = "";
   document.getElementById("movementReason").value = "";
   document.getElementById("movementComments").value = "";
-  document.getElementById("movementModalLabel").textContent =
-    "Registrar Movimiento";
+  // Reiniciar el campo de fecha
+  document.getElementById("movementDate").value = "";
+  document.getElementById("movementModalLabel").textContent = "Registrar Movimiento";
 }
 
 // Función para guardar (o actualizar) un movimiento
@@ -22,12 +23,16 @@ async function saveMovement() {
     let movementId = document.getElementById("movementId").value;
     let productId = document.getElementById("movementProductSelect").value;
     let type = document.getElementById("movementType").value;
-    let quantity = parseFloat(
-      document.getElementById("movementQuantity").value
-    );
+    let quantity = parseFloat(document.getElementById("movementQuantity").value);
     let user = document.getElementById("movementUser").value;
     let reason = document.getElementById("movementReason").value;
     let comments = document.getElementById("movementComments").value;
+
+    // Obtener la fecha ingresada en el formulario
+    let dateInput = document.getElementById("movementDate").value;
+    let movementDate = dateInput
+      ? new Date(dateInput)
+      : firebase.firestore.FieldValue.serverTimestamp();
 
     if (isNaN(quantity) || quantity <= 0)
       throw new Error("La cantidad debe ser un número positivo.");
@@ -37,10 +42,8 @@ async function saveMovement() {
     let product = productDoc.exists ? productDoc.data() : null;
 
     if (movementId) {
-      let oldMovementDoc = await db
-        .collection("inventoryMovements")
-        .doc(movementId)
-        .get();
+      // Actualizar movimiento existente
+      let oldMovementDoc = await db.collection("inventoryMovements").doc(movementId).get();
       if (!oldMovementDoc.exists)
         throw new Error("Movimiento no encontrado");
       let oldMovement = oldMovementDoc.data();
@@ -58,14 +61,16 @@ async function saveMovement() {
         await productRef.update({ stock: newStock });
       }
       await db.collection("inventoryMovements").doc(movementId).update({
+        productId: productId,
         type: type,
         quantity: quantity,
-        date: firebase.firestore.FieldValue.serverTimestamp(),
+        date: movementDate,
         user: user,
         reason: reason,
         comments: comments,
       });
     } else {
+      // Registrar nuevo movimiento
       if (product) {
         let newStock = product.stock;
         if (type === "entrada" || type === "ajuste") {
@@ -73,9 +78,7 @@ async function saveMovement() {
         } else if (type === "salida") {
           newStock -= quantity;
           if (newStock < 0)
-            throw new Error(
-              "No hay suficiente stock para realizar esta salida."
-            );
+            throw new Error("No hay suficiente stock para realizar esta salida.");
         }
         await productRef.update({ stock: newStock });
       }
@@ -83,14 +86,14 @@ async function saveMovement() {
         productId: productId,
         type: type,
         quantity: quantity,
-        date: firebase.firestore.FieldValue.serverTimestamp(),
+        date: movementDate,
         user: user,
         reason: reason,
         comments: comments,
       });
     }
     closeModal("movementModal");
-    loadProducts(); // Función global en inventario.js
+    loadProducts(); // Función global definida en inventario.js
     loadMovements();
   } catch (error) {
     console.error("Error al registrar/actualizar movimiento:", error);
@@ -105,9 +108,7 @@ async function loadMovements() {
     let sortOrderElem = document.getElementById("movementSortOrder");
     let sortOrder = sortOrderElem ? sortOrderElem.value : "desc";
     let filterUserElem = document.getElementById("movementFilterUser");
-    let filterUser = filterUserElem
-      ? filterUserElem.value.trim().toLowerCase()
-      : "";
+    let filterUser = filterUserElem ? filterUserElem.value.trim().toLowerCase() : "";
     let filterProductElem = document.getElementById("movementFilterProduct");
     let filterProduct = filterProductElem ? filterProductElem.value : "";
 
@@ -119,32 +120,24 @@ async function loadMovements() {
     query = query.orderBy("date", sortOrder);
 
     let snapshot = await query.get();
-    let tbody = document
-      .getElementById("movementsTable")
-      .getElementsByTagName("tbody")[0];
+    let tbody = document.getElementById("movementsTable").getElementsByTagName("tbody")[0];
     tbody.innerHTML = "";
 
     // Recorrer documentos y aplicar filtro de responsable de forma cliente
     for (let doc of snapshot.docs) {
       let m = doc.data();
-      if (
-        filterUser !== "" &&
-        (!m.user || !m.user.toLowerCase().includes(filterUser))
-      ) {
+      if (filterUser !== "" && (!m.user || !m.user.toLowerCase().includes(filterUser))) {
         continue;
       }
-      let productDoc = await db
-        .collection("inventoryProducts")
-        .doc(m.productId)
-        .get();
-      let productName = productDoc.exists
-        ? productDoc.data().name
-        : "Producto no encontrado";
+      let productDoc = await db.collection("inventoryProducts").doc(m.productId).get();
+      let productName = productDoc.exists ? productDoc.data().name : "Producto no encontrado";
       let row = tbody.insertRow();
       row.insertCell(0).textContent = productName;
       row.insertCell(1).textContent = m.type;
       row.insertCell(2).textContent = m.quantity;
-      let dateStr = m.date ? m.date.toDate().toLocaleString() : "";
+      let dateStr = m.date
+        ? (m.date.toDate ? m.date.toDate().toLocaleString() : new Date(m.date).toLocaleString())
+        : "";
       row.insertCell(3).textContent = dateStr;
       row.insertCell(4).textContent = m.user;
       row.insertCell(5).textContent = m.reason;
@@ -163,7 +156,7 @@ async function loadMovements() {
   }
 }
 
-// Función para editar un movimiento
+// Función para editar un movimiento, ahora incluyendo la fecha
 async function editMovement(movementId) {
   try {
     let doc = await db.collection("inventoryMovements").doc(movementId).get();
@@ -176,8 +169,14 @@ async function editMovement(movementId) {
       document.getElementById("movementUser").value = m.user;
       document.getElementById("movementReason").value = m.reason;
       document.getElementById("movementComments").value = m.comments;
-      document.getElementById("movementModalLabel").textContent =
-        "Editar Movimiento";
+      // Convertir el timestamp a formato 'YYYY-MM-DDTHH:MM' para el input datetime-local
+      let dateLocal = "";
+      if (m.date && m.date.toDate) {
+        let dateObj = m.date.toDate();
+        dateLocal = dateObj.toISOString().slice(0, 16);
+      }
+      document.getElementById("movementDate").value = dateLocal;
+      document.getElementById("movementModalLabel").textContent = "Editar Movimiento";
       new bootstrap.Modal(document.getElementById("movementModal")).show();
     } else {
       alert("Movimiento no encontrado.");
@@ -226,10 +225,7 @@ async function populateMovementFilterProduct() {
       filterSelect.appendChild(option);
     });
   } catch (error) {
-    console.error(
-      "Error al cargar productos para filtro de movimientos:",
-      error
-    );
+    console.error("Error al cargar productos para filtro de movimientos:", error);
   }
 }
 

@@ -97,9 +97,7 @@
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
           <!-- Sección: Productos -->
           <section id="productsSection" class="my-4">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
+            <div class="d-flex justify-content-between align-items-center mb-3">
               <h2>Gestión de Productos</h2>
               <!-- BOTÓN PARA REGRESAR A INICIO -->
               <div>
@@ -133,7 +131,11 @@
             <div class="row mb-3">
               <div class="col-md-4">
                 <label for="productSortOrder" class="form-label">Ordenar por</label>
-                <select id="productSortOrder" class="form-select" onchange="loadProducts()">
+                <select
+                  id="productSortOrder"
+                  class="form-select"
+                  onchange="loadProducts()"
+                >
                   <option value="desc">Más reciente primero</option>
                   <option value="asc">Menos reciente primero</option>
                 </select>
@@ -167,10 +169,7 @@
               </table>
             </div>
             <!-- Contenedor oculto para exportar stock en imagen -->
-            <div
-              id="exportProductsContainer"
-              style="display: none;"
-            >
+            <div id="exportProductsContainer" style="display: none;">
               <h3 id="exportHeader"></h3>
               <table
                 class="table table-striped"
@@ -191,9 +190,7 @@
 
           <!-- Sección: Movimientos -->
           <section id="movementsSection" class="my-4" style="display: none;">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
+            <div class="d-flex justify-content-between align-items-center mb-3">
               <h2>Historial de Movimientos</h2>
               <button
                 class="btn btn-primary"
@@ -262,9 +259,7 @@
 
           <!-- Sección: Reajustes -->
           <section id="adjustmentsSection" class="my-4" style="display: none;">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
+            <div class="d-flex justify-content-between align-items-center mb-3">
               <h2>Reajustes de Inventario</h2>
               <button
                 class="btn btn-primary"
@@ -282,9 +277,7 @@
 
           <!-- Sección: Facturas -->
           <section id="invoicesSection" class="my-4" style="display: none;">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
+            <div class="d-flex justify-content-between align-items-center mb-3">
               <h2>Registro de Facturas</h2>
               <div>
                 <button
@@ -326,9 +319,7 @@
                     class="form-check-input"
                     onchange="loadInvoices()"
                   />
-                  <label
-                    for="groupByCompanyCheckbox"
-                    class="form-check-label"
+                  <label for="groupByCompanyCheckbox" class="form-check-label"
                     >Agrupar por Empresa</label
                   >
                 </div>
@@ -355,7 +346,10 @@
             <!-- Contenedor oculto para exportar facturas en imagen -->
             <div id="exportInvoicesContainer" style="display: none;">
               <h3 style="text-align:center;">Facturas Registradas</h3>
-              <table class="table table-striped" style="width: 100%; text-align: center;">
+              <table
+                class="table table-striped"
+                style="width: 100%; text-align: center;"
+              >
                 <thead>
                   <tr>
                     <th>Número</th>
@@ -375,9 +369,7 @@
 
           <!-- Sección: Reportes -->
           <section id="reportsSection" class="my-4" style="display: none;">
-            <div
-              class="d-flex justify-content-between align-items-center mb-3"
-            >
+            <div class="d-flex justify-content-between align-items-center mb-3">
               <h2>Reportes</h2>
               <button
                 class="btn btn-primary"
@@ -446,9 +438,7 @@
             <div class="modal-body">
               <input type="hidden" id="productId" />
               <div class="mb-3">
-                <label for="productName" class="form-label"
-                  >Nombre del Producto</label
-                >
+                <label for="productName" class="form-label">Nombre del Producto</label>
                 <input
                   type="text"
                   class="form-control"
@@ -460,13 +450,8 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="productDescription" class="form-label"
-                  >Descripción</label
-                >
-                <textarea
-                  class="form-control"
-                  id="productDescription"
-                ></textarea>
+                <label for="productDescription" class="form-label">Descripción</label>
+                <textarea class="form-control" id="productDescription"></textarea>
               </div>
               <div class="mb-3">
                 <label for="productUnit" class="form-label">Unidad</label>
@@ -481,9 +466,7 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="productStock" class="form-label"
-                  >Stock Inicial</label
-                >
+                <label for="productStock" class="form-label">Stock Inicial</label>
                 <input
                   type="number"
                   class="form-control"
@@ -495,9 +478,7 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="productStockMin" class="form-label"
-                  >Stock Mínimo</label
-                >
+                <label for="productStockMin" class="form-label">Stock Mínimo</label>
                 <input
                   type="number"
                   class="form-control"
@@ -510,18 +491,10 @@
               </div>
             </div>
             <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                 Cerrar
               </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="saveProduct()"
-              >
+              <button type="button" class="btn btn-primary" onclick="saveProduct()">
                 Guardar Producto
               </button>
             </div>
@@ -542,9 +515,7 @@
         <div class="modal-content">
           <form id="movementForm" novalidate>
             <div class="modal-header">
-              <h5 class="modal-title" id="movementModalLabel">
-                Registrar Movimiento
-              </h5>
+              <h5 class="modal-title" id="movementModalLabel">Registrar Movimiento</h5>
               <button
                 type="button"
                 class="btn btn-close"
@@ -555,14 +526,8 @@
             <div class="modal-body">
               <input type="hidden" id="movementId" />
               <div class="mb-3">
-                <label for="movementProductSelect" class="form-label"
-                  >Producto</label
-                >
-                <select
-                  class="form-select"
-                  id="movementProductSelect"
-                  required
-                ></select>
+                <label for="movementProductSelect" class="form-label">Producto</label>
+                <select class="form-select" id="movementProductSelect" required></select>
                 <div class="invalid-feedback">
                   Seleccione un producto.
                 </div>
@@ -579,68 +544,49 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="movementQuantity" class="form-label"
-                  >Cantidad</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="movementQuantity"
-                  required
-                />
+                <label for="movementQuantity" class="form-label">Cantidad</label>
+                <input type="number" class="form-control" id="movementQuantity" required />
                 <div class="invalid-feedback">
                   Ingrese una cantidad válida.
                 </div>
               </div>
               <div class="mb-3">
-                <label for="movementUser" class="form-label"
-                  >Usuario Responsable</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  id="movementUser"
-                  required
-                />
+                <label for="movementUser" class="form-label">Usuario Responsable</label>
+                <input type="text" class="form-control" id="movementUser" required />
                 <div class="invalid-feedback">
                   Ingrese el nombre del usuario.
                 </div>
               </div>
               <div class="mb-3">
                 <label for="movementReason" class="form-label">Motivo</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="movementReason"
-                  required
-                />
+                <input type="text" class="form-control" id="movementReason" required />
                 <div class="invalid-feedback">
                   Ingrese el motivo.
                 </div>
               </div>
               <div class="mb-3">
-                <label for="movementComments" class="form-label"
-                  >Comentarios</label
-                >
-                <textarea
+                <label for="movementComments" class="form-label">Comentarios</label>
+                <textarea class="form-control" id="movementComments"></textarea>
+              </div>
+              <!-- Campo para la fecha del movimiento -->
+              <div class="mb-3">
+                <label for="movementDate" class="form-label">Fecha</label>
+                <input
+                  type="datetime-local"
                   class="form-control"
-                  id="movementComments"
-                ></textarea>
+                  id="movementDate"
+                  required
+                />
+                <div class="invalid-feedback">
+                  Ingrese la fecha del movimiento.
+                </div>
               </div>
             </div>
             <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                 Cerrar
               </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="saveMovement()"
-              >
+              <button type="button" class="btn btn-primary" onclick="saveMovement()">
                 Guardar Movimiento
               </button>
             </div>
@@ -661,9 +607,7 @@
         <div class="modal-content">
           <form id="adjustmentForm" novalidate>
             <div class="modal-header">
-              <h5 class="modal-title" id="adjustmentModalLabel">
-                Realizar Reajuste
-              </h5>
+              <h5 class="modal-title" id="adjustmentModalLabel">Realizar Reajuste</h5>
               <button
                 type="button"
                 class="btn btn-close"
@@ -673,72 +617,39 @@
             </div>
             <div class="modal-body">
               <div class="mb-3">
-                <label for="adjustmentProductSelect" class="form-label"
-                  >Producto</label
-                >
-                <select
-                  class="form-select"
-                  id="adjustmentProductSelect"
-                  required
-                ></select>
+                <label for="adjustmentProductSelect" class="form-label">Producto</label>
+                <select class="form-select" id="adjustmentProductSelect" required></select>
                 <div class="invalid-feedback">
                   Seleccione un producto.
                 </div>
               </div>
               <div class="mb-3">
-                <label for="adjustmentQuantity" class="form-label"
-                  >Cantidad a ajustar</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="adjustmentQuantity"
-                  required
-                />
+                <label for="adjustmentQuantity" class="form-label">Cantidad a ajustar</label>
+                <input type="number" class="form-control" id="adjustmentQuantity" required />
                 <div class="invalid-feedback">
                   Ingrese una cantidad válida.
                 </div>
               </div>
               <div class="mb-3">
-                <label for="adjustmentUser" class="form-label"
-                  >Usuario Responsable</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  id="adjustmentUser"
-                  required
-                />
+                <label for="adjustmentUser" class="form-label">Usuario Responsable</label>
+                <input type="text" class="form-control" id="adjustmentUser" required />
                 <div class="invalid-feedback">
                   Ingrese el nombre del usuario.
                 </div>
               </div>
               <div class="mb-3">
                 <label for="adjustmentReason" class="form-label">Motivo</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="adjustmentReason"
-                  required
-                />
+                <input type="text" class="form-control" id="adjustmentReason" required />
                 <div class="invalid-feedback">
                   Ingrese el motivo.
                 </div>
               </div>
             </div>
             <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                 Cerrar
               </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="saveAdjustment()"
-              >
+              <button type="button" class="btn btn-primary" onclick="saveAdjustment()">
                 Guardar Ajuste
               </button>
             </div>
@@ -758,9 +669,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="catalogModalLabel">
-              Cargar Producto desde Catálogo
-            </h5>
+            <h5 class="modal-title" id="catalogModalLabel">Cargar Producto desde Catálogo</h5>
             <button
               type="button"
               class="btn btn-close"
@@ -808,9 +717,7 @@
         <div class="modal-content">
           <form id="invoiceForm" novalidate>
             <div class="modal-header">
-              <h5 class="modal-title" id="invoiceModalLabel">
-                Agregar Factura
-              </h5>
+              <h5 class="modal-title" id="invoiceModalLabel">Agregar Factura</h5>
               <button
                 type="button"
                 class="btn btn-close"
@@ -821,8 +728,7 @@
             <div class="modal-body">
               <input type="hidden" id="invoiceId" />
               <div class="mb-3">
-                <label for="invoiceNumber" class="form-label">
-                  Número de Factura</label>
+                <label for="invoiceNumber" class="form-label">Número de Factura</label>
                 <input
                   type="text"
                   class="form-control"
@@ -834,21 +740,14 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="invoiceDate" class="form-label">
-                  Fecha de Factura</label>
-                <input
-                  type="date"
-                  class="form-control"
-                  id="invoiceDate"
-                  required
-                />
+                <label for="invoiceDate" class="form-label">Fecha de Factura</label>
+                <input type="date" class="form-control" id="invoiceDate" required />
                 <div class="invalid-feedback">
                   Ingrese la fecha.
                 </div>
               </div>
               <div class="mb-3">
-                <label for="invoiceCompany" class="form-label">
-                  Empresa</label>
+                <label for="invoiceCompany" class="form-label">Empresa</label>
                 <select class="form-select" id="invoiceCompany" required>
                   <option value="">Seleccione la empresa</option>
                   <option value="AMERICAN PIZZA">AMERICAN PIZZA</option>
@@ -864,8 +763,7 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label for="invoiceSupplier" class="form-label">
-                  Proveedor</label>
+                <label for="invoiceSupplier" class="form-label">Proveedor</label>
                 <select class="form-select" id="invoiceSupplier" required></select>
                 <div class="invalid-feedback">
                   Seleccione un proveedor.
@@ -896,8 +794,7 @@
                 </button>
               </div>
               <div class="mb-3">
-                <label for="invoiceOverallTotal" class="form-label">
-                  Total Factura</label>
+                <label for="invoiceOverallTotal" class="form-label">Total Factura</label>
                 <input
                   type="number"
                   class="form-control"
@@ -907,18 +804,10 @@
               </div>
             </div>
             <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                 Cerrar
               </button>
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="saveInvoice()"
-              >
+              <button type="button" class="btn btn-primary" onclick="saveInvoice()">
                 Guardar Factura
               </button>
             </div>
@@ -938,9 +827,7 @@
       <div class="modal-dialog modal-xl">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="reportModalLabel">
-              Reporte de Producto
-            </h5>
+            <h5 class="modal-title" id="reportModalLabel">Reporte de Producto</h5>
             <button
               type="button"
               class="btn btn-close"
@@ -953,29 +840,16 @@
               <div class="col-md-6">
                 <form id="reportForm" class="mb-3">
                   <div class="mb-3">
-                    <label for="reportProduct" class="form-label">
-                      Producto</label>
+                    <label for="reportProduct" class="form-label">Producto</label>
                     <select class="form-select" id="reportProduct" required></select>
                   </div>
                   <div class="mb-3">
-                    <label for="reportStartDate" class="form-label">
-                      Fecha de Inicio</label>
-                    <input
-                      type="date"
-                      class="form-control"
-                      id="reportStartDate"
-                      required
-                    />
+                    <label for="reportStartDate" class="form-label">Fecha de Inicio</label>
+                    <input type="date" class="form-control" id="reportStartDate" required />
                   </div>
                   <div class="mb-3">
-                    <label for="reportEndDate" class="form-label">
-                      Fecha de Fin</label>
-                    <input
-                      type="date"
-                      class="form-control"
-                      id="reportEndDate"
-                      required
-                    />
+                    <label for="reportEndDate" class="form-label">Fecha de Fin</label>
+                    <input type="date" class="form-control" id="reportEndDate" required />
                   </div>
                   <button
                     type="button"
@@ -991,16 +865,10 @@
                   <p id="reportDateRange"></p>
                 </div>
                 <div class="mt-3">
-                  <button
-                    class="btn btn-success me-2"
-                    onclick="exportReportCSV()"
-                  >
+                  <button class="btn btn-success me-2" onclick="exportReportCSV()">
                     Exportar CSV
                   </button>
-                  <button
-                    class="btn btn-info"
-                    onclick="exportReportImage()"
-                  >
+                  <button class="btn btn-info" onclick="exportReportImage()">
                     Exportar Imagen (PNG)
                   </button>
                 </div>
