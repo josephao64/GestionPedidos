@@ -12,19 +12,22 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <!-- Archivo de conexión a la base de datos -->
   <script src="../database/connection.js"></script>
-  <!-- Archivo JavaScript de la aplicación (modificado para avance automático Tienda) -->
+  <!-- Archivo JavaScript de la aplicación -->
   <script defer src="pedidos.js"></script>
 </head>
 <body>
   <div class="header">
     <h1>Gestión de Pedidos</h1>
     <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
+    <!-- Botón para volver al menú principal -->
     <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
+    <!-- Nuevo botón para exportar pedidos -->
     <button class="export-orders-button" onclick="window.location.href='exportPedidos.html'">
       Exportar Pedidos
     </button>
   </div>
 
+  <!-- Filtros para administrador -->
   <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
     <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
     <select id="sucursalFilter" onchange="reloadOrders()"></select>
@@ -39,6 +42,7 @@
       <option value="delivery">Entrega en Bodega/Tienda</option>
     </select>
     
+    <!-- Filtro adicional: Tipo de Entrega -->
     <label for="deliveryTypeFilter" style="font-weight: bold; margin-left: 1rem;">Tipo de Entrega:</label>
     <select id="deliveryTypeFilter" onchange="reloadOrders()">
       <option value="all" selected>Todos</option>
@@ -55,23 +59,31 @@
     <label for="idSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por ID:</label>
     <input type="text" id="idSearchInput" placeholder="Ej. 123" oninput="reloadOrders()" style="width: 100px;"/>
     
+    <!-- Filtro por fecha -->
     <label for="dateSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por Fecha:</label>
     <input type="date" id="dateSearchInput" onchange="reloadOrders()" />
   </div>
 
+  <!-- Pestañas -->
   <div class="tab-container" id="tabContainer">
     <button class="tab-button active" onclick="openTab(event, 'inProcessOrdersContainer')">Pedidos en Proceso</button>
     <button class="tab-button" onclick="openTab(event, 'completedOrdersContainer')">Pedidos Completados</button>
   </div>
 
+  <!-- Contenedor Pedidos en Proceso -->
   <div id="inProcessOrdersContainer" class="container">
     <h2>Pedidos en Proceso</h2>
-    <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
+    <div id="inProcessOrdersAdminCards" class="order-cards-container">
+      <!-- Se generan dinámicamente -->
+    </div>
   </div>
 
+  <!-- Contenedor Pedidos Completados -->
   <div id="completedOrdersContainer" class="container" style="display: none;">
     <h2>Pedidos Completados</h2>
-    <div id="completedOrdersAdminCards" class="order-cards-container"></div>
+    <div id="completedOrdersAdminCards" class="order-cards-container">
+      <!-- Se generan dinámicamente -->
+    </div>
   </div>
 
   <!-- Modal: Detalles del Pedido -->
@@ -81,7 +93,7 @@
       <h2>Detalles del Pedido</h2>
       <div id="orderDetails"></div>
       <button id="exportOrderImageButton" style="margin-top: 1rem;">Exportar Pedido como Imagen</button>
-      <button onclick="editOrder(currentOrder)">Editar Pedido</button>
+      <button onclick="openEditOrderModal(currentOrder)">Editar Pedido</button>
     </div>
   </div>
 
@@ -210,17 +222,65 @@
     </div>
   </div>
 
-  <!-- Contenedor oculto para exportar recepción -->
+  <!-- Contenedor oculto para exportar recepción (se usa para generar la imagen a descargar) -->
   <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 1200px;">
-    <!-- ... contenido igual al original ... -->
+    <img id="exportReceptionLogo" src="../resources/images/logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
+    <h2>Recepción de Pedido</h2>
+    <p><strong>ID Pedido:</strong> <span id="exportReceptionOrderIdHidden"></span></p>
+    <p><strong>Proveedor:</strong> <span id="exportReceptionProviderHidden"></span></p>
+    <p><strong>Sucursal:</strong> <span id="exportReceptionSucursalHidden"></span></p>
+    <p><strong>Fecha de Pedido:</strong> <span id="exportReceptionOrderDateHidden"></span></p>
+    <p><strong>Facturas:</strong> <span id="exportReceptionInvoiceNumberHidden"></span></p>
+    <p><strong>Información adicional:</strong> <span id="exportReceptionInvoiceDateHidden"></span></p>
+    <p><strong>Total de la Factura:</strong> Q<span id="exportReceptionInvoiceTotalHidden"></span></p>
+    <p><strong>Última Edición:</strong> <span id="exportReceptionLastEditHidden"></span></p>
+    <table border="1" style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Presentación</th>
+          <th>Cantidad Pedida</th>
+          <th>Cantidad Recibida</th>
+          <th>Advertencias</th>
+          <th>Comentarios</th>
+        </tr>
+      </thead>
+      <tbody id="exportReceptionProductsTableBody"></tbody>
+    </table>
+    <div style="margin-top: 20px; font-weight: bold; text-align: center;">¡Gracias por su pedido!</div>
   </div>
 
-  <!-- Ticket oculto para exportar como imagen -->
+  <!-- Ticket oculto para exportar como imagen (para otros usos) -->
   <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
-    <!-- ... contenido igual al original ... -->
+    <div class="ticket-header">
+      <img src="../resources/images/logo.png" alt="Logo" />
+      <h1>Pedido</h1>
+      <h2>ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
+    </div>
+    <div class="ticket-body">
+      <p><strong>Proveedor:</strong> <span id="imgProviderName"></span></p>
+      <p><strong>Sucursal:</strong> <span id="imgSucursalName"></span></p>
+      <p><strong>Entrega en:</strong> <span id="imgDestination"></span></p>
+      <p><strong>Fecha de Registro:</strong> <span id="imgSaveDate"></span></p>
+      <h3>Productos:</h3>
+      <table class="products-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Presentación</th>
+            <th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody id="imgProductsTableBody"></tbody>
+      </table>
+    </div>
+    <div class="ticket-footer">
+      <p>Gracias por su pedido.</p>
+    </div>
   </div>
   
   <script>
+    // Se expone la función global en caso de que otras secciones la requieran
     window.downloadExportReceptionImage = downloadExportReceptionImage;
   </script>
 </body>

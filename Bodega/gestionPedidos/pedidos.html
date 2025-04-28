@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestión de Pedidos — Bodega</title>
+  <link rel="stylesheet" href="pedidos.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Conexión a la base de datos -->
+  <script src="/database/connection.js"></script>
+  <!-- Lógica para Bodega -->
+  <script defer src="pedidos.js"></script>
+</head>
+<body>
+  <script>
+    // Redirigir si no hay sesión
+    if (!localStorage.getItem('usuarioLogueado')) {
+      window.location.href = '/login.html';
+    }
+  </script>
+
+  <div class="header">
+    <h1>Gestión de Pedidos — Bodega</h1>
+    <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
+    <button onclick="goToMainMenu()">Volver al Menú Principal</button>
+  </div>
+
+  <!-- FILTROS -->
+  <div id="filterContainer" style="margin:1rem; display:flex; gap:1rem; flex-wrap:wrap;">
+    <input type="text" id="idSearchInput" placeholder="Buscar ID" oninput="reloadOrders()" style="width:100px"/>
+    <select id="providerFilter" onchange="reloadOrders()">
+      <option value="all">Todos Proveedores</option>
+    </select>
+    <select id="sucursalFilter" onchange="reloadOrders()">
+      <option value="all">Todas Sucursales</option>
+    </select>
+    <input type="date" id="dateSearchInput" onchange="reloadOrders()"/>
+  </div>
+
+  <!-- PESTAÑAS -->
+  <div class="tab-container">
+    <button class="tab-button active" onclick="openTab(event,'inProcess')">Pedidos en Proceso</button>
+    <button class="tab-button" onclick="openTab(event,'completed')">Pedidos Completados</button>
+  </div>
+
+  <!-- PEDIDOS EN PROCESO -->
+  <div id="inProcess" class="container">
+    <h2>En Proceso</h2>
+    <div id="inProcessOrders" class="order-cards-container"></div>
+  </div>
+
+  <!-- PEDIDOS COMPLETADOS -->
+  <div id="completed" class="container" style="display:none;">
+    <h2>Completados</h2>
+    <div id="completedOrders" class="order-cards-container"></div>
+  </div>
+
+  <!-- MODAL: DETALLES -->
+  <div id="orderDetailsModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeDetails()">&times;</span>
+      <div id="orderDetails"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: RECEPCIÓN -->
+  <div id="confirmOrderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeConfirm()">&times;</span>
+      <h3>Recepción de Pedido</h3>
+      <div>
+        <p><strong>ID:</strong> <span id="orderIdDisplay"></span></p>
+        <p><strong>Proveedor:</strong> <span id="providerNameDisplay"></span></p>
+        <p><strong>Fecha:</strong> <span id="orderDateDisplay"></span></p>
+      </div>
+      <div>
+        <label>Número de Factura:</label>
+        <input type="text" id="invoiceNumber" /><br/><br/>
+        <label>Fecha de Factura:</label>
+        <input type="date" id="invoiceDate" />
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Presentación</th>
+            <th>Cant. Pedida</th>
+            <th>Cant. Recibida</th>
+            <th>Precio Unitario</th>
+          </tr>
+        </thead>
+        <tbody id="confirmOrderProducts"></tbody>
+      </table>
+      <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
+    </div>
+  </div>
+
+  <!-- MODAL: VISTA RECEPCIÓN -->
+  <div id="receivedOrderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeReceived()">&times;</span>
+      <div id="receivedOrderDetails"></div>
+      <button onclick="exportReceivedImage()">Exportar Imagen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: ENVÍO -->
+  <div id="sendOrderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeSend()">&times;</span>
+      <h3>Enviar Pedido a Sucursal</h3>
+      <p><strong>Fecha de Envío:</strong> <span id="sendDateDisplay"></span></p>
+      <label>Transporte:</label>
+      <select id="transportType">
+        <option value="propio">Propio</option>
+        <option value="guia">Por Guía</option>
+      </select><br/><br/>
+      <div id="guideInput" style="display:none;">
+        <label>Número de Guía:</label>
+        <input type="text" id="guideNumber"/>
+      </div><br/>
+      <button onclick="confirmSend()">Confirmar Envío</button>
+    </div>
+  </div>
+
+  <script>
+    function openTab(evt, name) {
+      document.querySelectorAll('.container').forEach(c=>c.style.display='none');
+      document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));
+      document.getElementById(name).style.display='block';
+      evt.currentTarget.classList.add('active');
+    }
+    function goToMainMenu() { window.location.href='/index.html'; }
+  </script>
+</body>
+</html>
