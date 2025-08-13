@@ -4,91 +4,76 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Salidas de Productos</title>
+
     <!-- Bootstrap CSS -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <!-- Font Awesome (opcional) -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
-    <!-- Hoja de estilos personalizada -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"/>
+
+    <!-- Hoja de estilos -->
     <link rel="stylesheet" href="salidas.css" />
+
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
     <!-- Chart.js (para reportes) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- html2canvas (se sigue usando para exportar a imagen) -->
+
+    <!-- html2canvas (exportar imagen) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <!-- jsPDF (para exportar a PDF) -->
+
+    <!-- jsPDF (PDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- jsPDF-AutoTable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <!-- Archivo JavaScript principal -->
+
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- JS principal -->
     <script defer src="salidas.js"></script>
   </head>
   <body>
-    <!-- Botón de Inicio (ir a index.html) -->
+    <!-- Botón de Inicio -->
     <div class="d-flex justify-content-end p-2">
-      <a href="../../INDEX.HTML" class="btn btn-secondary">Inicio</a>
+      <a href="../../INDEX.HTML" class="btn btn-secondary btn-sm">
+        <i class="fa-solid fa-house"></i> Inicio
+      </a>
     </div>
 
-    <!-- Navbar para móviles -->
-    <nav class="navbar navbar-light bg-light d-md-none">
+    <!-- Navbar móvil -->
+    <nav class="navbar navbar-light bg-light d-md-none sticky-top shadow-sm">
       <div class="container-fluid">
-        <button
-          class="btn btn-primary"
-          type="button"
-          data-bs-toggle="offcanvas"
-          data-bs-target="#offcanvasSidebar"
-          aria-controls="offcanvasSidebar"
-        >
+        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar" aria-controls="offcanvasSidebar">
           <i class="fa-solid fa-bars"></i>
         </button>
         <span class="navbar-brand mb-0 h1">Salidas de Bodega</span>
       </div>
     </nav>
 
-    <!-- Offcanvas para menú en móviles -->
-    <div
-      class="offcanvas offcanvas-start d-md-none"
-      tabindex="-1"
-      id="offcanvasSidebar"
-      aria-labelledby="offcanvasSidebarLabel"
-    >
+    <!-- Offcanvas móvil -->
+    <div class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="offcanvasSidebar" aria-labelledby="offcanvasSidebarLabel">
       <div class="offcanvas-header">
         <h5 class="offcanvas-title" id="offcanvasSidebarLabel">Menú</h5>
-        <button
-          type="button"
-          class="btn-close text-reset"
-          data-bs-dismiss="offcanvas"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body">
         <ul class="nav flex-column">
           <li class="nav-item mb-2">
-            <a href="#" class="nav-link" onclick="showSection('register'); closeOffcanvas()">
-              Registrar Salida
-            </a>
+            <a href="#" class="nav-link" onclick="showSection('register'); closeOffcanvas()">Registrar Salida</a>
           </li>
           <li class="nav-item mb-2">
-            <a href="#" class="nav-link" onclick="showSection('history'); closeOffcanvas()">
-              Historial de Salidas
-            </a>
+            <a href="#" class="nav-link" onclick="showSection('history'); closeOffcanvas()">Historial de Salidas</a>
           </li>
           <li class="nav-item mb-2">
-            <a href="#" class="nav-link" onclick="showSection('stock'); closeOffcanvas()">
-              Stock Actual
-            </a>
+            <a href="#" class="nav-link" onclick="showSection('stock'); closeOffcanvas()">Stock Actual</a>
           </li>
           <li class="nav-item mb-2">
-            <a href="#" class="nav-link" onclick="showSection('reports'); closeOffcanvas()">
-              Reportes de Salidas
-            </a>
+            <a href="#" class="nav-link" onclick="showSection('reports'); closeOffcanvas()">Reportes de Salidas</a>
           </li>
         </ul>
       </div>
@@ -96,7 +81,7 @@
 
     <div class="container-fluid">
       <div class="row">
-        <!-- Sidebar para desktop (visible en md+ ) -->
+        <!-- Sidebar desktop -->
         <nav class="col-md-3 col-lg-2 d-none d-md-block bg-light sidebar p-3">
           <h4 class="mb-4">Salidas de Bodega</h4>
           <ul class="nav flex-column">
@@ -125,95 +110,124 @@
 
         <!-- Contenido principal -->
         <main class="col-12 col-md-9 col-lg-10 py-3">
-          <!-- Sección: Registrar Salida -->
+          <!-- ============ REGISTRAR SALIDA (REDISEÑO MÓVIL) ============ -->
           <section id="registerSection" class="my-4">
             <h2>Registrar Salida de Productos</h2>
+
             <div class="card p-3 shadow-sm">
-              <form id="outgoingForm">
-                <div class="row g-3 mb-3">
-                  <div class="col-12 col-md-6">
-                    <label for="outgoingDate" class="form-label">Fecha de Salida</label>
-                    <input type="date" id="outgoingDate" class="form-control" required />
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <label for="outgoingBranch" class="form-label">Sucursal</label>
-                    <select id="outgoingBranch" class="form-select" required></select>
-                  </div>
+              <form id="outgoingForm" class="needs-validation" novalidate>
+
+                <!-- Fecha -->
+                <div class="mb-3">
+                  <label for="outgoingDate" class="form-label">Fecha de Salida</label>
+                  <input type="date" id="outgoingDate" class="form-control form-control-lg" required />
+                  <div class="invalid-feedback">Selecciona una fecha válida (no futura).</div>
                 </div>
-                <div class="row g-3 mb-3">
-                  <div class="col-12 col-md-6">
-                    <label for="outgoingProduct" class="form-label">Producto</label>
-                    <select id="outgoingProduct" class="form-select" required></select>
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <label for="outgoingQuantity" class="form-label">Cantidad</label>
-                    <input type="number" id="outgoingQuantity" class="form-control" required />
-                  </div>
+
+                <!-- Sucursal (modal picker) -->
+                <div class="mb-3">
+                  <label class="form-label">Sucursal</label>
+                  <button type="button" class="btn btn-outline-primary w-100 py-3 picker-btn" data-bs-toggle="modal" data-bs-target="#branchPickerModal" id="btnPickBranch">
+                    <i class="fa-solid fa-store me-2"></i><span id="selectedBranchText">Seleccione la sucursal</span>
+                  </button>
+                  <select id="outgoingBranch" class="form-select d-none" required></select>
+                  <div class="invalid-feedback d-block small text-danger" id="branchHelper" style="display:none;">Selecciona una sucursal.</div>
                 </div>
-                <div class="row g-3 mb-3">
-                  <div class="col-12 col-md-6">
-                    <label for="outgoingUser" class="form-label">Usuario Responsable</label>
-                    <select id="outgoingUser" class="form-select" required>
-                      <option value="">Seleccione</option>
-                      <option value="ERICK">ERICK</option>
-                      <option value="CESAR">CESAR</option>
-                    </select>
+
+                <!-- Producto (modal picker) -->
+                <div class="mb-2">
+                  <label class="form-label">Producto</label>
+                  <button type="button" class="btn btn-outline-primary w-100 py-3 picker-btn" data-bs-toggle="modal" data-bs-target="#productPickerModal" id="btnPickProduct">
+                    <i class="fa-solid fa-box me-2"></i><span id="selectedProductText">Seleccione el producto</span>
+                  </button>
+                  <div class="mt-2">
+                    <span class="badge bg-secondary" id="selectedProductStockBadge" style="display:none;">Stock: —</span>
                   </div>
-                  <div class="col-12 col-md-6">
-                    <label for="outgoingComments" class="form-label">Comentarios</label>
-                    <input type="text" id="outgoingComments" class="form-control" />
-                  </div>
+                  <select id="outgoingProduct" class="form-select d-none" required></select>
+                  <div class="invalid-feedback d-block small text-danger" id="productHelper" style="display:none;">Selecciona un producto.</div>
                 </div>
-                <button type="button" class="btn btn-primary" onclick="saveOutgoing()">
-                  Registrar Salida
-                </button>
+
+                <!-- Cantidad con stepper -->
+                <div class="mb-3">
+                  <label for="outgoingQuantity" class="form-label">Cantidad</label>
+                  <div class="input-group input-group-lg">
+                    <button class="btn btn-outline-secondary" type="button" onclick="decQuantity()">−</button>
+                    <input type="number" id="outgoingQuantity" class="form-control text-center" inputmode="decimal" min="0.01" step="0.01" placeholder="0.00" required />
+                    <button class="btn btn-outline-secondary" type="button" onclick="incQuantity()">+</button>
+                  </div>
+                  <div class="invalid-feedback">Ingresa una cantidad válida mayor a 0.</div>
+                </div>
+
+                <!-- Usuario (segmentado) -->
+                <div class="mb-3">
+                  <label class="form-label">Usuario Responsable</label>
+                  <div class="btn-group w-100" role="group" aria-label="Usuario">
+                    <input type="radio" class="btn-check" name="outgoingUserRadio" id="userErick" value="ERICK" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="userErick">ERICK</label>
+
+                    <input type="radio" class="btn-check" name="outgoingUserRadio" id="userCesar" value="CESAR" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="userCesar">CESAR</label>
+                  </div>
+                  <select id="outgoingUser" class="form-select d-none" required>
+                    <option value="">Seleccione</option>
+                    <option value="ERICK">ERICK</option>
+                    <option value="CESAR">CESAR</option>
+                  </select>
+                  <div class="invalid-feedback d-block small text-danger" id="userHelper" style="display:none;">Selecciona el usuario responsable.</div>
+                </div>
+
+                <!-- Comentarios -->
+                <div class="mb-4">
+                  <label for="outgoingComments" class="form-label">Comentarios (opcional)</label>
+                  <input type="text" id="outgoingComments" class="form-control" maxlength="120" placeholder="Máx. 120 caracteres"/>
+                </div>
+
+                <!-- Botón en desktop/tablet -->
+                <div class="d-none d-md-block">
+                  <button type="button" id="btnSaveOutgoing" class="btn btn-primary w-100 py-2" onclick="saveOutgoing()" disabled>
+                    <span class="spinner-border spinner-border-sm me-2 d-none" id="saveSpinner" role="status" aria-hidden="true"></span>
+                    <i class="fa-solid fa-check"></i> Registrar Salida
+                  </button>
+                </div>
               </form>
             </div>
           </section>
 
-          <!-- Sección: Historial de Salidas -->
+          <!-- Historial -->
           <section id="historySection" class="my-4" style="display: none;">
-            <h2>Historial de Salidas</h2>
-            <div class="table-responsive">
+            <div class="d-flex align-items-center justify-content-between">
+              <h2 class="mb-0">Historial de Salidas</h2>
+              <button class="btn btn-outline-primary btn-sm" onclick="loadOutgoingHistory()">
+                <i class="fa-solid fa-rotate"></i> Actualizar
+              </button>
+            </div>
+            <div class="table-responsive mt-3">
               <table class="table table-striped" id="outgoingTable">
                 <thead>
                   <tr>
-                    <th>Fecha</th>
-                    <th>Sucursal</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Usuario</th>
-                    <th>Comentarios</th>
-                    <th>Acciones</th>
+                    <th>Fecha</th><th>Sucursal</th><th>Producto</th><th>Cantidad</th><th>Usuario</th><th>Comentarios</th><th>Acciones</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
+                <tbody><tr><td colspan="7" class="text-center text-muted">Cargando…</td></tr></tbody>
               </table>
             </div>
           </section>
 
-          <!-- Sección: Stock Actual -->
+          <!-- Stock -->
           <section id="stockSection" class="my-4" style="display: none;">
-            <h2>Stock Actual</h2>
-            <div class="table-responsive">
+            <div class="d-flex align-items-center justify-content-between">
+              <h2 class="mb-0">Stock Actual</h2>
+              <button class="btn btn-outline-primary btn-sm" onclick="loadStock()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+            </div>
+            <div class="table-responsive mt-3">
               <table class="table table-striped" id="stockTable">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Stock</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
+                <thead><tr><th>ID</th><th>Nombre</th><th>Stock</th></tr></thead>
+                <tbody><tr><td colspan="3" class="text-center text-muted">Cargando…</td></tr></tbody>
               </table>
             </div>
           </section>
 
-          <!-- Sección: Reportes de Salidas -->
+          <!-- Reportes -->
           <section id="reportsSection" class="my-4" style="display: none;">
             <h2>Reportes de Salidas</h2>
             <div class="row g-3 mb-3">
@@ -229,41 +243,22 @@
                 <label for="reportBranch" class="form-label">Sucursal</label>
                 <select id="reportBranch" class="form-select">
                   <option value="">Todas</option>
-                  <!-- Se llenará dinámicamente -->
                 </select>
               </div>
             </div>
-            <button class="btn btn-primary mb-3" onclick="generateOutgoingReport()">
-              Generar Reporte
+            <button class="btn btn-primary mb-3 w-100" onclick="generateOutgoingReport()">
+              <i class="fa-solid fa-chart-column"></i> Generar Reporte
             </button>
-            <!-- Botones de exportación -->
-            <div class="mb-3">
-              <button class="btn btn-success me-2" onclick="exportReportToImage()">
-                Exportar a Imagen
-              </button>
-              <button class="btn btn-danger me-2" onclick="exportReportToPDF()">
-                Exportar a PDF
-              </button>
-              <button class="btn btn-info" onclick="exportReportToExcel()">
-                Exportar a Excel
-              </button>
+            <div class="mb-3 d-grid gap-2 d-md-block">
+              <button class="btn btn-success me-2" onclick="exportReportToImage()">Exportar a Imagen</button>
+              <button class="btn btn-danger me-2" onclick="exportReportToPDF()">Exportar a PDF</button>
+              <button class="btn btn-info" onclick="exportReportToExcel()">Exportar a Excel</button>
             </div>
             <canvas id="reportChart" class="my-3" style="max-height: 300px;"></canvas>
             <div class="table-responsive">
               <table class="table table-striped report-table" id="reportOutgoingTable">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Sucursal</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Usuario</th>
-                    <th>Comentarios</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- Se llenará dinámicamente -->
-                </tbody>
+                <thead><tr><th>Fecha</th><th>Sucursal</th><th>Producto</th><th>Cantidad</th><th>Usuario</th><th>Comentarios</th></tr></thead>
+                <tbody><tr><td colspan="6" class="text-center text-muted">Sin datos</td></tr></tbody>
               </table>
             </div>
           </section>
@@ -271,16 +266,56 @@
       </div>
     </div>
 
-    <!-- Bootstrap JS Bundle (incluye Popper) -->
+    <!-- Barra fija de guardado (solo móvil) -->
+    <div class="mobile-save-bar d-sm-none fixed-bottom">
+      <div class="container">
+        <button id="btnSaveOutgoingMobile" class="btn btn-primary btn-lg w-100" onclick="saveOutgoing()" disabled>
+          <span class="spinner-border spinner-border-sm me-2 d-none" id="saveSpinnerMobile" role="status" aria-hidden="true"></span>
+          <i class="fa-solid fa-check"></i> Registrar Salida
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: Picker de productos -->
+    <div class="modal fade" id="productPickerModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="fa-solid fa-box me-2"></i>Elegir producto</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <input type="text" id="productSearchInput" class="form-control mb-3" placeholder="Buscar producto..." />
+            <div id="productPickerList" class="list-group list-group-flush"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Picker de sucursales -->
+    <div class="modal fade" id="branchPickerModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="fa-solid fa-store me-2"></i>Elegir sucursal</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <input type="text" id="branchSearchInput" class="form-control mb-3" placeholder="Buscar sucursal..." />
+            <div id="branchPickerList" class="list-group list-group-flush"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Función para cerrar el offcanvas en móviles -->
+
     <script>
       function closeOffcanvas() {
         var offcanvasEl = document.getElementById("offcanvasSidebar");
         var bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-        if (bsOffcanvas) {
-          bsOffcanvas.hide();
-        }
+        if (bsOffcanvas) { bsOffcanvas.hide(); }
       }
     </script>
   </body>
