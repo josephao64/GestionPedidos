@@ -76,19 +76,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   attachCompletedListener();
   document.getElementById("inProcessOrdersContainer").style.display = "block";
   document.getElementById("completedOrdersContainer").style.display = "none";
-  
-  const multipleInvoicesCheckbox = document.getElementById("multipleInvoicesCheckbox");
-  if (multipleInvoicesCheckbox) {
-    multipleInvoicesCheckbox.addEventListener("change", function() {
-      const container = document.getElementById("additionalInvoicesContainer");
-      if (this.checked) {
-        container.style.display = "block";
-      } else {
-        container.style.display = "none";
-        document.getElementById("additionalInvoicesRows").innerHTML = "";
-      }
-    });
-  }
 });
 
 /**********************************************************
@@ -701,7 +688,7 @@ function closeEditOrderModal() {
 }
 
 /**********************************************************
- * Facturas adicionales
+ * Facturas adicionales (sin uso actual, conservado para compatibilidad)
  **********************************************************/
 function addInvoiceRow() {
   const container = document.getElementById("additionalInvoicesRows");
@@ -715,7 +702,7 @@ function addInvoiceRow() {
     <button type="button" onclick="removeInvoiceRow(this)">Eliminar</button>
     <br/><br/>
   `;
-  container.appendChild(row);
+  container?.appendChild(row);
 }
 function removeInvoiceRow(btn) {
   const row = btn.parentNode;
@@ -847,7 +834,7 @@ function exportAsImageTicket(order, fileName) {
 }
 
 /**********************************************************
- * Recepción
+ * Recepción (ACTUALIZADO)
  **********************************************************/
 async function confirmOrder(orderId) {
   try {
@@ -859,9 +846,15 @@ async function confirmOrder(orderId) {
     const order = docSnap.data();
 
     document.getElementById("confirmOrderId").value = orderId;
-    document.getElementById("invoiceNumber").value = order.invoiceNumber || "";
-    document.getElementById("invoiceDate").value = order.invoiceDate || "";
-    document.getElementById("noInvoiceCheckbox").checked = !!order.pendingInvoice;
+
+    // Fecha actual (YYYY-MM-DD) y solo lectura
+    const todayISO = new Date();
+    const yyyy = todayISO.getFullYear();
+    const mm = String(todayISO.getMonth() + 1).padStart(2, "0");
+    const dd = String(todayISO.getDate()).padStart(2, "0");
+    document.getElementById("invoiceDate").value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById("invoiceDate").setAttribute("readonly", "readonly");
+
     document.getElementById("orderIdDisplay").textContent = order.orderId;
     document.getElementById("providerNameDisplay").textContent = order.providerName;
     document.getElementById("sucursalNameDisplay").textContent = order.sucursalName;
@@ -937,9 +930,7 @@ function calculateInvoiceTotal() {
 }
 function closeConfirmOrderModal() {
   document.getElementById("confirmOrderId").value = "";
-  document.getElementById("invoiceNumber").value = "";
   document.getElementById("invoiceDate").value = "";
-  document.getElementById("noInvoiceCheckbox").checked = false;
   document.getElementById("orderIdDisplay").textContent = "";
   document.getElementById("providerNameDisplay").textContent = "";
   document.getElementById("sucursalNameDisplay").textContent = "";
@@ -956,21 +947,19 @@ async function saveConfirmedOrder() {
       return;
     }
 
-    const invoiceNumberField = document.getElementById("invoiceNumber").value.trim();
-    const invoiceDateField = document.getElementById("invoiceDate").value.trim();
-    const noInvoice = document.getElementById("noInvoiceCheckbox").checked;
-
-    if (!noInvoice && (!invoiceNumberField || !invoiceDateField)) {
-      Swal.fire({ icon: "warning", title: "Faltan datos de factura", text: "Ingresa la factura o marca 'No se ingresó la factura'." });
-      return;
-    }
-
     const orderDoc = await db.collection("orders").doc(orderId).get();
     if (!orderDoc.exists) {
       Swal.fire({ icon: "error", title: "Error", text: "Pedido no existe en DB" });
       return;
     }
     const orderData = orderDoc.data();
+
+    // Fecha actual para la factura (auto)
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const invoiceDateField = `${yyyy}-${mm}-${dd}`;
 
     const tRows = document.querySelectorAll("#confirmOrderProducts tr");
     let mismatchedQuantities = false;
@@ -999,30 +988,18 @@ async function saveConfirmedOrder() {
       });
     }
 
-    let pendingInvoice = noInvoice;
     const invoiceTotalValue = Number(totalFactura.toFixed(2));
 
-    let invoices = [];
-    if (document.getElementById("multipleInvoicesCheckbox").checked) {
-      if (invoiceNumberField && invoiceDateField) {
-        invoices.push({ invoiceNumber: invoiceNumberField, invoiceDate: invoiceDateField });
-      }
-      const additionalRows = document.querySelectorAll(".invoice-row");
-      additionalRows.forEach(row => {
-        const invNum = row.querySelector(".additionalInvoiceNumber").value.trim();
-        const invDate = row.querySelector(".additionalInvoiceDate").value.trim();
-        if (invNum && invDate) invoices.push({ invoiceNumber: invNum, invoiceDate: invDate });
-      });
-    } else {
-      invoices = [{ invoiceNumber: invoiceNumberField, invoiceDate: invoiceDateField }];
-    }
+    // Siempre una sola “factura” sin número, con fecha auto; y sin pendiente
+    const invoices = [{ invoiceNumber: "", invoiceDate: invoiceDateField }];
+    const pendingInvoice = false;
 
-    if (mismatchedQuantities || pendingInvoice) {
+    if (mismatchedQuantities) {
       const { value: reason } = await Swal.fire({
-        title: "Motivo del faltante o no factura",
+        title: "Motivo del faltante",
         input: "text",
         inputLabel: "Comentario:",
-        inputPlaceholder: "Ej. 'No llegó factura', 'Producto incompleto'...",
+        inputPlaceholder: "Ej. 'Producto incompleto'...",
         showCancelButton: true,
         cancelButtonText: "Cancelar",
         confirmButtonText: "Guardar",
@@ -1031,27 +1008,27 @@ async function saveConfirmedOrder() {
       if (!reason) return;
 
       await db.collection("orders").doc(orderId).update({
-        invoices: invoices,
+        invoices,
         pendingInvoice,
         receivedProducts,
         invoiceTotal: invoiceTotalValue,
-        mismatchedQuantities,
+        mismatchedQuantities: true,
         mismatchComment: reason,
         commentSource: "encargado"
       });
 
       Swal.fire({
         icon: "success",
-        title: "Recepción Guardada con Faltantes/Comentario",
-        text: pendingInvoice ? "Esperando factura" : "Producto faltante. Total Factura: Q" + invoiceTotalValue
+        title: "Recepción Guardada con Faltantes",
+        text: "Total Factura: Q" + invoiceTotalValue
       });
       closeConfirmOrderModal();
       return;
     }
 
     await db.collection("orders").doc(orderId).update({
-      invoices: invoices,
-      pendingInvoice: false,
+      invoices,
+      pendingInvoice,
       receivedProducts,
       invoiceTotal: invoiceTotalValue,
       mismatchedQuantities: false,
@@ -1062,7 +1039,7 @@ async function saveConfirmedOrder() {
     Swal.fire({
       icon: "success",
       title: "Recepción Guardada",
-      text: "Todo coincide y se ingresó factura. Total Factura: Q" + invoiceTotalValue
+      text: "Todo coincide. Total Factura: Q" + invoiceTotalValue
     }).then(() => {
       showReceivedOrder(orderId);
     });

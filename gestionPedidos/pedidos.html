@@ -124,30 +124,18 @@
     </div>
   </div>
 
+  <!-- MODAL RECEPCIÓN (ACTUALIZADO) -->
   <div id="confirmOrderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
       <h2>Ingresar Cantidades Recibidas</h2>
       <input type="hidden" id="confirmOrderId" value=""/>
+
       <div id="invoiceDetails">
-        <label for="invoiceNumber"><strong>Número de Factura:</strong></label>
-        <input type="number" id="invoiceNumber" name="invoiceNumber"/><br/><br/>
         <label for="invoiceDate"><strong>Fecha de Factura:</strong></label>
-        <input type="date" id="invoiceDate" name="invoiceDate"/><br/><br/>
-        <label style="display: inline-flex; align-items: center;">
-          <input type="checkbox" id="noInvoiceCheckbox" style="margin-right: 8px;"/>
-          No se ingresó la factura
-        </label>
-        <br/><br/>
-        <label style="display: inline-flex; align-items: center;">
-          <input type="checkbox" id="multipleInvoicesCheckbox" style="margin-right: 8px;"/>
-          Pedido incluye más de una factura
-        </label>
-        <div id="additionalInvoicesContainer" style="display: none; margin-top: 1rem;">
-          <button type="button" onclick="addInvoiceRow()">Agregar Factura Adicional</button>
-          <div id="additionalInvoicesRows"></div>
-        </div>
+        <input type="date" id="invoiceDate" name="invoiceDate" readonly />
       </div>
+
       <div id="orderInfo">
         <p><strong>ID Pedido:</strong> <span id="orderIdDisplay"></span></p>
         <p><strong>Proveedor:</strong> <span id="providerNameDisplay"></span></p>
