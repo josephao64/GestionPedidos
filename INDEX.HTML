@@ -1,15 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Página Principal</title>
-
-  <!-- Políticas de seguridad para reducir avisos de "sitio peligroso" -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://identitytoolkit.googleapis.com; upgrade-insecure-requests">
-  <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Permissions-Policy" content="geolocation=(), camera=(), microphone=()">
-
   <!-- Estilos CSS Integrados -->
   <style>
     /* =====================================
@@ -203,14 +197,17 @@
     </ul>
     <div class="right-menu">
       <!-- Botón "Empresa" (exclusivo para administradores) -->
-      <button class="menu-button admin-only" id="empresa-button">Empresa</button>
+      <button class="menu-button admin-only" id="empresa-button" onclick="window.location.href='empresa/empresaMenu.html'">Empresa</button>
       <!-- Botón "Bodega" (exclusivo para administradores) -->
-      <button class="menu-button admin-only" id="bodega-button">Bodega</button>
+      <button class="menu-button admin-only" id="bodega-button" onclick="window.location.href='InventarioBodega/inventory.html'">Bodega</button>
       <!-- Botón "Reportes" (exclusivo para administradores) -->
-      <button class="menu-button admin-only" id="reportes-button">Reportes</button>
+      <button class="menu-button admin-only" id="reportes-button" onclick="window.location.href='reportes/reportes.html'">Reportes</button>
       <button class="menu-button" id="logout-button">Cerrar Sesión</button>
     </div>
   </div>
+
+  <!-- Resto de tu contenido y modales (para productos, movimientos, facturas, etc.) se mantiene igual -->
+  <!-- … (código completo de modales y demás se deja sin cambios) … -->
 
   <!-- Contenedor oculto para exportar el diseño de factura -->
   <div id="exportInvoiceContainer" style="display:none; padding:20px; border:1px solid #ccc; max-width:600px; margin:20px auto; font-family: Arial, sans-serif;">
@@ -241,70 +238,61 @@
     </div>
   </div>
 
+  <!-- Se omiten aquí los modales de productos, movimientos, reajustes, catálogo, facturas y reportes (mantén el código existente) -->
+  <!-- … (código completo de modales se mantiene sin cambios) … -->
+
   <!-- Firebase SDK y conexión a base de datos -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="database/connection.js"></script>
-
   <script>
-    // Utilidad de navegación segura
-    function navegarA(url) {
-      window.location.href = url;
-    }
-
     // Referencias a elementos del DOM
     const welcomeMessage = document.getElementById('welcome-message');
-    const empresaButton  = document.getElementById('empresa-button');
-    const bodegaButton   = document.getElementById('bodega-button');
-    const reportesButton = document.getElementById('reportes-button');
-    const logoutButton   = document.getElementById('logout-button');
+    const empresaButton = document.getElementById('empresa-button');
+    const logoutButton = document.getElementById('logout-button');
 
     // Función para ajustar el menú según el rol del usuario
     function ajustarMenuSegunRol(rol) {
       if (rol === 'administrador') {
-        // Mostrar elementos exclusivos
-        document.querySelectorAll('.admin-only').forEach(el => {
-          el.style.display = 'inline-block';
+        // Para administradores, mostramos los elementos exclusivos
+        const adminElements = document.querySelectorAll('.admin-only');
+        adminElements.forEach(element => {
+          element.style.display = 'inline-block';
         });
-        // Rutas por defecto para administrador
-        if (empresaButton) {
-          empresaButton.textContent = 'Empresa';
-          empresaButton.onclick = () => navegarA('empresa/empresaMenu.html');
-        }
-        if (bodegaButton) {
-          bodegaButton.textContent = 'Bodega';
-          bodegaButton.onclick = () => navegarA('InventarioBodega/inventory.html');
-        }
-        if (reportesButton) {
-          reportesButton.textContent = 'Reportes';
-          reportesButton.onclick = () => navegarA('reportes/reportes.html');
-        }
       } else if (rol === 'bodega') {
-        // 1) Ocultar menú izquierdo
+        // Para usuarios con rol "bodega":
+        // 1. Ocultar el menú izquierdo (clase .oe_menu)
         const oeMenu = document.querySelector('.oe_menu');
-        if (oeMenu) oeMenu.style.display = 'none';
-
-        // 2) Ocultar elementos admin-only
-        document.querySelectorAll('.admin-only').forEach(el => {
-          el.style.display = 'none';
+        if (oeMenu) {
+          oeMenu.style.display = 'none';
+        }
+        // 2. Ocultar botones exclusivos de administradores (se mantiene el botón de cerrar sesión)
+        const adminElements = document.querySelectorAll('.admin-only');
+        adminElements.forEach(element => {
+          element.style.display = 'none';
         });
-
-        // 3) Mostrar/crear botón de Inventario Bodega accesible
+        // 3. Mostrar o actualizar el botón de "Bodega" para inventario
+        const bodegaButton = document.getElementById('bodega-button');
         if (bodegaButton) {
+          // Eliminar la clase 'admin-only' para evitar conflictos con el CSS
           bodegaButton.classList.remove('admin-only');
           bodegaButton.style.display = 'inline-block';
           bodegaButton.textContent = 'Inventario Bodega';
-          // Ruta con espacios: usar encodeURI
-          bodegaButton.onclick = () => navegarA(encodeURI('InventarioBodega/salidas encargado bodega/salidas.html'));
+          bodegaButton.onclick = function() {
+            window.location.href = 'InventarioBodega/salidas encargado bodega/salidas.html';
+          };
         } else {
+          // Si el botón no existe, se crea y se agrega al contenedor derecho
           const rightMenu = document.querySelector('.right-menu');
           if (rightMenu) {
             const newButton = document.createElement('button');
             newButton.className = 'menu-button';
             newButton.id = 'bodega-button';
             newButton.textContent = 'Inventario Bodega';
-            newButton.onclick = () => navegarA(encodeURI('InventarioBodega/salidas encargado bodega/salidas.html'));
+            newButton.onclick = function() {
+              window.location.href = 'InventarioBodega/salidas encargado bodega/salidas.html';
+            };
             rightMenu.appendChild(newButton);
           }
         }
@@ -313,51 +301,40 @@
 
     // Función para verificar el usuario logueado y su rol
     function verificarUsuario() {
-      try {
-        const usuarioLogueado = localStorage.getItem('usuarioLogueado');
-        if (!usuarioLogueado) {
-          navegarA('login.html');
-          return;
-        }
-        // Consulta a Firestore para obtener el rol
-        db.collection('usuarios')
-          .where('username', '==', usuarioLogueado)
-          .limit(1)
-          .get()
+      const usuarioLogueado = localStorage.getItem('usuarioLogueado');
+      if (usuarioLogueado) {
+        db.collection('usuarios').where('username', '==', usuarioLogueado).limit(1).get()
           .then(querySnapshot => {
-            if (querySnapshot.empty) {
+            if (!querySnapshot.empty) {
+              const userData = querySnapshot.docs[0].data();
+              ajustarMenuSegunRol(userData.rol);
+              welcomeMessage.textContent = `Bienvenido, ${userData.username}!`;
+            } else {
               alert('Usuario no encontrado. Por favor, inicia sesión nuevamente.');
-              navegarA('login.html');
-              return;
+              window.location.href = 'login.html';
             }
-            const userData = querySnapshot.docs[0].data();
-            ajustarMenuSegunRol(userData.rol);
-            welcomeMessage.textContent = `Bienvenido, ${userData.username}!`;
           })
           .catch(error => {
-            console.error('Error al verificar el usuario: ', error);
+            console.error("Error al verificar el usuario: ", error);
             alert('Error al verificar el usuario. Por favor, intenta nuevamente.');
-            navegarA('login.html');
+            window.location.href = 'login.html';
           });
-      } catch (e) {
-        console.error('Error general en verificación: ', e);
-        navegarA('login.html');
+      } else {
+        window.location.href = 'login.html';
       }
     }
 
     // Función para manejar el cierre de sesión
     function cerrarSesion() {
-      try {
-        localStorage.removeItem('usuarioLogueado');
-      } finally {
-        navegarA('login.html');
-      }
+      localStorage.removeItem('usuarioLogueado');
+      window.location.href = 'login.html';
     }
 
-    // Listeners
-    if (logoutButton) logoutButton.addEventListener('click', cerrarSesion);
+    logoutButton.addEventListener('click', cerrarSesion);
+    empresaButton.addEventListener('click', function() {
+      window.location.href = 'empresa/empresaMenu.html';
+    });
 
-    // Inicio
     window.onload = verificarUsuario;
   </script>
 </body>
