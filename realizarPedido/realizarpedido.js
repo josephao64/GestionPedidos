@@ -7,19 +7,16 @@ const { jsPDF } = window.jspdf;
 let userSucursalId = null;
 let userSucursalName = null;
 let userRole = null;
-let currentOrderId = null;
 let selectedProduct = null;
 let orderAlreadySaved = false;
+let isSaving = false; // NUEVO: evita doble guardado
 
 // Variable global para almacenar el ID generado y evitar que cambie
 let generatedOrderId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // La conexión a Firebase ya se realizó en database/connection.js
-  // db ya está definido.
   await obtenerSucursalDelUsuario();
   document.getElementById('orderCreationContainer').style.display = 'none';
-  document.getElementById('preSavedOrdersContainer').style.display = 'none';
   setupInitialProductTable();
 });
 
@@ -90,174 +87,40 @@ function setupInitialProductTable() {
   tbody.innerHTML = '';
   document.getElementById('newOrderProviderSelect').disabled = false;
   orderAlreadySaved = false;
+  isSaving = false;
 }
 
 async function showNewOrderForm() {
   document.getElementById('orderCreationContainer').style.display = 'block';
-  document.getElementById('preSavedOrdersContainer').style.display = 'none';
   await loadNewOrderProviders();
   if (userRole === 'administrador') {
     document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
   } else {
     document.getElementById('orderDateText').textContent = new Date().toISOString().split('T')[0];
   }
-  // Genera el ID solo si aún no se ha creado en esta sesión
   if (generatedOrderId === null) {
     await generateOrderIdOnce();
   }
-  currentOrderId = null;
   setupInitialProductTable();
 }
 
-function showPreSavedOrders() {
-  document.getElementById('orderCreationContainer').style.display = 'none';
-  document.getElementById('preSavedOrdersContainer').style.display = 'block';
-  loadPreSavedOrders();
+function showProductSelectionModal() {
+  const providerId = document.getElementById('newOrderProviderSelect').value;
+  if (!providerId) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Proveedor requerido',
+      text: 'Debes seleccionar un proveedor antes de elegir productos.'
+    });
+    document.getElementById('newOrderProviderSelect').focus();
+    return;
+  }
+  loadProductsForProvider(providerId);
+  document.getElementById('productSelectionModal').style.display = 'block';
 }
 
-async function loadPreSavedOrders() {
-  try {
-    const snap = await db.collection('orders').where('status', '==', 'preSaved').get();
-    const tbody = document.getElementById('preSavedOrdersTable').getElementsByTagName('tbody')[0];
-    tbody.innerHTML = '';
-    snap.forEach(doc => {
-      const data = doc.data();
-      const row = tbody.insertRow();
-      row.setAttribute('data-id', doc.id);
-
-      const c1 = row.insertCell(0);
-      const c2 = row.insertCell(1);
-      const c3 = row.insertCell(2);
-      const c4 = row.insertCell(3);
-      const c5 = row.insertCell(4);
-
-      c1.textContent = data.orderId;
-      c2.textContent = data.providerName;
-      c3.textContent = data.sucursalName;
-      c4.textContent = data.orderDate;
-      c5.innerHTML = `
-        <button class="action-button edit-button" onclick="openPreSavedOrder('${doc.id}')">
-          <i class="fas fa-folder-open"></i>
-        </button>
-        <button class="action-button delete-button" onclick="deletePreSavedOrder('${doc.id}')">
-          <i class="fas fa-trash-alt"></i>
-        </button>
-      `;
-    });
-    if (snap.empty) {
-      document.getElementById('preSavedOrdersContainer').style.display = 'none';
-      Swal.fire({
-        icon: 'info',
-        title: 'Sin Pedidos Preguardados',
-        text: 'No hay pedidos preguardados para mostrar.'
-      });
-    }
-  } catch (error) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al cargar pedidos preguardados: ' + error.message
-    });
-  }
-}
-
-async function openPreSavedOrder(docId) {
-  try {
-    const docRef = await db.collection('orders').doc(docId).get();
-    if (!docRef.exists) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'El pedido preguardado no existe.'
-      });
-      return;
-    }
-    const data = docRef.data();
-    currentOrderId = docId;
-
-    document.getElementById('orderCreationContainer').style.display = 'block';
-    document.getElementById('preSavedOrdersContainer').style.display = 'none';
-    await loadNewOrderProviders();
-
-    document.getElementById('newOrderProviderSelect').value = data.providerId;
-    if (userRole === 'administrador') {
-      document.getElementById('newOrderSucursalSelect').value = data.sucursalId;
-      document.getElementById('orderDate').value = data.orderDate;
-      document.getElementById('orderId').value = data.orderId;
-    } else {
-      document.getElementById('orderDateText').textContent = data.orderDate;
-      document.getElementById('orderIdText').textContent = data.orderId;
-    }
-    document.getElementById('newOrderProviderSelect').disabled = data.products.length > 0;
-
-    setupInitialProductTable();
-    const tbody = document.getElementById('newOrderTable').querySelector('tbody');
-    data.products.forEach(prod => {
-      const row = tbody.insertRow();
-      row.setAttribute('data-id', prod.id);
-      const c1 = row.insertCell(0);
-      const c2 = row.insertCell(1);
-      const c3 = row.insertCell(2);
-      const c4 = row.insertCell(3);
-
-      c1.textContent = prod.name;
-      c2.textContent = prod.presentation;
-      c3.innerHTML = `<input type="number" min="1" value="${prod.quantity}" />`;
-      c4.innerHTML = `
-        <button class="action-button edit-button" onclick="editNewOrderProduct(this)">
-          <i class="fas fa-edit"></i>
-        </button>
-        <button class="action-button delete-button" onclick="deleteNewOrderProduct(this)">
-          <i class="fas fa-trash-alt"></i>
-        </button>
-      `;
-    });
-  } catch (error) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al abrir pedido preguardado: ' + error.message
-    });
-  }
-}
-
-/**
- * Función que genera el ID de pedido UNA SOLA VEZ por sesión,
- * utilizando una transacción en Firestore para actualizar el contador atómicamente.
- */
-async function generateOrderIdOnce() {
-  if (generatedOrderId !== null) {
-    return generatedOrderId;
-  }
-  try {
-    const configRef = db.collection('config').doc('orderCounter');
-    await db.runTransaction(async (transaction) => {
-      const doc = await transaction.get(configRef);
-      let newId;
-      if (!doc.exists) {
-        newId = 1;
-        transaction.set(configRef, { lastOrderId: newId });
-      } else {
-        newId = doc.data().lastOrderId + 1;
-        transaction.update(configRef, { lastOrderId: newId });
-      }
-      generatedOrderId = newId;
-    });
-    
-    if (userRole === 'administrador') {
-      document.getElementById('orderId').value = generatedOrderId;
-    } else {
-      document.getElementById('orderIdText').textContent = generatedOrderId;
-    }
-    return generatedOrderId;
-  } catch (error) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al generar ID: ' + error.message
-    });
-    throw error;
-  }
+function closeProductSelectionModal() {
+  document.getElementById('productSelectionModal').style.display = 'none';
 }
 
 async function loadNewOrderProviders() {
@@ -279,24 +142,6 @@ async function loadNewOrderProviders() {
       text: 'Error al cargar proveedores: ' + error.message
     });
   }
-}
-
-function showProductSelectionModal() {
-  const providerId = document.getElementById('newOrderProviderSelect').value;
-  if (!providerId) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Advertencia',
-      text: 'Debes seleccionar un proveedor primero.'
-    });
-    return;
-  }
-  loadProductsForProvider(providerId);
-  document.getElementById('productSelectionModal').style.display = 'block';
-}
-
-function closeProductSelectionModal() {
-  document.getElementById('productSelectionModal').style.display = 'none';
 }
 
 async function loadProductsForProvider(providerId) {
@@ -356,16 +201,17 @@ function addSelectedProductToTable() {
     if (!qtyInput.value || isNaN(qtyInput.value) || Number(qtyInput.value) <= 0) {
       Swal.fire({
         icon: 'warning',
-        title: 'Advertencia',
-        text: 'Debe ingresar la cantidad para el producto anterior antes de agregar otro.'
+        title: 'Cantidad requerida',
+        text: 'Debes ingresar la cantidad del producto anterior antes de agregar otro.'
       });
+      qtyInput.focus();
       return;
     }
   }
   if (!selectedProduct) {
     Swal.fire({
       icon: 'warning',
-      title: 'Advertencia',
+      title: 'Sin producto',
       text: 'No se ha seleccionado ningún producto.'
     });
     return;
@@ -375,7 +221,7 @@ function addSelectedProductToTable() {
     if (existingRows[i].getAttribute('data-id') === selectedProduct.id) {
       Swal.fire({
         icon: 'warning',
-        title: 'Producto Duplicado',
+        title: 'Producto duplicado',
         text: 'Este producto ya ha sido agregado al pedido.'
       });
       selectedProduct = null;
@@ -391,7 +237,7 @@ function addSelectedProductToTable() {
 
   cell1.textContent = selectedProduct.name;
   cell2.textContent = selectedProduct.presentation;
-  cell3.innerHTML = `<input type="number" min="1" placeholder="Cantidad" />`;
+  cell3.innerHTML = `<input type="number" min="1" step="1" placeholder="Cantidad" />`; // step=1 para enteros
   cell4.innerHTML = `
     <button class="action-button edit-button" onclick="editNewOrderProduct(this)">
       <i class="fas fa-edit"></i>
@@ -408,17 +254,18 @@ function editNewOrderProduct(button) {
   const row = button.parentNode.parentNode;
   const input = row.querySelector('input[type="number"]');
   const currentQuantity = input.value;
-  const newQuantity = prompt('Nueva cantidad:', currentQuantity);
+  const newQuantity = prompt('Nueva cantidad (entera y > 0):', currentQuantity);
   if (newQuantity === null) return;
-  if (!newQuantity.trim() || isNaN(newQuantity) || Number(newQuantity) <= 0) {
+  const qty = Number(newQuantity);
+  if (!Number.isInteger(qty) || qty <= 0) {
     Swal.fire({
       icon: 'warning',
-      title: 'Valor Inválido',
-      text: 'La cantidad debe ser un número positivo.'
+      title: 'Valor inválido',
+      text: 'La cantidad debe ser un número entero positivo.'
     });
     return;
   }
-  input.value = newQuantity;
+  input.value = qty;
 }
 
 function deleteNewOrderProduct(button) {
@@ -432,7 +279,7 @@ function deleteNewOrderProduct(button) {
 
 function formatDateTime(date) {
   const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0'); // Mes (0-11, se suma 1)
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
   const hh = String(date.getHours()).padStart(2, '0');
   const mi = String(date.getMinutes()).padStart(2, '0');
@@ -440,24 +287,116 @@ function formatDateTime(date) {
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
 
-async function saveNewOrder() {
-  if (orderAlreadySaved) return;
-  const providerId = document.getElementById('newOrderProviderSelect').value;
-  const providerName = document.getElementById('newOrderProviderSelect').options[document.getElementById('newOrderProviderSelect').selectedIndex]?.text || '';
+/**
+ * Genera el ID de pedido UNA SOLA VEZ por sesión con transacción atómica.
+ */
+async function generateOrderIdOnce() {
+  if (generatedOrderId !== null) return generatedOrderId;
+  try {
+    const configRef = db.collection('config').doc('orderCounter');
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(configRef);
+      let newId;
+      if (!doc.exists) {
+        newId = 1;
+        transaction.set(configRef, { lastOrderId: newId });
+      } else {
+        newId = doc.data().lastOrderId + 1;
+        transaction.update(configRef, { lastOrderId: newId });
+      }
+      generatedOrderId = newId;
+    });
+    if (userRole === 'administrador') {
+      document.getElementById('orderId').value = generatedOrderId;
+    } else {
+      document.getElementById('orderIdText').textContent = generatedOrderId;
+    }
+    return generatedOrderId;
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error al generar ID: ' + error.message
+    });
+    throw error;
+  }
+}
 
-  let sucursalId, sucursalName, orderDate, orderIdValue;
-  if (userRole === 'administrador') {
-    sucursalId = document.getElementById('newOrderSucursalSelect').value;
-    sucursalName = document.getElementById('newOrderSucursalSelect').options[document.getElementById('newOrderSucursalSelect').selectedIndex]?.text || '';
-    orderDate = document.getElementById('orderDate').value;
-    orderIdValue = document.getElementById('orderId').value;
-  } else {
-    sucursalId = userSucursalId;
-    sucursalName = userSucursalName;
-    orderDate = document.getElementById('orderDateText').textContent;
-    orderIdValue = document.getElementById('orderIdText').textContent;
+async function saveNewOrder() {
+  if (orderAlreadySaved || isSaving) return;
+  isSaving = true;
+
+  const providerSelect = document.getElementById('newOrderProviderSelect');
+  const providerId = providerSelect.value;
+  const providerName = providerSelect.options[providerSelect.selectedIndex]?.text || '';
+
+  // VALIDACIONES GENERALES
+  if (!providerId) {
+    isSaving = false;
+    Swal.fire({ icon: 'warning', title: 'Proveedor requerido', text: 'Selecciona un proveedor.' });
+    providerSelect.focus();
+    return;
   }
 
+  let sucursalId, sucursalName, orderDate, orderIdValue;
+
+  if (userRole === 'administrador') {
+    const sucSel = document.getElementById('newOrderSucursalSelect');
+    sucursalId = sucSel.value;
+    sucursalName = sucSel.options[sucSel.selectedIndex]?.text || '';
+    orderDate = document.getElementById('orderDate').value;
+    orderIdValue = document.getElementById('orderId').value;
+
+    // VALIDACIÓN: Sucursal obligatoria para admin
+    if (!sucursalId) {
+      isSaving = false;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Sucursal requerida',
+        text: 'Debes seleccionar una sucursal antes de guardar.'
+      });
+      sucSel.focus();
+      return;
+    }
+
+    // Fecha obligatoria para admin
+    if (!orderDate) {
+      isSaving = false;
+      Swal.fire({ icon: 'warning', title: 'Fecha requerida', text: 'Selecciona la fecha del pedido.' });
+      document.getElementById('orderDate').focus();
+      return;
+    }
+  } else {
+    // Usuarios no admin: validar que su sucursal esté disponible
+    if (!userSucursalId || !userSucursalName) {
+      isSaving = false;
+      Swal.fire({
+        icon: 'error',
+        title: 'Sucursal no disponible',
+        text: 'No se encontró la sucursal del usuario. Cierra sesión e inicia nuevamente.'
+      });
+      return;
+    }
+    sucursalId = userSucursalId;
+    sucursalName = userSucursalName;
+    orderDate = document.getElementById('orderDateText').textContent || new Date().toISOString().split('T')[0];
+    orderIdValue = document.getElementById('orderIdText').textContent || generatedOrderId || '';
+  }
+
+  // Asegurar que exista un ID de pedido
+  if (!orderIdValue) {
+    try {
+      await generateOrderIdOnce();
+      orderIdValue = (userRole === 'administrador')
+        ? document.getElementById('orderId').value
+        : document.getElementById('orderIdText').textContent;
+    } catch {
+      isSaving = false;
+      return;
+    }
+  }
+
+  // VALIDACIÓN DE PRODUCTOS
   const tbody = document.getElementById('newOrderTable').querySelector('tbody');
   const rows = tbody.getElementsByTagName('tr');
   const products = [];
@@ -466,30 +405,40 @@ async function saveNewOrder() {
     if (!productId) continue;
     const tds = rows[i].getElementsByTagName('td');
     const qtyInput = rows[i].querySelector('input[type="number"]');
-    if (!qtyInput || !qtyInput.value.trim() || isNaN(qtyInput.value) || Number(qtyInput.value) <= 0) {
-      continue;
+    if (!qtyInput) continue;
+    const qty = Number(qtyInput.value);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      isSaving = false;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Cantidad inválida',
+        text: 'Todas las cantidades deben ser enteras y mayores a 0.'
+      });
+      qtyInput.focus();
+      return;
     }
     products.push({
       id: productId,
       name: tds[0].textContent,
       presentation: tds[1].textContent,
-      quantity: qtyInput.value
+      quantity: qty
     });
   }
   if (products.length === 0) {
+    isSaving = false;
     Swal.fire({
       icon: 'warning',
-      title: 'Advertencia',
-      text: 'No hay productos válidos en el pedido.'
+      title: 'Sin productos',
+      text: 'Agrega al menos un producto válido al pedido.'
     });
     return;
   }
 
-  // Aquí se obtiene la fecha y hora actual formateada
+  // Fecha y hora actual formateada
   const now = new Date();
   const saveDate = formatDateTime(now);
 
-  let details = {
+  const details = {
     orderId: orderIdValue,
     providerName,
     sucursalName,
@@ -498,6 +447,7 @@ async function saveNewOrder() {
     products
   };
 
+  // Resumen para confirmar
   let rowsHtml = '';
   details.products.forEach(p => {
     rowsHtml += `
@@ -510,7 +460,7 @@ async function saveNewOrder() {
   });
   const htmlTxt = `
     <div style="text-align: center; margin-bottom: 20px;">
-      <h2>Pedido Confirmado</h2>
+      <h2>Confirmar Pedido</h2>
     </div>
     <div style="text-align: left;">
       <p><strong>ID Pedido:</strong> <span style="font-weight: bold;">${escapeHtml(details.orderId)}</span></p>
@@ -539,93 +489,48 @@ async function saveNewOrder() {
     cancelButtonText: 'Cancelar',
     confirmButtonText: 'Confirmar'
   }).then(result => {
-    if (result.isConfirmed) {
-      // Paso 2: Seleccionar destino con botones "Bodega" y "Tienda"
-      Swal.fire({
-        title: 'Destino del Pedido',
-        text: 'Seleccione el destino',
-        icon: 'question',
-        showCloseButton: true,
-        showCancelButton: false,
-        confirmButtonText: 'Bodega',
-        denyButtonText: 'Tienda',
-        showDenyButton: true
-      }).then(destResult => {
-        if (destResult.isConfirmed || destResult.isDenied) {
-          let destination = destResult.isConfirmed ? 'Bodega' : 'Tienda';
-          details.destination = destination;
-          // Paso 3: Seleccionar si guardar o preguardar
-          Swal.fire({
-            title: 'Guardar Pedido',
-            text: 'Seleccione una opción',
-            icon: 'question',
-            showCloseButton: true,
-            showCancelButton: false,
-            confirmButtonText: 'Guardar',
-            denyButtonText: 'Preguardar',
-            showDenyButton: true,
-            reverseButtons: true
-          }).then(async finalRes => {
-            if (finalRes.isConfirmed || finalRes.isDenied) {
-              let status = finalRes.isConfirmed ? 'pending' : 'preSaved';
-              try {
-                if (currentOrderId) {
-                  await db.collection('orders').doc(currentOrderId).update({
-                    providerId,
-                    providerName,
-                    sucursalId,
-                    sucursalName,
-                    orderDate,
-                    orderId: orderIdValue,
-                    products,
-                    destination,
-                    savedDate: saveDate,
-                    status,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                  });
-                } else {
-                  await db.collection('orders').add({
-                    providerId,
-                    providerName,
-                    sucursalId,
-                    sucursalName,
-                    orderDate,
-                    orderId: orderIdValue,
-                    products,
-                    destination,
-                    savedDate: saveDate,
-                    status,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                  });
-                }
-                // Reiniciamos el ID generado para el siguiente pedido
-                generatedOrderId = null;
-                orderAlreadySaved = true;
-                showOrderConfirmationModal(details);
-              } catch (err) {
-                Swal.fire({
-                  icon: 'error',
-                  title: 'Error',
-                  text: err.message
-                });
-              }
-            } else {
-              Swal.fire({
-                icon: 'info',
-                title: 'Operación Cancelada',
-                text: 'Puedes seguir editando tu pedido.'
-              });
-            }
-          });
-        } else {
-          Swal.fire({
-            icon: 'info',
-            title: 'Operación Cancelada',
-            text: 'Puedes seguir editando tu pedido.'
-          });
-        }
-      });
-    }
+    if (!result.isConfirmed) { isSaving = false; return; }
+
+    // Paso 2: Seleccionar destino (Bodega o Tienda)
+    Swal.fire({
+      title: 'Destino del Pedido',
+      text: 'Seleccione el destino',
+      icon: 'question',
+      showCloseButton: true,
+      showCancelButton: false,
+      confirmButtonText: 'Bodega',
+      denyButtonText: 'Tienda',
+      showDenyButton: true
+    }).then(async destResult => {
+      if (!destResult.isConfirmed && !destResult.isDenied) { isSaving = false; return; }
+
+      const destination = destResult.isConfirmed ? 'Bodega' : 'Tienda';
+      details.destination = destination;
+
+      try {
+        await db.collection('orders').add({
+          providerId,
+          providerName,
+          sucursalId,
+          sucursalName,
+          orderDate,
+          orderId: orderIdValue,
+          products,
+          destination,
+          savedDate: saveDate,
+          status: 'pending',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        generatedOrderId = null;
+        orderAlreadySaved = true;
+        showOrderConfirmationModal(details);
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+      } finally {
+        isSaving = false;
+      }
+    });
   });
 }
 
@@ -726,11 +631,7 @@ function exportOrderAsImage(details) {
               resolve();
             });
           } else {
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'Error al generar la imagen.'
-            }).then(() => reject('Blob vacío.'));
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al generar la imagen.' }).then(() => reject('Blob vacío.'));
           }
         }, 'image/jpeg', 0.95);
 
@@ -738,44 +639,10 @@ function exportOrderAsImage(details) {
         ticket.style.left = '-9999px';
       })
       .catch(err => {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Error al exportar la imagen.'
-        }).then(() => reject(err));
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Error al exportar la imagen.' }).then(() => reject(err));
         ticket.style.display = 'none';
         ticket.style.left = '-9999px';
       });
-  });
-}
-
-function deletePreSavedOrder(docId) {
-  Swal.fire({
-    title: '¿Estás seguro?',
-    text: 'Esto eliminará el pedido preguardado permanentemente.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
-    cancelButtonText: 'Cancelar',
-    reverseButtons: true
-  }).then(async (r) => {
-    if (r.isConfirmed) {
-      try {
-        await db.collection('orders').doc(docId).delete();
-        Swal.fire({
-          icon: 'success',
-          title: 'Eliminado',
-          text: 'Pedido preguardado eliminado.'
-        });
-        loadPreSavedOrders();
-      } catch (e) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: e.message
-        });
-      }
-    }
   });
 }
 
