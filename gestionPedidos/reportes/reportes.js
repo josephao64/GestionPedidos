@@ -1,230 +1,238 @@
-// Espera a que el DOM se cargue
 document.addEventListener("DOMContentLoaded", () => {
-    loadSucursales();
-    loadProviders();
-    document.getElementById("reportFilterForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      generateReport();
+  loadSucursales();
+  loadProviders();
+  document.getElementById("providerSelect")
+          .addEventListener("change", loadProductsForReport);
+  document.getElementById("reportFilterForm")
+          .addEventListener("submit", e => {
+    e.preventDefault();
+    generateReport();
+  });
+});
+
+function loadSucursales() {
+  const sel = document.getElementById("sucursalSelect");
+  db.collection("sucursales").get()
+    .then(snap => {
+      snap.forEach(doc => {
+        const opt = document.createElement("option");
+        opt.value = doc.id;
+        opt.textContent = doc.data().name;
+        sel.appendChild(opt);
+      });
+    })
+    .catch(err => Swal.fire("Error al cargar sucursales", err.message, "error"));
+}
+
+function loadProviders() {
+  const sel = document.getElementById("providerSelect");
+  sel.innerHTML = `<option value="all">Todos</option>`;
+  db.collection("providers").get()
+    .then(snap => {
+      snap.forEach(doc => {
+        const data = doc.data();
+        const opt = document.createElement("option");
+        opt.value = doc.id;
+        opt.textContent = data.name;
+        sel.appendChild(opt);
+      });
+    })
+    .catch(err => Swal.fire("Error al cargar proveedores", err.message, "error"));
+}
+
+function loadProductsForReport() {
+  const providerId = document.getElementById("providerSelect").value;
+  const prodSel = document.getElementById("productSelect");
+  prodSel.innerHTML = `<option value="all">Todos</option>`;
+  if (providerId === "all") return;
+
+  db.collection("products")
+    .where("providerId", "==", providerId)
+    .get()
+    .then(snap => {
+      snap.forEach(doc => {
+        const d = doc.data();
+        const opt = document.createElement("option");
+        opt.value = doc.id;
+        opt.textContent = `${d.name} — ${d.presentation}`;
+        prodSel.appendChild(opt);
+      });
+    })
+    .catch(err => Swal.fire("Error al cargar productos", err.message, "error"));
+}
+
+function generateReport() {
+  const suc      = document.getElementById("sucursalSelect").value;
+  const provId   = document.getElementById("providerSelect").value;
+  const prodId   = document.getElementById("productSelect").value;
+  const startStr = document.getElementById("startDate").value;
+  const endStr   = document.getElementById("endDate").value;
+  const type     = document.getElementById("reportType").value;
+
+  if (!startStr || !endStr) {
+    return Swal.fire("Fechas requeridas", "Ingresa fecha inicio y fin.", "warning");
+  }
+
+  const startTs = firebase.firestore.Timestamp.fromDate(new Date(startStr));
+  const endDate = new Date(endStr);
+  endDate.setHours(23,59,59,999);
+  const endTs = firebase.firestore.Timestamp.fromDate(endDate);
+
+  let q = db.collection("orders")
+            .where("timestamp", ">=", startTs)
+            .where("timestamp", "<=", endTs)
+            .orderBy("timestamp", "asc");
+  if (suc !== "all")    q = q.where("sucursalId", "==", suc);
+  if (provId !== "all") q = q.where("providerId", "==", provId);
+
+  q.get()
+   .then(snap => {
+     let orders = snap.docs.map(d => d.data());
+
+     if (prodId !== "all") {
+       orders = orders.map(o => {
+         const fp = (o.products || []).filter(p => p.id === prodId);
+         const fr = (o.receivedProducts || []).filter(p => p.id === prodId);
+         return { ...o, products: fp, receivedProducts: fr };
+       })
+       .filter(o => (o.products && o.products.length) || (o.receivedProducts && o.receivedProducts.length));
+     }
+
+     switch(type) {
+       case "summary":
+         generateSummaryReport(orders);
+         break;
+       case "detailed":
+         generateDetailedReport(orders);
+         break;
+       case "separate":
+         generateSeparateReport(orders);
+         break;
+     }
+   })
+   .catch(err => Swal.fire("Error al generar reporte", err.message, "error"));
+}
+
+// ----------------------
+// REPORTES EXISTENTES
+// ----------------------
+function generateSummaryReport(orders) {
+  const summary = {};
+  orders.forEach(o => {
+    const list = (o.receivedProducts && o.receivedProducts.length)
+      ? o.receivedProducts.map(p => ({ key:p.name+"||"+p.presentation, name:p.name, pres:p.presentation, qty:+p.receivedQuantity||0 }))
+      : (o.products||[]).map(p => ({ key:p.name+"||"+p.presentation, name:p.name, pres:p.presentation, qty:+p.quantity||0 }));
+    list.forEach(p => {
+      if (!summary[p.key]) summary[p.key] = { name:p.name, pres:p.pres, total:0 };
+      summary[p.key].total += p.qty;
     });
   });
-  
-  /**
-   * Carga las sucursales desde Firestore y llena el select.
-   */
-  function loadSucursales() {
-    const sucursalSelect = document.getElementById("sucursalSelect");
-    db.collection("sucursales").get()
-      .then(snapshot => {
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const option = document.createElement("option");
-          option.value = doc.id;
-          option.textContent = data.name;
-          sucursalSelect.appendChild(option);
+
+  let html = `
+    <h3>Resumen de Productos</h3>
+    <table class="table table-bordered">
+      <thead><tr><th>Producto</th><th>Presentación</th><th>Total</th></tr></thead>
+      <tbody>
+  `;
+  Object.values(summary).forEach(p => {
+    html += `<tr><td>${p.name}</td><td>${p.pres}</td><td>${p.total}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById("reportResults").innerHTML = html;
+}
+
+function generateDetailedReport(orders) {
+  let html = `<h3>Detalle de Pedidos</h3>`;
+  if (!orders.length) {
+    html += `<p>No se encontraron pedidos.</p>`;
+  } else {
+    orders.forEach(o => {
+      html += `
+        <div class="card mb-3">
+          <div class="card-header">
+            ID: ${o.orderId} | Fecha: ${o.orderDate} | Estado: ${o.status||'—'}
+          </div>
+          <div class="card-body">
+            <p><strong>Proveedor:</strong> ${o.providerName}</p>
+            <p><strong>Sucursal:</strong> ${o.sucursalName}</p>
+            <h5>Productos:</h5>
+      `;
+      const list = (o.receivedProducts && o.receivedProducts.length)
+        ? o.receivedProducts
+        : o.products||[];
+      if (list.length) {
+        html += `
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th>Producto</th><th>Presentación</th>
+                <th>Cant. Pedida</th><th>Cant. Recibida</th>
+                <th>Precio U.</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        list.forEach(p => {
+          html += `
+            <tr>
+              <td>${p.name}</td>
+              <td>${p.presentation}</td>
+              <td>${p.quantity||'—'}</td>
+              <td>${p.receivedQuantity||'—'}</td>
+              <td>${p.unitPrice? 'Q'+p.unitPrice:'—'}</td>
+              <td>${p.totalPerProduct? 'Q'+p.totalPerProduct:'—'}</td>
+            </tr>
+          `;
         });
-      })
-      .catch(error => {
-        Swal.fire({ icon: "error", title: "Error", text: error.message });
-      });
-  }
-  
-  /**
-   * Carga los proveedores únicos de los pedidos completados y llena el select.
-   */
-  function loadProviders() {
-    const providerSelect = document.getElementById("providerSelect");
-    providerSelect.innerHTML = `<option value="all">Todos</option>`;
-    // Se asume que los pedidos completados tienen status "sucursalRecibioPedido"
-    db.collection("orders")
-      .where("status", "==", "sucursalRecibioPedido")
-      .get()
-      .then(snapshot => {
-        const uniqueProviders = new Set();
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.providerName) {
-            uniqueProviders.add(data.providerName);
-          }
-        });
-        uniqueProviders.forEach(provider => {
-          const opt = document.createElement("option");
-          opt.value = provider;
-          opt.textContent = provider;
-          providerSelect.appendChild(opt);
-        });
-      })
-      .catch(error => {
-        Swal.fire({ icon: "error", title: "Error", text: error.message });
-      });
-  }
-  
-  /**
-   * Genera el reporte filtrando por sucursal, proveedor y rango de fechas.
-   */
-  function generateReport() {
-    const sucursal = document.getElementById("sucursalSelect").value;
-    const provider = document.getElementById("providerSelect").value;
-    const startDateStr = document.getElementById("startDate").value;
-    const endDateStr = document.getElementById("endDate").value;
-    const reportType = document.getElementById("reportType").value;
-    
-    if (!startDateStr || !endDateStr) {
-      Swal.fire({ icon: "warning", title: "Fechas requeridas", text: "Ingresa la fecha de inicio y la fecha fin." });
-      return;
-    }
-    
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
-    endDate.setHours(23,59,59,999);
-    
-    const startTimestamp = firebase.firestore.Timestamp.fromDate(startDate);
-    const endTimestamp = firebase.firestore.Timestamp.fromDate(endDate);
-    
-    // Consulta a la colección "orders" para pedidos completados
-    let query = db.collection("orders")
-      .where("status", "==", "sucursalRecibioPedido")
-      .where("timestamp", ">=", startTimestamp)
-      .where("timestamp", "<=", endTimestamp)
-      .orderBy("timestamp", "asc");
-    
-    if (sucursal !== "all") {
-      query = query.where("sucursalId", "==", sucursal);
-    }
-    if (provider !== "all") {
-      query = query.where("providerName", "==", provider);
-    }
-    
-    query.get()
-      .then(snapshot => {
-        const orders = [];
-        snapshot.forEach(doc => orders.push(doc.data()));
-        if (reportType === "summary") {
-          generateSummaryReport(orders);
-        } else {
-          generateDetailedReport(orders);
-        }
-      })
-      .catch(error => {
-        Swal.fire({ icon: "error", title: "Error al generar el reporte", text: error.message });
-      });
-  }
-  
-  /**
-   * Genera un reporte resumido que agrupa los productos recibidos.
-   */
-  function generateSummaryReport(orders) {
-    const productSummary = {};
-    
-    orders.forEach(order => {
-      if (order.receivedProducts && Array.isArray(order.receivedProducts)) {
-        order.receivedProducts.forEach(prod => {
-          // Usamos el nombre y la presentación como clave única
-          const key = prod.name + "||" + prod.presentation;
-          if (!productSummary[key]) {
-            productSummary[key] = {
-              name: prod.name,
-              presentation: prod.presentation,
-              totalReceived: 0
-            };
-          }
-          productSummary[key].totalReceived += Number(prod.receivedQuantity) || 0;
-        });
+        html += `</tbody></table>`;
+      } else {
+        html += `<p>No hay productos en este pedido.</p>`;
       }
+      html += `</div></div>`;
     });
-    
-    let html = `
-      <h3>Reporte Resumido de Productos Recibidos</h3>
-      <table class="table table-bordered">
-        <thead class="thead-light">
-          <tr>
-            <th>Producto</th>
-            <th>Presentación</th>
-            <th>Total Recibido</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-    
-    for (const key in productSummary) {
-      const prod = productSummary[key];
+  }
+  document.getElementById("reportResults").innerHTML = html;
+}
+
+// ----------------------
+// NUEVO: REPORTE SEPARADO
+// ----------------------
+function generateSeparateReport(orders) {
+  let html = `
+    <h3>Reporte Separado de Productos por Pedido</h3>
+    <table class="table table-bordered">
+      <thead class="thead-light">
+        <tr>
+          <th>Sucursal</th>
+          <th>Fecha de Pedido</th>
+          <th>ID Pedido</th>
+          <th>Proveedor</th>
+          <th>Producto</th>
+          <th>Cantidad</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  orders.forEach(o => {
+    const list = (o.receivedProducts && o.receivedProducts.length)
+      ? o.receivedProducts.map(p => ({ name:p.name, qty:+p.receivedQuantity||0 }))
+      : (o.products||[]).map(p => ({ name:p.name, qty:+p.quantity||0 }));
+    list.forEach(p => {
       html += `
         <tr>
-          <td>${prod.name}</td>
-          <td>${prod.presentation}</td>
-          <td>${prod.totalReceived}</td>
+          <td>${o.sucursalName}</td>
+          <td>${o.orderDate}</td>
+          <td>${o.orderId}</td>
+          <td>${o.providerName}</td>
+          <td>${p.name}</td>
+          <td>${p.qty}</td>
         </tr>
       `;
-    }
-    
-    html += `
-        </tbody>
-      </table>
-    `;
-    
-    document.getElementById("reportResults").innerHTML = html;
-  }
-  
-  /**
-   * Genera un reporte detallado mostrando cada pedido completado con sus datos.
-   */
-  function generateDetailedReport(orders) {
-    let html = `<h3>Reporte Detallado de Pedidos Completados</h3>`;
-    
-    if (orders.length === 0) {
-      html += `<p>No se encontraron pedidos en el rango de fechas y filtros seleccionados.</p>`;
-    } else {
-      orders.forEach(order => {
-        html += `
-          <div class="card mb-3">
-            <div class="card-header">
-              Pedido ID: ${order.orderId} | Fecha: ${order.orderDate}
-            </div>
-            <div class="card-body">
-              <p><strong>Proveedor:</strong> ${order.providerName}</p>
-              <p><strong>Sucursal:</strong> ${order.sucursalName}</p>
-              <h5>Productos Recibidos:</h5>
-        `;
-        if (order.receivedProducts && Array.isArray(order.receivedProducts)) {
-          html += `
-            <table class="table table-sm table-striped">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Presentación</th>
-                  <th>Cantidad Pedida</th>
-                  <th>Cantidad Recibida</th>
-                  <th>Precio Unitario</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-          order.receivedProducts.forEach(prod => {
-            html += `
-              <tr>
-                <td>${prod.name}</td>
-                <td>${prod.presentation}</td>
-                <td>${prod.quantity}</td>
-                <td>${prod.receivedQuantity}</td>
-                <td>Q${prod.unitPrice}</td>
-                <td>Q${prod.totalPerProduct}</td>
-              </tr>
-            `;
-          });
-          html += `
-              </tbody>
-            </table>
-          `;
-        } else {
-          html += `<p>No se encontraron productos recibidos.</p>`;
-        }
-        html += `
-            </div>
-          </div>
-        `;
-      });
-    }
-    
-    document.getElementById("reportResults").innerHTML = html;
-  }
-  
+    });
+  });
+  html += `
+      </tbody>
+    </table>
+  `;
+  document.getElementById("reportResults").innerHTML = html;
+}

@@ -10,24 +10,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- Archivo de conexión a la base de datos -->
   <script src="../database/connection.js"></script>
-  <!-- Archivo JavaScript de la aplicación -->
   <script defer src="pedidos.js"></script>
 </head>
 <body>
   <div class="header">
     <h1>Gestión de Pedidos</h1>
     <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
-    <!-- Botón para volver al menú principal -->
     <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
-    <!-- Nuevo botón para exportar pedidos -->
-    <button class="export-orders-button" onclick="window.location.href='exportPedidos.html'">
-      Exportar Pedidos
-    </button>
+    <button class="export-orders-button" onclick="window.location.href='exportPedidos.html'">Exportar Pedidos</button>
   </div>
 
-  <!-- Filtros para administrador -->
   <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
     <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
     <select id="sucursalFilter" onchange="reloadOrders()"></select>
@@ -42,7 +35,6 @@
       <option value="delivery">Entrega en Bodega/Tienda</option>
     </select>
     
-    <!-- Filtro adicional: Tipo de Entrega -->
     <label for="deliveryTypeFilter" style="font-weight: bold; margin-left: 1rem;">Tipo de Entrega:</label>
     <select id="deliveryTypeFilter" onchange="reloadOrders()">
       <option value="all" selected>Todos</option>
@@ -59,45 +51,35 @@
     <label for="idSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por ID:</label>
     <input type="text" id="idSearchInput" placeholder="Ej. 123" oninput="reloadOrders()" style="width: 100px;"/>
     
-    <!-- Filtro por fecha -->
     <label for="dateSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por Fecha:</label>
     <input type="date" id="dateSearchInput" onchange="reloadOrders()" />
   </div>
 
-  <!-- Pestañas -->
   <div class="tab-container" id="tabContainer">
     <button class="tab-button active" onclick="openTab(event, 'inProcessOrdersContainer')">Pedidos en Proceso</button>
     <button class="tab-button" onclick="openTab(event, 'completedOrdersContainer')">Pedidos Completados</button>
   </div>
 
-  <!-- Contenedor Pedidos en Proceso -->
   <div id="inProcessOrdersContainer" class="container">
     <h2>Pedidos en Proceso</h2>
-    <div id="inProcessOrdersAdminCards" class="order-cards-container">
-      <!-- Se generan dinámicamente -->
-    </div>
+    <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
   </div>
 
-  <!-- Contenedor Pedidos Completados -->
   <div id="completedOrdersContainer" class="container" style="display: none;">
     <h2>Pedidos Completados</h2>
-    <div id="completedOrdersAdminCards" class="order-cards-container">
-      <!-- Se generan dinámicamente -->
-    </div>
+    <div id="completedOrdersAdminCards" class="order-cards-container"></div>
   </div>
 
-  <!-- Modal: Detalles del Pedido -->
   <div id="orderDetailsModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
       <h2>Detalles del Pedido</h2>
       <div id="orderDetails"></div>
       <button id="exportOrderImageButton" style="margin-top: 1rem;">Exportar Pedido como Imagen</button>
-      <button onclick="openEditOrderModal(currentOrder)">Editar Pedido</button>
+      <button id="editOrderFromDetailsBtn">Editar Pedido</button>
     </div>
   </div>
 
-  <!-- Modal: Exportar Pedido -->
   <div id="exportModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeExportModal()">&times;</span>
@@ -108,7 +90,6 @@
     </div>
   </div>
 
-  <!-- Modal: Editar Pedido -->
   <div id="editOrderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeEditOrderModal()">&times;</span>
@@ -143,7 +124,6 @@
     </div>
   </div>
 
-  <!-- Modal: Confirmar Recepción -->
   <div id="confirmOrderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
@@ -198,7 +178,6 @@
     </div>
   </div>
 
-  <!-- Modal: Mostrar Pedido Recibido -->
   <div id="receivedOrderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
@@ -207,7 +186,6 @@
     </div>
   </div>
 
-  <!-- Modal: Cambiar Estado del Pedido -->
   <div id="changeStatusModal" class="modal" style="display: none;">
     <div class="modal-content">
       <span class="close" onclick="closeChangeStatusModal()">&times;</span>
@@ -222,7 +200,6 @@
     </div>
   </div>
 
-  <!-- Contenedor oculto para exportar recepción (se usa para generar la imagen a descargar) -->
   <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 1200px;">
     <img id="exportReceptionLogo" src="../resources/images/logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
     <h2>Recepción de Pedido</h2>
@@ -250,7 +227,6 @@
     <div style="margin-top: 20px; font-weight: bold; text-align: center;">¡Gracias por su pedido!</div>
   </div>
 
-  <!-- Ticket oculto para exportar como imagen (para otros usos) -->
   <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
     <div class="ticket-header">
       <img src="../resources/images/logo.png" alt="Logo" />
@@ -280,7 +256,6 @@
   </div>
   
   <script>
-    // Se expone la función global en caso de que otras secciones la requieran
     window.downloadExportReceptionImage = downloadExportReceptionImage;
   </script>
 </body>
