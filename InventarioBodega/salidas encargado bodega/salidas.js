@@ -482,11 +482,14 @@ async function loadOutgoingHistory() {
       tr.insertCell(3).textContent = m.quantity;
       tr.insertCell(4).textContent = m.user;
       tr.insertCell(5).textContent = m.comments || "";
-      tr.insertCell(6).innerHTML = `
-        <button class="btn btn-sm btn-danger"
-                onclick="deleteMovement('${docu.id}', '${(prodSnap.data()||{}).name||""}', ${Number(m.quantity)||0})">
-          <i class="fa-solid fa-trash"></i> Eliminar
-        </button>`;
+     const actionsCell = tr.insertCell(6);
+const delBtn = document.createElement('button');
+delBtn.className = 'btn btn-sm btn-danger';
+delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Eliminar';
+delBtn.addEventListener('click', () =>
+  deleteMovement(docu.id, (prodSnap.data()||{}).name||"", Number(m.quantity)||0)
+);
+actionsCell.appendChild(delBtn);
     }
   } catch (e) {
     console.error("Error al cargar historial:", e);
