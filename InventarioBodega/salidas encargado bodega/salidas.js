@@ -1,5 +1,6 @@
 /* salidas.js — versión completa con rediseño móvil, validaciones, prevención de duplicados,
-   transacciones en Firestore, pickers con búsqueda, stepper de cantidad y exportaciones. */
+   transacciones en Firestore, pickers con búsqueda, stepper de cantidad, exportaciones
+   y SIN scripts inline (listo para CSP estricta). */
 
 /* =========================
    FIREBASE
@@ -184,8 +185,8 @@ function selectProductFromPicker(p) {
   window.selectedProductName = p.name;
   updateProductDisplay(p.name, p.stock);
   const modal = document.getElementById("productPickerModal");
-  if (modal) {
-    const inst = bootstrap.Modal.getInstance(modal);
+  if (modal && typeof bootstrap !== "undefined") {
+    const inst = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
     inst && inst.hide();
   }
   updateSaveButtonState();
@@ -200,8 +201,8 @@ function selectBranchFromPicker(name) {
   const help = document.getElementById("branchHelper");
   if (help) help.style.display = "none";
   const modal = document.getElementById("branchPickerModal");
-  if (modal) {
-    const inst = bootstrap.Modal.getInstance(modal);
+  if (modal && typeof bootstrap !== "undefined") {
+    const inst = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
     inst && inst.hide();
   }
   updateSaveButtonState();
@@ -482,14 +483,15 @@ async function loadOutgoingHistory() {
       tr.insertCell(3).textContent = m.quantity;
       tr.insertCell(4).textContent = m.user;
       tr.insertCell(5).textContent = m.comments || "";
-     const actionsCell = tr.insertCell(6);
-const delBtn = document.createElement('button');
-delBtn.className = 'btn btn-sm btn-danger';
-delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Eliminar';
-delBtn.addEventListener('click', () =>
-  deleteMovement(docu.id, (prodSnap.data()||{}).name||"", Number(m.quantity)||0)
-);
-actionsCell.appendChild(delBtn);
+
+      const actionsCell = tr.insertCell(6);
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-sm btn-danger';
+      delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Eliminar';
+      delBtn.addEventListener('click', () =>
+        deleteMovement(docu.id, (prodSnap.data()||{}).name||"", Number(m.quantity)||0)
+      );
+      actionsCell.appendChild(delBtn);
     }
   } catch (e) {
     console.error("Error al cargar historial:", e);
@@ -619,7 +621,9 @@ async function generateOutgoingReport() {
       }
     }
 
-    const ctx = document.getElementById("reportChart").getContext("2d");
+    const ctxEl = document.getElementById("reportChart");
+    if (!ctxEl) return;
+    const ctx = ctxEl.getContext("2d");
     if (window.outgoingChart && window.outgoingChart.destroy) window.outgoingChart.destroy();
     window.outgoingChart = new Chart(ctx, {
       type: "bar",
@@ -861,7 +865,7 @@ function exportReportToExcel() {
 }
 
 /* =========================
-   INIT
+   INIT (sin inline)
    ========================= */
 function setDefaultDate() {
   const input = document.getElementById("outgoingDate");
@@ -890,7 +894,56 @@ window.onload = async function () {
 };
 
 /* =========================
-   Exponer funciones al DOM
+   Listeners de UI (equivalentes a los antiguos onclick)
+   ========================= */
+document.addEventListener('DOMContentLoaded', () => {
+  // Navegación secciones (móvil + desktop)
+  document.querySelectorAll('.js-nav-section').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = link.getAttribute('data-section');
+      showSection(section);
+
+      // Cerrar offcanvas si está abierto (móvil)
+      const offcanvasEl = document.getElementById('offcanvasSidebar');
+      if (offcanvasEl && typeof bootstrap !== 'undefined') {
+        const instance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+        if (instance) instance.hide();
+      }
+    });
+  });
+
+  // Botones cantidad
+  const btnDec = document.getElementById('btnDecQty');
+  const btnInc = document.getElementById('btnIncQty');
+  if (btnDec) btnDec.addEventListener('click', decQuantity);
+  if (btnInc) btnInc.addEventListener('click', incQuantity);
+
+  // Guardar (desktop y móvil)
+  const btnSave = document.getElementById('btnSaveOutgoing');
+  const btnSaveMobile = document.getElementById('btnSaveOutgoingMobile');
+  if (btnSave) btnSave.addEventListener('click', saveOutgoing);
+  if (btnSaveMobile) btnSaveMobile.addEventListener('click', saveOutgoing);
+
+  // Historial / Stock refrescar
+  const btnRefreshHistory = document.getElementById('btnRefreshHistory');
+  const btnRefreshStock = document.getElementById('btnRefreshStock');
+  if (btnRefreshHistory) btnRefreshHistory.addEventListener('click', loadOutgoingHistory);
+  if (btnRefreshStock) btnRefreshStock.addEventListener('click', loadStock);
+
+  // Reportes
+  const btnGenerateReport = document.getElementById('btnGenerateReport');
+  const btnExportImg = document.getElementById('btnExportImg');
+  const btnExportPDF = document.getElementById('btnExportPDF');
+  const btnExportExcel = document.getElementById('btnExportExcel');
+  if (btnGenerateReport) btnGenerateReport.addEventListener('click', generateOutgoingReport);
+  if (btnExportImg) btnExportImg.addEventListener('click', exportReportToImage);
+  if (btnExportPDF) btnExportPDF.addEventListener('click', exportReportToPDF);
+  if (btnExportExcel) btnExportExcel.addEventListener('click', exportReportToExcel);
+});
+
+/* =========================
+   Exponer funciones (por si las necesitas en consola)
    ========================= */
 window.showSection = showSection;
 window.saveOutgoing = saveOutgoing;
