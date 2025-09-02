@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Exportar Pedidos</title>
+  <title>Exportar Pedidos (por Proveedor)</title>
   <link rel="stylesheet" href="exportPedidos.css" />
   <!-- Firebase y dependencias -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
@@ -19,76 +19,51 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <!-- Conexión a la base de datos (Firebase) -->
   <script src="../database/connection.js"></script>
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 1rem;
-      background-color: #f8f9fa;
-    }
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 24px;
-    }
-    #filters {
-      margin: 1rem 0;
-      background-color: #fff;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    #filters label {
-      margin-right: 0.5rem;
-      font-weight: bold;
-    }
-    #filters select,
-    #filters input[type="date"] {
-      margin-right: 1rem;
-      padding: 0.3rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    .download-btn {
-      padding: 0.4rem 0.8rem;
-      margin-left: 1rem;
-      border: none;
-      color: #fff;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .excel-btn {
-      background-color: #28a745;
-    }
-    .pdf-btn {
-      background-color: #dc3545;
-    }
-    .img-btn {
-      background-color: #007bff;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-      background-color: #fff;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 0.5rem;
-      text-align: left;
-    }
-    th {
-      background-color: #e9ecef;
-    }
-    /* Contenedor oculto para PDF export (detalle) */
-    #pdfExportContainer {
-      display: none;
-    }
+    body { font-family: Arial, sans-serif; margin: 1rem; background-color: #f8f9fa; }
+    header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 1rem; }
+    header h1 { margin: 0; font-size: 24px; }
+
+    #filters { margin: 1rem 0; background-color: #fff; padding: 0.5rem; border: 1px solid #ccc; border-radius: 8px; }
+    #filters label { margin-right: 0.5rem; font-weight: bold; }
+    #filters select, #filters input[type="date"] { margin-right: 1rem; padding: 0.3rem; border: 1px solid #ccc; border-radius: 6px; }
+    .download-btn { padding: 0.45rem 0.9rem; margin-left: 0.5rem; border: none; color: #fff; border-radius: 8px; cursor: pointer; }
+    .excel-btn { background-color: #28a745; }
+    .pdf-btn { background-color: #dc3545; }
+    .img-btn { background-color: #007bff; }
+
+    /* ======= Agrupación por Proveedor ======= */
+    .proveedor-section { background: #fff; border: 2px solid; border-radius: 14px; overflow: hidden; margin-top: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+    .proveedor-header { display: flex; align-items: center; gap: .5rem; padding: .75rem 1rem; border-bottom: 1px dashed #ced4da; background: linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,0)); }
+    .proveedor-badge { font-weight: 700; padding: .25rem .65rem; border-radius: 999px; color: #fff; letter-spacing: .3px; }
+    .proveedor-count { color: #495057; font-size: 0.9rem; }
+    .proveedor-table { width: 100%; border-collapse: collapse; background: #fff; }
+    .proveedor-table th, .proveedor-table td { border: 1px solid #dee2e6; padding: 0.55rem; text-align: left; }
+    .proveedor-table thead th { background: #f1f3f5; font-weight: 700; }
+
+    /* Paleta de colores (8 variantes) */
+    .section-color-1 { border-color: #6f42c1; } .badge-color-1 { background: #6f42c1; }
+    .section-color-2 { border-color: #0d6efd; } .badge-color-2 { background: #0d6efd; }
+    .section-color-3 { border-color: #198754; } .badge-color-3 { background: #198754; }
+    .section-color-4 { border-color: #dc3545; } .badge-color-4 { background: #dc3545; }
+    .section-color-5 { border-color: #fd7e14; } .badge-color-5 { background: #fd7e14; }
+    .section-color-6 { border-color: #20c997; } .badge-color-6 { background: #20c997; }
+    .section-color-7 { border-color: #0dcaf0; } .badge-color-7 { background: #0dcaf0; color:#0b2e3a; }
+    .section-color-8 { border-color: #6c757d; } .badge-color-8 { background: #6c757d; }
+
+    /* Contenedores ocultos para exportaciones */
+    #pdfExportContainer { display: none; }
+    .pdf-proveedor-block { margin-bottom: 1.25rem; border: 1px dashed #ced4da; border-radius: 10px; padding: 0.75rem; }
+    .pdf-proveedor-title { font-weight: 800; margin: 0 0 0.5rem 0; }
+
+    /* Ticket para imágenes */
+    #orderDetailsForImage.ticket { display: none; position: absolute; left: -9999px; width: 420px; background: #fff; border: 1px solid #dee2e6; border-radius: 12px; padding: 16px; }
+    .ticket-header { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px; }
+    .ticket-header img { height: 28px; }
+    .ticket-body table { width: 100%; border-collapse: collapse; }
+    .ticket-body th, .ticket-body td { border: 1px solid #ddd; padding: 4px; font-size: 12px; }
+    .ticket-footer { margin-top: 8px; font-size: 12px; color: #6c757d; text-align: center; }
   </style>
 </head>
 <body>
@@ -103,12 +78,12 @@
     <select id="sucursalFilter" onchange="reloadExportOrders()">
       <option value="all">Todas</option>
     </select>
-    
+
     <label for="providerFilter">Proveedor:</label>
     <select id="providerFilter" onchange="reloadExportOrders()">
       <option value="all">Todos</option>
     </select>
-    
+
     <label for="estadoFilter">Estado:</label>
     <select id="estadoFilter" onchange="reloadExportOrders()">
       <option value="all" selected>Todos</option>
@@ -119,63 +94,46 @@
       <option value="caminoATienda">Camino a Tienda</option>
       <option value="sucursalRecibioPedido">Sucursal Recibió Pedido</option>
     </select>
-    
+
     <label for="deliveryTypeFilter">Tipo de Entrega:</label>
     <select id="deliveryTypeFilter" onchange="reloadExportOrders()">
       <option value="all">Todos</option>
       <option value="Tienda">Entrega en Tienda</option>
       <option value="Bodega">Entrega en Bodega</option>
     </select>
-    
+
     <label for="dateFilter">Fecha:</label>
     <input type="date" id="dateFilter" onchange="reloadExportOrders()">
-    
+
     <button onclick="exportOrdersExcel()" class="download-btn excel-btn">Descargar Excel</button>
     <button onclick="exportOrdersPDF()" class="download-btn pdf-btn">Descargar PDF</button>
     <button onclick="exportAllOrderImages()" class="download-btn img-btn">Descargar Imágenes Individuales</button>
   </section>
 
-  <!-- Tabla de Pedidos Generales -->
-  <section id="generalSection">
-    <h2>Pedidos Generales</h2>
-    <table id="ordersGeneralTable">
-      <thead>
-        <tr>
-          <th>ID Pedido</th>
-          <th>Proveedor</th>
-          <th>Sucursal</th>
-          <th>Fecha</th>
-          <th>Destino</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Se llenará dinámicamente -->
-      </tbody>
-    </table>
+  <!-- Resumen por Proveedor (vista general en pantalla) -->
+  <section id="generalSections">
+    <!-- Se llenará dinámicamente con secciones por proveedor -->
   </section>
 
-  <!-- Contenedor oculto para exportar PDF (detallado) -->
+  <!-- Contenedor oculto para exportar PDF (detallado por proveedor) -->
   <div id="pdfExportContainer">
-    <h2>Pedidos Detallados</h2>
-    <div id="detailedOrdersContainer">
-      <!-- Cada pedido se insertará como un bloque con detalle -->
-    </div>
+    <h2>Pedidos Detallados por Proveedor</h2>
+    <div id="pdfProveedorContainer"><!-- dinámico --></div>
   </div>
 
   <!-- Contenedor oculto para exportar imagen (formato similar a la gestión de pedidos) -->
-  <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
+  <div id="orderDetailsForImage" class="ticket">
     <div class="ticket-header">
       <img src="../resources/images/logo.png" alt="Logo" />
-      <h1>Pedido</h1>
-      <h2>ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
+      <h1 style="font-size:16px; margin:0;">Pedido</h1>
     </div>
     <div class="ticket-body">
+      <h2 style="font-size:14px; margin:0 0 6px 0;">ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
       <p><strong>Proveedor:</strong> <span id="imgProviderName"></span></p>
       <p><strong>Sucursal:</strong> <span id="imgSucursalName"></span></p>
       <p><strong>Entrega en:</strong> <span id="imgDestination"></span></p>
       <p><strong>Fecha de Registro:</strong> <span id="imgSaveDate"></span></p>
-      <h3>Productos:</h3>
+      <h3 style="font-size:14px;">Productos:</h3>
       <table class="products-table">
         <thead>
           <tr>
@@ -193,294 +151,372 @@
   </div>
 
   <script>
-    // Función para cargar los filtros: sucursales, proveedores.
+    // ===== Utilidades =====
+    const PALETTE_SIZE = 8;
+    function colorIndexFromString(s) {
+      if (!s) return 1;
+      let sum = 0;
+      for (let i = 0; i < s.length; i++) sum = (sum + s.charCodeAt(i)) % 997;
+      return (sum % PALETTE_SIZE) + 1; // 1..8
+    }
+    function sanitizeSheetName(name) {
+      const cleaned = (name || 'Proveedor').replace(/[\\\/*?\[\]]/g, ' ').slice(0, 28);
+      return cleaned.trim() || 'Proveedor';
+    }
+
+    // ===== Cargar filtros: sucursales, proveedores =====
     async function loadFilters() {
       try {
-        const sucursalSelect = document.getElementById("sucursalFilter");
-        const sucSnap = await db.collection("sucursales").get();
+        const sucursalSelect = document.getElementById('sucursalFilter');
+        const sucSnap = await db.collection('sucursales').get();
         sucSnap.forEach(doc => {
-          const opt = document.createElement("option");
+          const opt = document.createElement('option');
           opt.value = doc.id;
           opt.textContent = doc.data().name;
           sucursalSelect.appendChild(opt);
         });
-        const providerSelect = document.getElementById("providerFilter");
-        const ordersSnap = await db.collection("orders").get();
+
+        const providerSelect = document.getElementById('providerFilter');
+        const ordersSnap = await db.collection('orders').get();
         const providers = new Set();
         ordersSnap.forEach(doc => {
           const data = doc.data();
           if (data.providerName) providers.add(data.providerName);
         });
         providers.forEach(provider => {
-          const opt = document.createElement("option");
+          const opt = document.createElement('option');
           opt.value = provider;
           opt.textContent = provider;
           providerSelect.appendChild(opt);
         });
       } catch (error) {
-        Swal.fire({ icon: "error", title: "Error", text: error.message });
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message });
       }
     }
 
-    // Función para recargar pedidos según filtros y llenar la tabla general y la sección para PDF.
+    // ===== Recarga de pedidos agrupados por proveedor =====
     async function reloadExportOrders() {
       try {
-        let query = db.collection("orders");
-        const sucursal = document.getElementById("sucursalFilter").value;
-        if (sucursal !== "all") {
-          query = query.where("sucursalId", "==", sucursal);
-        }
-        const provider = document.getElementById("providerFilter").value;
-        if (provider !== "all") {
-          query = query.where("providerName", "==", provider);
-        }
-        const estado = document.getElementById("estadoFilter").value;
-        if (estado !== "all") {
-          query = query.where("status", "==", estado);
-        }
-        const deliveryType = document.getElementById("deliveryTypeFilter").value;
-        if (deliveryType !== "all") {
-          query = query.where("destination", "==", deliveryType);
-        }
-        const dateVal = document.getElementById("dateFilter").value;
+        let query = db.collection('orders');
+
+        const sucursal = document.getElementById('sucursalFilter').value;
+        if (sucursal !== 'all') query = query.where('sucursalId', '==', sucursal);
+
+        const provider = document.getElementById('providerFilter').value;
+        if (provider !== 'all') query = query.where('providerName', '==', provider);
+
+        const estado = document.getElementById('estadoFilter').value;
+        if (estado !== 'all') query = query.where('status', '==', estado);
+
+        const deliveryType = document.getElementById('deliveryTypeFilter').value;
+        if (deliveryType !== 'all') query = query.where('destination', '==', deliveryType);
+
+        const dateVal = document.getElementById('dateFilter').value;
         if (dateVal) {
           const startDate = new Date(dateVal);
           const endDate = new Date(dateVal);
           endDate.setDate(endDate.getDate() + 1);
-          query = query.where("timestamp", ">=", startDate).where("timestamp", "<", endDate);
+          query = query.where('timestamp', '>=', startDate).where('timestamp', '<', endDate);
         }
+
         const snapshot = await query.get();
-        // Llenar tabla general
-        const tbodyGeneral = document.querySelector("#ordersGeneralTable tbody");
-        tbodyGeneral.innerHTML = "";
-        // Llenar sección detallada para PDF (oculta)
-        const detailedContainer = document.getElementById("detailedOrdersContainer");
-        detailedContainer.innerHTML = "";
+
+        // Agrupar por proveedor
+        const groups = new Map(); // key: providerName
         snapshot.forEach(doc => {
           const order = doc.data();
-          // Llenar tabla general
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${order.orderId || "-"}</td>
-            <td>${order.providerName || "-"}</td>
-            <td>${order.sucursalName || "-"}</td>
-            <td>${order.orderDate || "-"}</td>
-            <td>${order.destination || "-"}</td>
-            <td>${order.status || "-"}</td>
-          `;
-          tbodyGeneral.appendChild(row);
-          // Bloque detallado para PDF
-          const orderBlock = document.createElement("div");
-          orderBlock.style.border = "1px solid #ccc";
-          orderBlock.style.padding = "1rem";
-          orderBlock.style.marginBottom = "1rem";
-          orderBlock.innerHTML = `
-            <h3>Pedido ${order.orderId || "-"}</h3>
-            <p><strong>Proveedor:</strong> ${order.providerName || "-"}</p>
-            <p><strong>Sucursal:</strong> ${order.sucursalName || "-"}</p>
-            <p><strong>Fecha:</strong> ${order.orderDate || "-"}</p>
-            <p><strong>Destino:</strong> ${order.destination || "-"}</p>
-            <p><strong>Estado:</strong> ${order.status || "-"}</p>
-            <h4>Productos</h4>
-          `;
-          if (order.products && order.products.length > 0) {
-            const prodTable = document.createElement("table");
-            prodTable.style.width = "100%";
-            prodTable.style.borderCollapse = "collapse";
-            prodTable.innerHTML = `
-              <thead>
-                <tr>
-                  <th style="border: 1px solid #ccc; padding: 0.3rem;">Producto</th>
-                  <th style="border: 1px solid #ccc; padding: 0.3rem;">Presentación</th>
-                  <th style="border: 1px solid #ccc; padding: 0.3rem;">Cantidad</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            `;
-            const tbodyProd = prodTable.querySelector("tbody");
-            order.products.forEach(prod => {
-              const prodRow = document.createElement("tr");
-              prodRow.innerHTML = `
-                <td style="border: 1px solid #ccc; padding: 0.3rem;">${prod.name || "-"}</td>
-                <td style="border: 1px solid #ccc; padding: 0.3rem;">${prod.presentation || "-"}</td>
-                <td style="border: 1px solid #ccc; padding: 0.3rem;">${prod.quantity || "-"}</td>
-              `;
-              tbodyProd.appendChild(prodRow);
+          const key = order.providerName || 'Sin proveedor';
+          if (!groups.has(key)) {
+            groups.set(key, {
+              id: key,
+              name: key,
+              orders: []
             });
-            orderBlock.appendChild(prodTable);
-          } else {
-            orderBlock.innerHTML += `<p>No hay productos.</p>`;
           }
-          detailedContainer.appendChild(orderBlock);
+          groups.get(key).orders.push(order);
         });
+
+        // Render vista general (pantalla)
+        const generalSections = document.getElementById('generalSections');
+        generalSections.innerHTML = '';
+
+        for (const g of groups.values()) {
+          const idx = colorIndexFromString(g.id);
+          const section = document.createElement('div');
+          section.className = `proveedor-section section-color-${idx}`;
+          section.innerHTML = `
+            <div class="proveedor-header">
+              <span class="proveedor-badge badge-color-${idx}">${g.name}</span>
+              <span class="proveedor-count">(${g.orders.length} pedidos)</span>
+            </div>
+          `;
+
+          const table = document.createElement('table');
+          table.className = 'proveedor-table ordersGeneralTable';
+          table.dataset.proveedorName = g.name;
+          table.innerHTML = `
+            <thead>
+              <tr>
+                <th>ID Pedido</th>
+                <th>Proveedor</th>
+                <th>Sucursal</th>
+                <th>Fecha</th>
+                <th>Destino</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          `;
+          const tbody = table.querySelector('tbody');
+          g.orders.forEach(order => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${order.orderId || '-'}</td>
+              <td>${order.providerName || '-'}</td>
+              <td>${order.sucursalName || '-'}</td>
+              <td>${order.orderDate || '-'}</td>
+              <td>${order.destination || '-'}</td>
+              <td>${order.status || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+          section.appendChild(table);
+          generalSections.appendChild(section);
+        }
+
+        // Render contenedor PDF (detallado por proveedor)
+        const pdfContainer = document.getElementById('pdfProveedorContainer');
+        pdfContainer.innerHTML = '';
+
+        for (const g of groups.values()) {
+          const block = document.createElement('div');
+          block.className = 'pdf-proveedor-block';
+          block.innerHTML = `<h3 class="pdf-proveedor-title">Proveedor: ${g.name} — ${g.orders.length} pedidos</h3>`;
+
+          g.orders.forEach(order => {
+            const orderBlock = document.createElement('div');
+            orderBlock.style.border = '1px solid #ccc';
+            orderBlock.style.padding = '0.75rem';
+            orderBlock.style.marginBottom = '0.75rem';
+            orderBlock.innerHTML = `
+              <h4 style=\"margin:0 0 .4rem 0;\">Pedido ${order.orderId || '-'}</h4>
+              <p style=\"margin:.1rem 0;\"><strong>Proveedor:</strong> ${order.providerName || '-'}</p>
+              <p style=\"margin:.1rem 0;\"><strong>Sucursal:</strong> ${order.sucursalName || '-'}</p>
+              <p style=\"margin:.1rem 0;\"><strong>Fecha:</strong> ${order.orderDate || '-'}</p>
+              <p style=\"margin:.1rem 0;\"><strong>Destino:</strong> ${order.destination || '-'}</p>
+              <p style=\"margin:.1rem 0;\"><strong>Estado:</strong> ${order.status || '-'}</p>
+              <h5 style=\"margin:.4rem 0;\">Productos</h5>
+            `;
+
+            if (order.products && order.products.length) {
+              const prodTable = document.createElement('table');
+              prodTable.style.width = '100%';
+              prodTable.style.borderCollapse = 'collapse';
+              prodTable.innerHTML = `
+                <thead>
+                  <tr>
+                    <th style=\"border: 1px solid #ccc; padding: 0.3rem;\">Producto</th>
+                    <th style=\"border: 1px solid #ccc; padding: 0.3rem;\">Presentación</th>
+                    <th style=\"border: 1px solid #ccc; padding: 0.3rem;\">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              `;
+              const tbodyProd = prodTable.querySelector('tbody');
+              order.products.forEach(p => {
+                const r = document.createElement('tr');
+                r.innerHTML = `
+                  <td style=\"border: 1px solid #ccc; padding: 0.3rem;\">${p.name || '-'}</td>
+                  <td style=\"border: 1px solid #ccc; padding: 0.3rem;\">${p.presentation || '-'}</td>
+                  <td style=\"border: 1px solid #ccc; padding: 0.3rem;\">${p.quantity || '-'}</td>
+                `;
+                tbodyProd.appendChild(r);
+              });
+              orderBlock.appendChild(prodTable);
+            } else {
+              orderBlock.innerHTML += '<p>No hay productos.</p>';
+            }
+
+            block.appendChild(orderBlock);
+          });
+
+          pdfContainer.appendChild(block);
+        }
       } catch (error) {
-        Swal.fire({ icon: "error", title: "Error", text: error.message });
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message });
       }
     }
 
-    // Exportar a Excel usando la tabla general
+    // ===== Exportar a Excel (una hoja por proveedor) =====
     function exportOrdersExcel() {
+      const tables = document.querySelectorAll('.ordersGeneralTable');
+      if (!tables.length) {
+        Swal.fire('No hay datos para exportar.');
+        return;
+      }
+
       const wb = XLSX.utils.book_new();
-      const ws_data = [
-        ["ID Pedido", "Proveedor", "Sucursal", "Fecha", "Destino", "Estado"]
-      ];
-      const rows = document.querySelectorAll("#ordersGeneralTable tbody tr");
-      rows.forEach(row => {
-        const cells = row.querySelectorAll("td");
-        const rowData = [];
-        cells.forEach(cell => rowData.push(cell.textContent));
-        ws_data.push(rowData);
+      tables.forEach((table, idx) => {
+        const provName = table.dataset.proveedorName || `Proveedor ${idx + 1}`;
+        const ws_data = [ ['ID Pedido', 'Proveedor', 'Sucursal', 'Fecha', 'Destino', 'Estado'] ];
+        table.querySelectorAll('tbody tr').forEach(tr => {
+          const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent);
+          ws_data.push(cells);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(provName));
       });
-      const ws = XLSX.utils.aoa_to_sheet(ws_data);
-      XLSX.utils.book_append_sheet(wb, ws, "Pedidos Generales");
-      XLSX.writeFile(wb, "Pedidos.xlsx");
+
+      XLSX.writeFile(wb, 'Pedidos_por_Proveedor.xlsx');
     }
 
-    // Exportar a PDF con pedidos detallados
+    // ===== Exportar a PDF (separado y marcado por proveedor) =====
     async function exportOrdersPDF() {
       try {
-        await reloadExportOrders();
+        await reloadExportOrders(); // Asegura contenedores actualizados
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        let yPosition = 10;
-        doc.setFontSize(16);
-        doc.text("Listado de Pedidos Detallados", 14, yPosition);
-        yPosition += 10;
-        // Incluir filtro por proveedor en el título, si aplica
-        const provider = document.getElementById("providerFilter").value;
-        if (provider !== "all") {
-          doc.setFontSize(12);
-          doc.text(`Filtrado por Proveedor: ${provider}`, 14, yPosition);
-          yPosition += 10;
-        }
-        const detailedContainer = document.getElementById("detailedOrdersContainer");
-        const orderBlocks = detailedContainer.children;
-        for (let i = 0; i < orderBlocks.length; i++) {
-          const block = orderBlocks[i];
-          const headerElements = block.querySelectorAll("h3, p");
-          let orderInfo = "";
-          headerElements.forEach(el => {
-            orderInfo += el.textContent + "\n";
-          });
-          doc.setFontSize(12);
-          doc.text(orderInfo, 14, yPosition);
-          yPosition += 25;
-          const prodTable = block.querySelector("table");
-          if (prodTable) {
-            doc.autoTable({ html: prodTable, startY: yPosition, theme: 'grid', styles: { fontSize: 10 } });
-            yPosition = doc.lastAutoTable.finalY + 10;
+        let firstPage = true;
+
+        const pdfContainer = document.getElementById('pdfProveedorContainer');
+        const provBlocks = pdfContainer.children;
+
+        for (let i = 0; i < provBlocks.length; i++) {
+          const block = provBlocks[i];
+          const title = block.querySelector('.pdf-proveedor-title').textContent;
+
+          if (!firstPage) doc.addPage();
+          firstPage = false;
+
+          // Banda de color suave detrás del título
+          doc.setFillColor(245, 245, 245);
+          doc.rect(10, 10, 190, 14, 'F');
+          doc.setFontSize(14);
+          doc.text(title, 14, 18);
+
+          let y = 26;
+          const orderBlocks = block.querySelectorAll('div[style*="margin-bottom"]');
+          for (let j = 0; j < orderBlocks.length; j++) {
+            const ob = orderBlocks[j];
+
+            // Texto informativo del pedido
+            const infoEls = ob.querySelectorAll('h4, p');
+            let info = '';
+            infoEls.forEach(el => { info += (el.textContent || '') + '\n'; });
+            const lines = doc.splitTextToSize(info, 186);
+            doc.setFontSize(11);
+            doc.text(lines, 14, y);
+            y += lines.length * 6 + 2;
+
+            // Tabla de productos (si existe)
+            const prodTable = ob.querySelector('table');
+            if (prodTable) {
+              doc.autoTable({ html: prodTable, startY: y, theme: 'grid', styles: { fontSize: 10 } });
+              y = doc.lastAutoTable.finalY + 8;
+            }
+
+            // Separador
+            doc.setLineWidth(0.3);
+            doc.line(14, y, 196, y);
+            y += 8;
+
+            // Si no hay espacio suficiente en la página
+            if (y > 265 && (j < orderBlocks.length - 1)) {
+              doc.addPage();
+              y = 18; // margen superior tras título si fuera necesario
+            }
           }
-          doc.setLineWidth(0.5);
-          doc.line(14, yPosition, 196, yPosition);
-          yPosition += 10;
-          if (yPosition > 270 && i < orderBlocks.length - 1) {
-            doc.addPage();
-            yPosition = 10;
-          }
         }
-        doc.save("PedidosDetallados.pdf");
+        doc.save('Pedidos_Detallados_por_Proveedor.pdf');
       } catch (error) {
-        Swal.fire({ icon: "error", title: "Error en PDF", text: error.message });
+        Swal.fire({ icon: 'error', title: 'Error en PDF', text: error.message });
       }
     }
 
-    // Función para exportar imágenes individuales de cada pedido
+    // ===== Exportar imágenes individuales (sin cambios, ya incluye proveedor y sucursal visibles) =====
     async function exportAllOrderImages() {
       try {
-        let query = db.collection("orders");
-        const sucursal = document.getElementById("sucursalFilter").value;
-        if (sucursal !== "all") {
-          query = query.where("sucursalId", "==", sucursal);
-        }
-        const provider = document.getElementById("providerFilter").value;
-        if (provider !== "all") {
-          query = query.where("providerName", "==", provider);
-        }
-        const estado = document.getElementById("estadoFilter").value;
-        if (estado !== "all") {
-          query = query.where("status", "==", estado);
-        }
-        const deliveryType = document.getElementById("deliveryTypeFilter").value;
-        if (deliveryType !== "all") {
-          query = query.where("destination", "==", deliveryType);
-        }
-        const dateVal = document.getElementById("dateFilter").value;
+        let query = db.collection('orders');
+        const sucursal = document.getElementById('sucursalFilter').value;
+        if (sucursal !== 'all') query = query.where('sucursalId', '==', sucursal);
+        const provider = document.getElementById('providerFilter').value;
+        if (provider !== 'all') query = query.where('providerName', '==', provider);
+        const estado = document.getElementById('estadoFilter').value;
+        if (estado !== 'all') query = query.where('status', '==', estado);
+        const deliveryType = document.getElementById('deliveryTypeFilter').value;
+        if (deliveryType !== 'all') query = query.where('destination', '==', deliveryType);
+        const dateVal = document.getElementById('dateFilter').value;
         if (dateVal) {
           const startDate = new Date(dateVal);
           const endDate = new Date(dateVal);
           endDate.setDate(endDate.getDate() + 1);
-          query = query.where("timestamp", ">=", startDate).where("timestamp", "<", endDate);
+          query = query.where('timestamp', '>=', startDate).where('timestamp', '<', endDate);
         }
+
         const snapshot = await query.get();
-        if (snapshot.empty) {
-          Swal.fire("No se encontraron pedidos para exportar imágenes.");
-          return;
-        }
+        if (snapshot.empty) { Swal.fire('No se encontraron pedidos para exportar imágenes.'); return; }
+
         const orders = [];
-        snapshot.forEach(doc => {
-          orders.push(doc.data());
-        });
+        snapshot.forEach(doc => orders.push(doc.data()));
+
         for (const order of orders) {
           await exportOrderImage(order);
-          await new Promise(r => setTimeout(r, 500)); // pequeño retardo
+          await new Promise(r => setTimeout(r, 300));
         }
-        Swal.fire("Descarga de imágenes completada.");
+        Swal.fire('Descarga de imágenes completada.');
       } catch (error) {
-        Swal.fire({ icon: "error", title: "Error", text: error.message });
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message });
       }
     }
 
-    // Función para exportar imagen de un pedido individual usando el formato de imagen (similar a exportAsImageTicket)
     async function exportOrderImage(order) {
       return new Promise((resolve, reject) => {
         try {
-          document.getElementById("imgOrderId").textContent = order.orderId;
-          document.getElementById("imgProviderName").textContent = order.providerName;
-          document.getElementById("imgSucursalName").textContent = order.sucursalName;
-          document.getElementById("imgDestination").textContent = order.destination;
-          const regDate = order.savedDate || order.orderDate;
-          document.getElementById("imgSaveDate").textContent = regDate;
-          const tbody = document.getElementById("imgProductsTableBody");
-          tbody.innerHTML = "";
+          document.getElementById('imgOrderId').textContent = order.orderId || '-';
+          document.getElementById('imgProviderName').textContent = order.providerName || '-';
+          document.getElementById('imgSucursalName').textContent = order.sucursalName || '-';
+          document.getElementById('imgDestination').textContent = order.destination || '-';
+          const regDate = order.savedDate || order.orderDate || '-';
+          document.getElementById('imgSaveDate').textContent = regDate;
+
+          const tbody = document.getElementById('imgProductsTableBody');
+          tbody.innerHTML = '';
           if (order.products && order.products.length > 0) {
             order.products.forEach(prod => {
-              const row = document.createElement("tr");
+              const row = document.createElement('tr');
               row.innerHTML = `
-                <td>${prod.name}</td>
-                <td>${prod.presentation}</td>
-                <td>${prod.quantity}</td>
+                <td>${prod.name || '-'}</td>
+                <td>${prod.presentation || '-'}</td>
+                <td>${prod.quantity || '-'}</td>
               `;
               tbody.appendChild(row);
             });
           }
-          const ticket = document.getElementById("orderDetailsForImage");
-          ticket.style.display = "block";
-          ticket.style.left = "50%";
-          ticket.style.top = "50%";
-          ticket.style.transform = "translate(-50%, -50%)";
+
+          const ticket = document.getElementById('orderDetailsForImage');
+          ticket.style.display = 'block';
+          ticket.style.left = '50%';
+          ticket.style.top = '50%';
+          ticket.style.transform = 'translate(-50%, -50%)';
+
           html2canvas(ticket, { scale: 3 })
             .then(canvas => {
-              const imgData = canvas.toDataURL("image/png");
-              const link = document.createElement("a");
+              const imgData = canvas.toDataURL('image/png');
+              const link = document.createElement('a');
               link.href = imgData;
-              link.download = `Pedido_${order.orderId}.png`;
+              link.download = `Pedido_${order.orderId || 'sin_id'}.png`;
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
-              ticket.style.display = "none";
+              ticket.style.display = 'none';
               resolve();
             })
-            .catch(err => {
-              Swal.fire({ icon: "error", title: "Error", text: "No se pudo exportar la imagen" });
-              reject(err);
-            });
-        } catch (error) {
-          reject(error);
-        }
+            .catch(err => { Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo exportar la imagen' }); reject(err); });
+        } catch (error) { reject(error); }
       });
     }
 
-    // Inicializar filtros y cargar pedidos al cargar la página
+    // ===== Init =====
     loadFilters().then(reloadExportOrders);
   </script>
 </body>

@@ -17,50 +17,52 @@
   <div class="header">
     <h1>Gestión de Pedidos</h1>
     <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
-    <button class="main-menu-button" onclick="goToMainMenu()">Volver al Menú Principal</button>
-    <button class="export-orders-button" onclick="window.location.href='exportPedidos.html'">Exportar Pedidos</button>
+    <div>
+      <button id="btnMainMenu" class="main-menu-button">Volver al Menú Principal</button>
+      <a class="export-orders-button main-menu-button" href="exportPedidos.html">Exportar Pedidos</a>
+    </div>
   </div>
 
   <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
     <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
-    <select id="sucursalFilter" onchange="reloadOrders()"></select>
+    <select id="sucursalFilter"></select>
     
     <label for="providerFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Proveedor:</label>
-    <select id="providerFilter" onchange="reloadOrders()"></select>
+    <select id="providerFilter"></select>
     
     <label for="estadoFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Estado:</label>
-    <select id="estadoFilter" onchange="reloadOrders()">
+    <select id="estadoFilter">
       <option value="all" selected>Todos</option>
       <option value="pending">Pendiente</option>
       <option value="delivery">Entrega en Bodega/Tienda</option>
     </select>
     
     <label for="deliveryTypeFilter" style="font-weight: bold; margin-left: 1rem;">Tipo de Entrega:</label>
-    <select id="deliveryTypeFilter" onchange="reloadOrders()">
+    <select id="deliveryTypeFilter">
       <option value="all" selected>Todos</option>
       <option value="Tienda">Entrega en Tienda</option>
       <option value="Bodega">Entrega en Bodega</option>
     </select>
     
     <label for="sortOrder" style="font-weight: bold; margin-left: 1rem;">Ordenar por:</label>
-    <select id="sortOrder" onchange="reloadOrders()">
+    <select id="sortOrder">
       <option value="masReciente" selected>Más Reciente</option>
       <option value="masAntiguo">Más Antiguo</option>
     </select>
     
     <label for="idSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por ID:</label>
-    <input type="text" id="idSearchInput" placeholder="Ej. 123" oninput="reloadOrders()" style="width: 100px;"/>
+    <input type="text" id="idSearchInput" placeholder="Ej. 123" style="width: 100px;"/>
     
     <label for="dateSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por Fecha:</label>
-    <input type="date" id="dateSearchInput" onchange="reloadOrders()" />
+    <input type="date" id="dateSearchInput" />
   </div>
 
   <div class="tab-container" id="tabContainer">
-    <button class="tab-button active" onclick="openTab(event, 'inProcessOrdersContainer')">Pedidos en Proceso</button>
-    <button class="tab-button" onclick="openTab(event, 'completedOrdersContainer')">Pedidos Completados</button>
+    <button class="tab-button active" data-tab-target="inProcessOrdersContainer">Pedidos en Proceso</button>
+    <button class="tab-button" data-tab-target="completedOrdersContainer">Pedidos Completados</button>
   </div>
 
-  <div id="inProcessOrdersContainer" class="container">
+  <div id="inProcessOrdersContainer" class="container" style="display:block;">
     <h2>Pedidos en Proceso</h2>
     <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
   </div>
@@ -70,9 +72,10 @@
     <div id="completedOrdersAdminCards" class="order-cards-container"></div>
   </div>
 
-  <div id="orderDetailsModal" class="modal">
+  <!-- Detalles de Pedido -->
+  <div id="orderDetailsModal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
-      <span class="close" onclick="closeOrderDetailsModal()">&times;</span>
+      <span id="btnCloseOrderDetails" class="close">&times;</span>
       <h2>Detalles del Pedido</h2>
       <div id="orderDetails"></div>
       <button id="exportOrderImageButton" style="margin-top: 1rem;">Exportar Pedido como Imagen</button>
@@ -80,19 +83,23 @@
     </div>
   </div>
 
-  <div id="exportModal" class="modal">
+  <!-- Exportar Pedido -->
+  <div id="exportModal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
-      <span class="close" onclick="closeExportModal()">&times;</span>
+      <span id="btnCloseExportModal" class="close">&times;</span>
       <h2>Exportar Pedido</h2>
-      <button onclick="exportAs('image')">Descargar como Imagen</button>
-      <button onclick="exportAs('pdf')">Descargar como PDF</button>
-      <button onclick="exportAs('excel')">Descargar como Excel</button>
+      <div id="exportModalButtons">
+        <button data-export-format="image">Descargar como Imagen</button>
+        <button data-export-format="pdf">Descargar como PDF</button>
+        <button data-export-format="excel">Descargar como Excel</button>
+      </div>
     </div>
   </div>
 
-  <div id="editOrderModal" class="modal">
+  <!-- Editar Pedido -->
+  <div id="editOrderModal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
-      <span class="close" onclick="closeEditOrderModal()">&times;</span>
+      <span id="btnCloseEditOrder" class="close">&times;</span>
       <h2>Editar Pedido</h2>
       <div id="editOrderDetails">
         <form id="editOrderForm">
@@ -116,18 +123,20 @@
             </thead>
             <tbody id="editOrderProducts"></tbody>
           </table>
-          <button type="button" onclick="addProductRow()">Agregar Producto</button>
-          <br/><br/>
-          <button type="button" onclick="saveEditedOrder()">Guardar Cambios</button>
+          <br/>
+          <div>
+            <button type="button" id="btnAddProductRow">Agregar Producto</button>
+            <button type="button" id="btnSaveEditedOrder">Guardar Cambios</button>
+          </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- MODAL RECEPCIÓN (ACTUALIZADO) -->
-  <div id="confirmOrderModal" class="modal">
+  <!-- Recepción (ACTUALIZADO) -->
+  <div id="confirmOrderModal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
-      <span class="close" onclick="closeConfirmOrderModal()">&times;</span>
+      <span id="btnCloseConfirmOrder" class="close">&times;</span>
       <h2>Ingresar Cantidades Recibidas</h2>
       <input type="hidden" id="confirmOrderId" value=""/>
 
@@ -160,34 +169,39 @@
         <p>Total de la Factura: Q<span id="invoiceTotal">0.00</span></p>
       </div>
       <div id="exportReceptionButtonContainer" style="margin-top: 1rem; display: none;">
-        <button onclick="exportAsReceivedOrderImage(document.getElementById('confirmOrderId').value)">Exportar Cantidades Recibidas</button>
+        <button id="btnExportReceived">Exportar Cantidades Recibidas</button>
       </div>
-      <button onclick="saveConfirmedOrder()">Guardar Recepción</button>
+      <button id="btnSaveReception">Guardar Recepción</button>
     </div>
   </div>
 
-  <div id="receivedOrderModal" class="modal">
+  <!-- Detalles Recepción -->
+  <div id="receivedOrderModal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
-      <span class="close" onclick="closeReceivedOrderModal()">&times;</span>
+      <span id="btnCloseReceivedOrder" class="close">&times;</span>
       <h2>Detalles del Pedido Recibido</h2>
       <div id="receivedOrderDetails"></div>
     </div>
   </div>
 
-  <div id="changeStatusModal" class="modal" style="display: none;">
+  <!-- Cambiar Estado -->
+  <div id="changeStatusModal" class="modal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content">
-      <span class="close" onclick="closeChangeStatusModal()">&times;</span>
+      <span id="btnCloseChangeStatus" class="close">&times;</span>
       <h2>Cambiar Estado del Pedido</h2>
       <p>Selecciona el nuevo estado para este pedido:</p>
-      <button onclick="changeOrderStatusManually('pending')">Pendiente</button>
-      <button onclick="changeOrderStatusManually('pedidoTomado')">Pedido Tomado</button>
-      <button onclick="changeOrderStatusManually('pedidoEnBodega')">Pedido en Bodega</button>
-      <button onclick="changeOrderStatusManually('bodegaEnvioPedido')">Bodega Envío Pedido</button>
-      <button onclick="changeOrderStatusManually('caminoATienda')">Camino a Tienda</button>
-      <button onclick="changeOrderStatusManually('sucursalRecibioPedido')">Sucursal Recibió Pedido</button>
+      <div id="changeStatusButtons">
+        <button data-action="changeManualStatus" data-status="pending">Pendiente</button>
+        <button data-action="changeManualStatus" data-status="pedidoTomado">Pedido Tomado</button>
+        <button data-action="changeManualStatus" data-status="pedidoEnBodega">Pedido en Bodega</button>
+        <button data-action="changeManualStatus" data-status="bodegaEnvioPedido">Bodega Envío Pedido</button>
+        <button data-action="changeManualStatus" data-status="caminoATienda">Camino a Tienda</button>
+        <button data-action="changeManualStatus" data-status="sucursalRecibioPedido">Sucursal Recibió Pedido</button>
+      </div>
     </div>
   </div>
 
+  <!-- Plantilla exportación Recepción -->
   <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 1200px;">
     <img id="exportReceptionLogo" src="../resources/images/logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
     <h2>Recepción de Pedido</h2>
@@ -215,6 +229,7 @@
     <div style="margin-top: 20px; font-weight: bold; text-align: center;">¡Gracias por su pedido!</div>
   </div>
 
+  <!-- Plantilla exportación Ticket Pedido -->
   <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
     <div class="ticket-header">
       <img src="../resources/images/logo.png" alt="Logo" />
@@ -242,9 +257,10 @@
       <p>Gracias por su pedido.</p>
     </div>
   </div>
-  
+
   <script>
-    window.downloadExportReceptionImage = downloadExportReceptionImage;
+    // Compatibilidad con llamadas externas existentes
+    window.downloadExportReceptionImage = function(id){ const elId = id || document.getElementById("confirmOrderId")?.value || ""; if (elId) document.dispatchEvent(new CustomEvent("exportReception", { detail: elId })); };
   </script>
 </body>
 </html>
