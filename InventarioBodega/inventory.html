@@ -294,8 +294,21 @@
                 </button>
               </div>
             </div>
-            <div class="row mb-3">
-              <div class="col-md-6">
+
+            <!-- Filtros de Facturas -->
+            <div class="row g-3 mb-2">
+              <div class="col-md-3">
+                <label for="invoiceSearchNumber" class="form-label">N° de Factura</label>
+                <input
+                  type="text"
+                  id="invoiceSearchNumber"
+                  class="form-control"
+                  placeholder="Buscar por número..."
+                  onkeyup="loadInvoices()"
+                />
+              </div>
+              <div class="col-md-3">
+                <label for="invoiceFilterCompany" class="form-label">Empresa</label>
                 <select
                   id="invoiceFilterCompany"
                   class="form-select"
@@ -311,7 +324,18 @@
                   </option>
                 </select>
               </div>
-              <div class="col-md-6">
+              <div class="col-md-3">
+                <label for="invoiceFilterSupplier" class="form-label">Proveedor</label>
+                <select
+                  id="invoiceFilterSupplier"
+                  class="form-select"
+                  onchange="loadInvoices()"
+                >
+                  <option value="">Todos los proveedores</option>
+                  <!-- Se poblará dinámicamente -->
+                </select>
+              </div>
+              <div class="col-md-3 d-flex align-items-end">
                 <div class="form-check">
                   <input
                     type="checkbox"
@@ -325,6 +349,36 @@
                 </div>
               </div>
             </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-3">
+                <label for="invoiceStartDate" class="form-label">Desde</label>
+                <input
+                  type="date"
+                  id="invoiceStartDate"
+                  class="form-control"
+                  onchange="loadInvoices()"
+                />
+              </div>
+              <div class="col-md-3">
+                <label for="invoiceEndDate" class="form-label">Hasta</label>
+                <input
+                  type="date"
+                  id="invoiceEndDate"
+                  class="form-control"
+                  onchange="loadInvoices()"
+                />
+              </div>
+              <div class="col-md-6 d-flex align-items-end gap-2">
+                <button class="btn btn-primary" onclick="loadInvoices()">
+                  <i class="fa-solid fa-filter"></i> Aplicar
+                </button>
+                <button class="btn btn-outline-secondary" onclick="clearInvoiceFilters()">
+                  <i class="fa-solid fa-eraser"></i> Limpiar
+                </button>
+              </div>
+            </div>
+
             <div class="table-responsive">
               <table class="table table-striped" id="invoicesTable">
                 <thead>
@@ -343,6 +397,7 @@
                 </tbody>
               </table>
             </div>
+
             <!-- Contenedor oculto para exportar facturas en imagen -->
             <div id="exportInvoicesContainer" style="display: none;">
               <h3 style="text-align:center;">Facturas Registradas</h3>
@@ -387,7 +442,7 @@
       </div>
     </div>
 
-    <!-- Contenedor oculto para exportar diseño de factura (ahora con varios productos) -->
+    <!-- Contenedor oculto para exportar diseño de factura -->
     <div
       id="exportInvoiceContainer"
       style="display:none; padding:20px; border:1px solid #ccc; max-width:600px; margin:20px auto; font-family: Arial, sans-serif;"
@@ -564,10 +619,6 @@
                   Ingrese el motivo.
                 </div>
               </div>
-              <div class="mb-3">
-                <label for="movementComments" class="form-label">Comentarios</label>
-                <textarea class="form-control" id="movementComments"></textarea>
-              </div>
               <!-- Campo para la fecha del movimiento -->
               <div class="mb-3">
                 <label for="movementDate" class="form-label">Fecha</label>
@@ -705,7 +756,7 @@
       </div>
     </div>
 
-    <!-- Modal para Facturas (Modificado para múltiples productos) -->
+    <!-- Modal para Facturas (múltiples productos) -->
     <div
       class="modal fade"
       id="invoiceModal"
@@ -902,7 +953,7 @@
       </div>
     </div>
 
-    <!-- Bootstrap JS Bundle (incluye Popper) -->
+    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Cargar los archivos JS (orden importante) -->
     <script defer src="inventario.js"></script>

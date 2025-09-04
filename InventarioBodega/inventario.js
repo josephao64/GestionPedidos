@@ -1,6 +1,8 @@
 /* inventario.js */
 
-// CONFIGURACIÓN DE FIREBASE
+/* =========================
+   CONFIGURACIÓN DE FIREBASE
+============================*/
 var firebaseConfig = {
   apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
   authDomain: "logisticdb-2e63c.firebaseapp.com",
@@ -17,7 +19,7 @@ var db = firebase.firestore();
 ============================*/
 function closeModal(modalId) {
   var modalEl = document.getElementById(modalId);
-  if (modalEl.contains(document.activeElement)) {
+  if (modalEl && modalEl.contains(document.activeElement)) {
     document.activeElement.blur();
   }
   var modalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -45,7 +47,8 @@ function showSection(section) {
     document.getElementById("adjustmentsSection").style.display = "block";
   } else if (section === "invoices") {
     document.getElementById("invoicesSection").style.display = "block";
-    loadInvoices();
+    // NUEVO: poblar filtro de proveedores antes de cargar
+    populateSupplierFilter().then(() => loadInvoices());
   } else if (section === "reports") {
     document.getElementById("reportsSection").style.display = "block";
     populateReportProducts();
@@ -103,7 +106,6 @@ async function saveProduct() {
   }
 }
 
-// Lee el valor del dropdown "productSortOrder" para ordenar los productos
 async function loadProducts() {
   try {
     let sortOrderSelect = document.getElementById("productSortOrder");
@@ -135,7 +137,6 @@ async function loadProducts() {
   }
 }
 
-// Filtra los productos buscando en todas las celdas de cada fila del tbody
 function filterProducts() {
   var input = document.getElementById("productSearchInput");
   var filter = input.value.toUpperCase();
@@ -151,7 +152,6 @@ function filterProducts() {
   }
 }
 
-// Carga los datos del producto en el modal y muestra el modal para editar
 async function editProduct(id) {
   try {
     let doc = await db.collection("inventoryProducts").doc(id).get();
@@ -164,8 +164,7 @@ async function editProduct(id) {
       document.getElementById("productUnit").value = product.unit;
       document.getElementById("productStock").value = product.stock;
       document.getElementById("productStockMin").value = product.stockMin;
-      
-      // Muestra el modal de producto para edición
+
       new bootstrap.Modal(document.getElementById("productModal")).show();
     } else {
       alert("Producto no encontrado.");
@@ -348,7 +347,36 @@ async function populateProviders() {
   }
 }
 
-// Función para cargar las opciones de productos en la factura (para los items)
+// NUEVO: llenar el filtro de proveedores (dropdown de filtros)
+async function populateSupplierFilter() {
+  try {
+    const sel = document.getElementById("invoiceFilterSupplier");
+    if (!sel) return;
+    // Guardar selección actual
+    const current = sel.value || "";
+    sel.innerHTML = '<option value="">Todos los proveedores</option>';
+
+    let snapshot = await db.collection("providers").get();
+    const names = [];
+    snapshot.forEach(doc => {
+      const name = (doc.data().name || "").trim();
+      if (name) names.push(name);
+    });
+    // ordenar alfabéticamente y únicos
+    [...new Set(names)].sort((a, b) => a.localeCompare(b)).forEach(n => {
+      const opt = document.createElement("option");
+      opt.value = n;
+      opt.textContent = n;
+      sel.appendChild(opt);
+    });
+    // restaurar selección
+    sel.value = current;
+  } catch (error) {
+    console.error("Error al cargar filtro de proveedores:", error);
+  }
+}
+
+// Opciones de productos para items de factura
 async function loadInvoiceProductOptions() {
   try {
     let snapshot = await db.collection("inventoryProducts").get();
@@ -379,7 +407,6 @@ function showAddInvoiceForm() {
   new bootstrap.Modal(document.getElementById("invoiceModal")).show();
 }
 
-// Funciones para manejar los ítems de la factura
 function addInvoiceItem() {
   let tbody = document.querySelector("#invoiceItemsTable tbody");
   let row = document.createElement("tr");
@@ -503,10 +530,10 @@ async function saveInvoice() {
       });
     }
 
-    // Calcular total general de la factura
+    // Calcular total general
     let overallTotal = items.reduce((sum, item) => sum + item.total, 0);
 
-    // Para factura nueva, verificar duplicidad por número
+    // Duplicidad por número (solo para nueva)
     if (!invoiceId) {
       let duplicateQuery = await db.collection("invoices").where("invoiceNum", "==", invoiceNumber).get();
       if (!duplicateQuery.empty) {
@@ -514,18 +541,15 @@ async function saveInvoice() {
       }
     }
 
-    // Actualizar el stock y registrar movimientos para cada item (para factura nueva)
+    // Actualizar stock y registrar movimientos para cada item (solo para nueva)
     for (let item of items) {
       let productRef = db.collection("inventoryProducts").doc(item.productId);
       let productDoc = await productRef.get();
       if (!productDoc.exists) throw new Error("Producto no encontrado.");
       let product = productDoc.data();
-      if (invoiceId) {
-        // Para edición se debería calcular la diferencia; aquí se omite para simplificar.
-      } else {
+      if (!invoiceId) {
         let newStock = product.stock + item.quantity;
         await productRef.update({ stock: newStock });
-        // Registrar movimiento para cada item
         await db.collection("inventoryMovements").add({
           productId: item.productId,
           type: "entrada",
@@ -548,7 +572,6 @@ async function saveInvoice() {
     };
 
     if (invoiceId) {
-      // Lógica de edición (no completamente implementada para múltiples items)
       await db.collection("invoices").doc(invoiceId).update(invoiceData);
       alert("Factura modificada exitosamente.");
     } else {
@@ -566,32 +589,89 @@ async function saveInvoice() {
   }
 }
 
+/* =========================
+   FILTROS DE FACTURAS (NUEVO)
+============================*/
+function clearInvoiceFilters() {
+  const search = document.getElementById("invoiceSearchNumber");
+  const company = document.getElementById("invoiceFilterCompany");
+  const supplier = document.getElementById("invoiceFilterSupplier");
+  const start = document.getElementById("invoiceStartDate");
+  const end = document.getElementById("invoiceEndDate");
+
+  if (search) search.value = "";
+  if (company) company.value = "";
+  if (supplier) supplier.value = "";
+  if (start) start.value = "";
+  if (end) end.value = "";
+
+  loadInvoices();
+}
+
 /**
- *  FUNCIÓN PRINCIPAL PARA CARGAR LAS FACTURAS
+ *  CARGAR FACTURAS (con búsqueda y filtros)
  */
 async function loadInvoices() {
   try {
-    let snapshot = await db.collection("invoices").orderBy("date", "desc").get();
+    // Lectura de controles
+    const searchTerm = (document.getElementById("invoiceSearchNumber")?.value || "").trim().toLowerCase();
+    const filterCompany = document.getElementById("invoiceFilterCompany")?.value || "";
+    const filterSupplier = document.getElementById("invoiceFilterSupplier")?.value || "";
+    const groupByCompanyCheckbox = document.getElementById("groupByCompanyCheckbox");
+    const groupByCompany = groupByCompanyCheckbox && groupByCompanyCheckbox.checked;
+
+    // Rango de fechas opcional
+    const startVal = document.getElementById("invoiceStartDate")?.value;
+    const endVal = document.getElementById("invoiceEndDate")?.value;
+
+    let queryRef = db.collection("invoices");
+
+    if (startVal) {
+      const p = startVal.split("-");
+      const startDate = new Date(p[0], p[1] - 1, p[2], 0, 0, 0, 0);
+      queryRef = queryRef.where("date", ">=", startDate);
+    }
+    if (endVal) {
+      const p = endVal.split("-");
+      const endDate = new Date(p[0], p[1] - 1, p[2], 23, 59, 59, 999);
+      queryRef = queryRef.where("date", "<=", endDate);
+    }
+
+    // Siempre ordenamos por fecha
+    queryRef = queryRef.orderBy("date", "desc");
+
+    let snapshot = await queryRef.get();
+
     let tbody = document.getElementById("invoicesTable").querySelector("tbody");
     tbody.innerHTML = "";
 
     let actionsHeader = document.getElementById("actionsHeader");
-    let filterCompany = document.getElementById("invoiceFilterCompany").value;
-    let groupByCompanyCheckbox = document.getElementById("groupByCompanyCheckbox");
-    let groupByCompany = groupByCompanyCheckbox && groupByCompanyCheckbox.checked;
+
+    // Filtrado en cliente por empresa / proveedor / número
+    const filteredDocs = snapshot.docs.filter(d => {
+      const inv = d.data();
+      // filtro por empresa
+      if (filterCompany && inv.company !== filterCompany) return false;
+      // filtro por proveedor
+      if (filterSupplier && inv.supplier !== filterSupplier) return false;
+      // búsqueda por número (parcial, case-insensitive)
+      if (searchTerm) {
+        const num = (inv.invoiceNum || "").toString().toLowerCase();
+        if (!num.includes(searchTerm)) return false;
+      }
+      return true;
+    });
 
     if (groupByCompany) {
       actionsHeader.style.display = "none";
       let groups = {};
-      for (let doc of snapshot.docs) {
+      for (let doc of filteredDocs) {
         let inv = doc.data();
-        if (filterCompany && inv.company !== filterCompany) continue;
         let companyName = inv.company || "SIN EMPRESA";
-        if (!groups[companyName]) {
-          groups[companyName] = [];
-        }
+        if (!groups[companyName]) groups[companyName] = [];
         groups[companyName].push({ id: doc.id, data: inv });
       }
+
       for (let company in groups) {
         let headerRow = tbody.insertRow();
         let headerCell = headerRow.insertCell(0);
@@ -609,13 +689,14 @@ async function loadInvoices() {
 
           let cellDate = row.insertCell(1);
           if (inv.date) {
-            let dateStr = new Date(inv.date.seconds * 1000).toLocaleDateString();
-            cellDate.textContent = dateStr;
+            // inv.date puede ser Timestamp o Date
+            let dateObj = inv.date.seconds ? new Date(inv.date.seconds * 1000) : new Date(inv.date);
+            cellDate.textContent = dateObj.toLocaleDateString();
           } else {
             cellDate.textContent = "";
           }
-          row.insertCell(2).textContent = inv.company;
-          row.insertCell(3).textContent = inv.supplier;
+          row.insertCell(2).textContent = inv.company || "";
+          row.insertCell(3).textContent = inv.supplier || "";
 
           let itemsCell = row.insertCell(4);
           let itemsDesc = "";
@@ -623,22 +704,14 @@ async function loadInvoices() {
             for (let itm of inv.items) {
               let productDoc = await db.collection("inventoryProducts").doc(itm.productId).get();
               let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
-              itemsDesc += productName + " (" + itm.quantity + " x Q." +
-                parseFloat(itm.unitPrice).toFixed(2) + " = Q." +
-                parseFloat(itm.total).toFixed(2) + ")<br>";
+              itemsDesc += `${productName} (${itm.quantity} x Q.${parseFloat(itm.unitPrice).toFixed(2)} = Q.${parseFloat(itm.total).toFixed(2)})<br>`;
             }
-          } else {
-            let productDoc = await db.collection("inventoryProducts").doc(inv.productId).get();
-            let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
-            itemsDesc = productName + " (" + inv.quantity + " x Q." +
-              parseFloat(inv.unitPrice).toFixed(2) + " = Q." +
-              parseFloat(inv.total).toFixed(2) + ")";
           }
           itemsCell.innerHTML = itemsDesc;
 
           let totalCell = row.insertCell(5);
           let overallTotal = Array.isArray(inv.items) ? inv.overallTotal : inv.total;
-          totalCell.textContent = "Q." + parseFloat(overallTotal).toFixed(2);
+          totalCell.textContent = "Q." + parseFloat(overallTotal || 0).toFixed(2);
           totalSum += parseFloat(overallTotal) || 0;
         }
         let totalRow = tbody.insertRow();
@@ -654,14 +727,21 @@ async function loadInvoices() {
       }
     } else {
       actionsHeader.style.display = "";
-      for (let doc of snapshot.docs) {
+      for (let doc of filteredDocs) {
         let inv = doc.data();
-        if (filterCompany && inv.company !== filterCompany) continue;
         let row = tbody.insertRow();
         row.insertCell(0).textContent = inv.invoiceNum ? inv.invoiceNum : "-";
-        row.insertCell(1).textContent = inv.date ? new Date(inv.date.seconds * 1000).toLocaleDateString() : "";
-        row.insertCell(2).textContent = inv.company;
-        row.insertCell(3).textContent = inv.supplier;
+
+        let dateCell = row.insertCell(1);
+        if (inv.date) {
+          let dateObj = inv.date.seconds ? new Date(inv.date.seconds * 1000) : new Date(inv.date);
+          dateCell.textContent = dateObj.toLocaleDateString();
+        } else {
+          dateCell.textContent = "";
+        }
+
+        row.insertCell(2).textContent = inv.company || "";
+        row.insertCell(3).textContent = inv.supplier || "";
 
         let itemsCell = row.insertCell(4);
         let itemsDesc = "";
@@ -669,21 +749,15 @@ async function loadInvoices() {
           for (let itm of inv.items) {
             let productDoc = await db.collection("inventoryProducts").doc(itm.productId).get();
             let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
-            itemsDesc += productName + " (" + itm.quantity + " x Q." +
-              parseFloat(itm.unitPrice).toFixed(2) + " = Q." +
-              parseFloat(itm.total).toFixed(2) + ")<br>";
+            itemsDesc += `${productName} (${itm.quantity} x Q.${parseFloat(itm.unitPrice).toFixed(2)} = Q.${parseFloat(itm.total).toFixed(2)})<br>`;
           }
-        } else {
-          let productDoc = await db.collection("inventoryProducts").doc(inv.productId).get();
-          let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
-          itemsDesc = productName + " (" + inv.quantity + " x Q." +
-            parseFloat(inv.unitPrice).toFixed(2) + " = Q." +
-            parseFloat(inv.total).toFixed(2) + ")";
         }
         itemsCell.innerHTML = itemsDesc;
+
         let totalCell = row.insertCell(5);
         let overallTotal = Array.isArray(inv.items) ? inv.overallTotal : inv.total;
-        totalCell.textContent = "Q." + parseFloat(overallTotal).toFixed(2);
+        totalCell.textContent = "Q." + parseFloat(overallTotal || 0).toFixed(2);
+
         let actionsCell = row.insertCell(6);
         actionsCell.innerHTML = `
           <button class="btn btn-sm btn-primary" onclick="editInvoice('${doc.id}')">
@@ -712,15 +786,15 @@ async function editInvoice(invoiceId) {
     document.getElementById("invoiceModalLabel").textContent = "Editar Factura";
     document.getElementById("invoiceNumber").value = inv.invoiceNum;
 
-    let d = new Date(inv.date.seconds * 1000);
+    let d = inv.date?.seconds ? new Date(inv.date.seconds * 1000) : new Date(inv.date);
     let year = d.getFullYear();
     let month = ("0" + (d.getMonth() + 1)).slice(-2);
     let day = ("0" + d.getDate()).slice(-2);
     document.getElementById("invoiceDate").value = year + "-" + month + "-" + day;
 
-    document.getElementById("invoiceCompany").value = inv.company;
+    document.getElementById("invoiceCompany").value = inv.company || "";
     await populateProviders();
-    document.getElementById("invoiceSupplier").value = inv.supplier;
+    document.getElementById("invoiceSupplier").value = inv.supplier || "";
     await loadInvoiceProductOptions();
     let tbody = document.querySelector("#invoiceItemsTable tbody");
     tbody.innerHTML = "";
@@ -831,11 +905,12 @@ async function exportInvoiceImage(invoiceId) {
     for (let item of inv.items) {
       let productDoc = await db.collection("inventoryProducts").doc(item.productId).get();
       let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
-      productsHTML += productName + " - Cantidad: " + item.quantity + ", Precio Unitario: Q." + parseFloat(item.unitPrice).toFixed(2) + ", Total: Q." + parseFloat(item.total).toFixed(2) + "<br>";
+      productsHTML += `${productName} - Cantidad: ${item.quantity}, Precio Unitario: Q.${parseFloat(item.unitPrice).toFixed(2)}, Total: Q.${parseFloat(item.total).toFixed(2)}<br>`;
     }
     document.getElementById("exportInvoiceNum").textContent = inv.invoiceNum ? inv.invoiceNum : "-";
-    document.getElementById("exportInvoiceDate").textContent = inv.date ? new Date(inv.date.seconds * 1000).toLocaleDateString() : "";
-    document.getElementById("exportInvoiceSupplier").textContent = inv.supplier;
+    let dateObj = inv.date?.seconds ? new Date(inv.date.seconds * 1000) : new Date(inv.date);
+    document.getElementById("exportInvoiceDate").textContent = inv.date ? dateObj.toLocaleDateString() : "";
+    document.getElementById("exportInvoiceSupplier").textContent = inv.supplier || "";
     document.getElementById("exportInvoiceProducts").innerHTML = productsHTML;
     document.getElementById("exportInvoiceOverallTotal").textContent = inv.overallTotal ? parseFloat(inv.overallTotal).toFixed(2) : "0.00";
 
@@ -868,21 +943,22 @@ async function exportInvoicesImage() {
       let cellNum = document.createElement("td");
       cellNum.textContent = inv.invoiceNum ? inv.invoiceNum : "-";
       let cellDate = document.createElement("td");
-      cellDate.textContent = inv.date ? new Date(inv.date.seconds * 1000).toLocaleDateString() : "";
+      let dateObj = inv.date?.seconds ? new Date(inv.date.seconds * 1000) : new Date(inv.date);
+      cellDate.textContent = inv.date ? dateObj.toLocaleDateString() : "";
       let cellCompany = document.createElement("td");
-      cellCompany.textContent = inv.company;
+      cellCompany.textContent = inv.company || "";
       let cellSupplier = document.createElement("td");
-      cellSupplier.textContent = inv.supplier;
+      cellSupplier.textContent = inv.supplier || "";
       let cellProducts = document.createElement("td");
       let productsDesc = "";
-      for (let item of inv.items) {
+      for (let item of inv.items || []) {
         let productDoc = await db.collection("inventoryProducts").doc(item.productId).get();
         let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
-        productsDesc += productName + " (" + item.quantity + " x Q." + parseFloat(item.unitPrice).toFixed(2) + " = Q." + parseFloat(item.total).toFixed(2) + ")<br>";
+        productsDesc += `${productName} (${item.quantity} x Q.${parseFloat(item.unitPrice).toFixed(2)} = Q.${parseFloat(item.total).toFixed(2)})<br>`;
       }
       cellProducts.innerHTML = productsDesc;
       let cellTotal = document.createElement("td");
-      cellTotal.textContent = "Q." + parseFloat(inv.overallTotal).toFixed(2);
+      cellTotal.textContent = "Q." + parseFloat(inv.overallTotal || 0).toFixed(2);
 
       row.appendChild(cellNum);
       row.appendChild(cellDate);
