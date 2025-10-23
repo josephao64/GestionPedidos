@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /
+
+# Este es un sitio de desarrollo local
+# No debe ser indexado por motores de búsqueda
