@@ -260,6 +260,17 @@
         adminElements.forEach(element => {
           element.style.display = 'inline-block';
         });
+      } else if (rol === 'view') {
+        // For view-only users, show only order management
+        const oeMenu = document.querySelector('.oe_menu');
+        if (oeMenu) {
+          oeMenu.style.display = 'block';
+        }
+        // Hide admin buttons
+        const adminElements = document.querySelectorAll('.admin-only');
+        adminElements.forEach(element => {
+          element.style.display = 'none';
+        });
       } else if (rol === 'bodega') {
         // Para usuarios con rol "bodega":
         // 1. Ocultar el menú izquierdo (clase .oe_menu)
@@ -308,7 +319,7 @@
             if (!querySnapshot.empty) {
               const userData = querySnapshot.docs[0].data();
               ajustarMenuSegunRol(userData.rol);
-              welcomeMessage.textContent = `Bienvenido, ${userData.username}!`;
+              welcomeMessage.textContent = `Bienvenido, ${userData.username}! (${userData.rol})`;
             } else {
               alert('Usuario no encontrado. Por favor, inicia sesión nuevamente.');
               window.location.href = 'login.html';

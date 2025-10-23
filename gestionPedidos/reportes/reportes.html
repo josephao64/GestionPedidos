@@ -1,85 +1,111 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reportes de Productos por Pedido</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Reportes de Consumo por Producto</title>
+
   <!-- Bootstrap CSS -->
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+
   <!-- SweetAlert2 CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"/>
+
   <style>
     body { padding-top: 20px; background-color: #f8f9fa; }
     h1, h3 { color: #333; }
+    .sticky-actions { position: sticky; top: 0; background: #f8f9fa; z-index: 10; padding: .5rem 0; }
+    .table thead th { white-space: nowrap; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1 class="mb-4">Reportes de Productos por Pedido (Todos los Estados)</h1>
-    
-    <div class="card mb-4">
+    <div class="sticky-actions d-flex align-items-center justify-content-between">
+      <h1 class="mb-0">Reportes de Consumo por Producto</h1>
+      <div>
+        <button id="btnExportExcel" class="btn btn-outline-primary btn-sm" disabled>Exportar a Excel</button>
+      </div>
+    </div>
+
+    <div class="card mb-4 mt-3">
       <div class="card-header">Filtros</div>
       <div class="card-body">
-        <form id="reportFilterForm" class="form-inline">
+        <form id="reportFilterForm" class="form-row">
           <!-- Sucursal -->
-          <div class="form-group mr-3">
-            <label for="sucursalSelect" class="mr-2">Sucursal:</label>
+          <div class="form-group col-md-3">
+            <label for="sucursalSelect">Sucursal</label>
             <select id="sucursalSelect" class="form-control">
               <option value="all">Todas</option>
             </select>
           </div>
+
           <!-- Proveedor -->
-          <div class="form-group mr-3">
-            <label for="providerSelect" class="mr-2">Proveedor:</label>
+          <div class="form-group col-md-3">
+            <label for="providerSelect">Proveedor</label>
             <select id="providerSelect" class="form-control">
               <option value="all">Todos</option>
             </select>
           </div>
-          <!-- Producto -->
-          <div class="form-group mr-3">
-            <label for="productSelect" class="mr-2">Producto:</label>
+
+          <!-- Producto (se filtra por proveedor si se elige) -->
+          <div class="form-group col-md-3">
+            <label for="productSelect">Producto</label>
             <select id="productSelect" class="form-control">
               <option value="all">Todos</option>
             </select>
           </div>
-          <!-- Fecha Inicio -->
-          <div class="form-group mr-3">
-            <label for="startDate" class="mr-2">Fecha Inicio:</label>
-            <input type="date" id="startDate" class="form-control">
-          </div>
-          <!-- Fecha Fin -->
-          <div class="form-group mr-3">
-            <label for="endDate" class="mr-2">Fecha Fin:</label>
-            <input type="date" id="endDate" class="form-control">
-          </div>
-          <!-- Tipo de Reporte -->
-          <div class="form-group mr-3">
-            <label for="reportType" class="mr-2">Tipo de Reporte:</label>
-            <select id="reportType" class="form-control">
-              <option value="summary">Resumen</option>
-              <option value="detailed">Detallado</option>
-              <option value="separate">Reporte Separado</option>
+
+          <!-- Periodicidad -->
+          <div class="form-group col-md-3">
+            <label for="periodicity">Periodicidad</label>
+            <select id="periodicity" class="form-control">
+              <option value="daily">Diario</option>
+              <option value="weekly" selected>Semanal (ISO)</option>
+              <option value="monthly">Mensual</option>
             </select>
           </div>
-          <button type="submit" class="btn btn-primary">Generar Reporte</button>
+
+          <!-- Fecha Inicio -->
+          <div class="form-group col-md-3">
+            <label for="startDate">Fecha Inicio</label>
+            <input type="date" id="startDate" class="form-control"/>
+          </div>
+
+          <!-- Fecha Fin -->
+          <div class="form-group col-md-3">
+            <label for="endDate">Fecha Fin</label>
+            <input type="date" id="endDate" class="form-control"/>
+          </div>
+
+          <div class="form-group col-md-3 align-self-end">
+            <button type="submit" class="btn btn-primary btn-block">Generar Reporte</button>
+          </div>
         </form>
       </div>
     </div>
 
+    <div id="reportMeta" class="mb-2 text-muted small"></div>
     <div id="reportResults" class="mb-4"></div>
   </div>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- Bootstrap JS opcional -->
+
+  <!-- Bootstrap JS (opcional) -->
   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Conexión y lógica de reportes -->
+  <!-- XLSX (sin integrity para evitar bloqueo por SRI) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Conexión a Firestore -->
   <script src="../../database/connection.js"></script>
+
+  <!-- Lógica de reportes (este archivo DEBE existir en esta misma carpeta) -->
   <script src="reportes.js"></script>
 </body>
 </html>

@@ -247,6 +247,7 @@
         <option value="administrador">Administrador</option>
         <option value="usuario">Usuario</option>
         <option value="bodega">Bodega</option>
+        <option value="view">Solo Visualización</option>
       </select>
 
       <label for="sucursal">Sucursal</label>
@@ -365,8 +366,8 @@
           .then((querySnapshot) => {
             if (!querySnapshot.empty) {
               const userData = querySnapshot.docs[0].data();
-              // Permitir acceso si el rol es "administrador" o "bodega"
-              if (userData.rol !== 'administrador' && userData.rol !== 'bodega') {
+              // Permitir acceso si el rol es "administrador", "bodega" o "view"
+              if (userData.rol !== 'administrador' && userData.rol !== 'bodega' && userData.rol !== 'view') {
                 alert('No tienes permisos para acceder a esta página.');
                 window.location.href = "../empresa/empresaMenu.html";
               } else {
@@ -695,9 +696,9 @@
       messageDiv.textContent = '';
     });
 
-    // --- NUEVO: Al cambiar el rol, si es "bodega" se deshabilitan los permisos ---
+    // --- NUEVO: Al cambiar el rol, si es "bodega" o "view" se deshabilitan los permisos ---
     document.getElementById('rol').addEventListener('change', function(){
-      if(this.value === 'bodega'){
+      if(this.value === 'bodega' || this.value === 'view'){
         permChangeStatusCheckbox.checked = false;
         permEditOrderCheckbox.checked = false;
         permDeleteOrderCheckbox.checked = false;

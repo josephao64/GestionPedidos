@@ -28,6 +28,25 @@ async function initUser() {
 }
 
 // ------------------------------------------------------------------
+// OBTENER ROL DEL USUARIO ACTUAL
+// ------------------------------------------------------------------
+function getCurrentUserRole() {
+  // Esta función debería obtener el rol del usuario desde la base de datos
+  // Por ahora, asumimos que está almacenado en localStorage o se puede obtener
+  // de alguna manera. En una implementación real, esto debería hacer una consulta
+  // a la base de datos para obtener el rol del usuario actual.
+  
+  // Intentar obtener el rol del usuario desde localStorage o hacer una consulta
+  const usuarioLogueado = localStorage.getItem("usuarioLogueado");
+  if (usuarioLogueado) {
+    // En una implementación real, aquí se haría una consulta a la base de datos
+    // Por ahora, retornamos un valor por defecto
+    return "bodega"; // Valor por defecto, debería ser reemplazado por la lógica real
+  }
+  return "bodega"; // Valor por defecto
+}
+
+// ------------------------------------------------------------------
 // CARGAR FILTROS DINÁMICOS
 // ------------------------------------------------------------------
 async function loadFilters() {
@@ -120,12 +139,24 @@ function createCard(id,o) {
   const div=document.createElement("div");
   div.className="order-card";
   let btns=`<button onclick="showDetails('${id}')">Detalles</button>`;
-  if (["pedidoTomado","pedidoEnBodega","bodegaEnvioPedido"].includes(o.status)) {
-    btns+=`<button onclick="confirmOrder('${id}')">Recibir</button>`;
-  }
-  if (o.status==="sucursalRecibioPedido") {
-    btns+=`<button onclick="viewReceived('${id}')">Ver Recepción</button>`;
-    btns+=`<button onclick="promptSendOrder('${id}')">Enviar Pedido</button>`;
+  
+  // Obtener el rol del usuario actual
+  const currentUserRole = getCurrentUserRole();
+  
+  // Only show action buttons if NOT "view" role
+  if (currentUserRole !== "view") {
+    if (["pedidoTomado","pedidoEnBodega","bodegaEnvioPedido"].includes(o.status)) {
+      btns+=`<button onclick="confirmOrder('${id}')">Recibir</button>`;
+    }
+    if (o.status==="sucursalRecibioPedido") {
+      btns+=`<button onclick="viewReceived('${id}')">Ver Recepción</button>`;
+      btns+=`<button onclick="promptSendOrder('${id}')">Enviar Pedido</button>`;
+    }
+  } else {
+    // For "view" role, only show view reception if it exists
+    if (o.status==="sucursalRecibioPedido") {
+      btns+=`<button onclick="viewReceived('${id}')">Ver Recepción</button>`;
+    }
   }
   div.innerHTML=`
     <h4>ID: ${o.orderId}</h4>
