@@ -139,6 +139,11 @@
     .admin-only {
       display: none;
     }
+    
+    /* Ocultar enlaces específicos para usuarios view */
+    .view-user .realizar-pedido {
+      display: none;
+    }
     /* =====================================
        Responsividad para dispositivos móviles
        ===================================== */
@@ -266,6 +271,11 @@
         // For view-only users, show only order management
         const oeMenu = document.querySelector('.oe_menu');
         if (oeMenu) {
+          // Remover el enlace de "Realizar pedidos" para usuarios view
+          const realizarPedidoLink = oeMenu.querySelector('a[href*="realizarPedido"]');
+          if (realizarPedidoLink) {
+            realizarPedidoLink.parentElement.remove();
+          }
           oeMenu.style.display = 'block';
         }
         // Hide admin buttons
