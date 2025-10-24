@@ -141,8 +141,21 @@
       <input type="hidden" id="confirmOrderId" value=""/>
 
       <div id="invoiceDetails">
-        <label for="invoiceDate"><strong>Fecha de Factura:</strong></label>
-        <input type="date" id="invoiceDate" name="invoiceDate" readonly />
+        <div id="invoicesList">
+          <div class="invoice-entry">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label><strong>Número de Factura:</strong></label>
+                <input type="text" class="invoice-number" placeholder="Ingrese número de factura" />
+              </div>
+              <div>
+                <label><strong>Fecha de Factura:</strong></label>
+                <input type="date" class="invoice-date" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <button type="button" id="btnAddInvoice" style="margin-bottom: 1rem;">Agregar Otra Factura</button>
       </div>
 
       <div id="orderInfo">
@@ -165,8 +178,11 @@
         </thead>
         <tbody id="confirmOrderProducts"></tbody>
       </table>
-      <div id="invoiceTotalContainer" style="margin-top: 1rem; font-weight: bold;">
-        <p>Total de la Factura: Q<span id="invoiceTotal">0.00</span></p>
+      <div id="invoiceTotalsContainer" style="margin-top: 1rem;">
+        <div id="invoiceTotalsList"></div>
+        <div style="margin-top: 0.5rem; font-weight: bold;">
+          <p>Total General: Q<span id="grandTotal">0.00</span></p>
+        </div>
       </div>
       <div id="exportReceptionButtonContainer" style="margin-top: 1rem; display: none;">
         <button id="btnExportReceived">Exportar Cantidades Recibidas</button>

@@ -155,6 +155,20 @@ function wireStaticButtons() {
     const id = $("#confirmOrderId")?.value || "";
     if (id) exportAsReceivedOrderImage(id);
   });
+  $("#btnAddInvoice")?.addEventListener("click", addNewInvoiceEntry);
+  
+  // Manejo de cálculos de facturas
+  $("#confirmOrderProducts").addEventListener("input", (e) => {
+    if (e.target.matches('input[type="number"]')) {
+      updateInvoiceTotals();
+    }
+  });
+
+  $("#invoicesList").addEventListener("input", (e) => {
+    if (e.target.matches('input[type="text"]')) {
+      updateInvoiceNumbers();
+    }
+  });
 
   // Cambiar estado manual
   $("#changeStatusButtons")?.addEventListener("click", (e) => {
@@ -963,6 +977,11 @@ function exportAsImageTicket(order, fileName) {
  **********************************************************/
 async function confirmOrder(orderId) {
   try {
+    if (!orderId) {
+      console.error("No se proporcionó ID de pedido");
+      return;
+    }
+
     const docSnap = await db.collection("orders").doc(orderId).get();
     if (!docSnap.exists) {
       Swal.fire({ icon: "error", title: "Pedido no encontrado" });
@@ -972,13 +991,21 @@ async function confirmOrder(orderId) {
 
     $("#confirmOrderId").value = orderId;
 
-    // Fecha actual (YYYY-MM-DD) y solo lectura
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    $("#invoiceDate").value = `${yyyy}-${mm}-${dd}`;
-    $("#invoiceDate").setAttribute("readonly", "readonly");
+    // Inicializar la lista de facturas con una entrada
+    $("#invoicesList").innerHTML = `
+      <div class="invoice-entry">
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label><strong>Número de Factura:</strong></label>
+            <input type="text" class="invoice-number" placeholder="Ingrese número de factura" />
+          </div>
+          <div>
+            <label><strong>Fecha de Factura:</strong></label>
+            <input type="date" class="invoice-date" value="${new Date().toISOString().split('T')[0]}" />
+          </div>
+        </div>
+      </div>
+    `;
 
     $("#orderIdDisplay").textContent = order.orderId;
     $("#providerNameDisplay").textContent = order.providerName;
@@ -1012,7 +1039,11 @@ async function confirmOrder(orderId) {
         );
       });
     }
-    calculateInvoiceTotal();
+    
+    // Inicializar totales
+    $("#invoiceTotalsList").innerHTML = "";
+    $("#grandTotal").textContent = "0.00";
+    updateInvoiceTotals();
 
     $("#confirmOrderModal").style.display = "block";
   } catch (error) {
@@ -1033,28 +1064,94 @@ function updateTotalPerProduct(i) {
   priceInput.value = p;
 
   totalSpan.textContent = (q * p).toFixed(2);
-  calculateInvoiceTotal();
+  updateInvoiceTotals();
 }
-function calculateInvoiceTotal() {
+function addNewInvoiceEntry() {
+  const invoicesList = $("#invoicesList");
+  const newEntry = document.createElement("div");
+  newEntry.className = "invoice-entry";
+  newEntry.innerHTML = `
+    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: flex-end;">
+      <div>
+        <label><strong>Número de Factura:</strong></label>
+        <input type="text" class="invoice-number" placeholder="Ingrese número de factura" />
+      </div>
+      <div>
+        <label><strong>Fecha de Factura:</strong></label>
+        <input type="date" class="invoice-date" />
+      </div>
+      <button type="button" class="remove-invoice" style="height: 2rem;">×</button>
+    </div>
+  `;
+  
+  newEntry.querySelector(".remove-invoice").addEventListener("click", (e) => {
+    e.target.closest(".invoice-entry").remove();
+    updateInvoiceTotals();
+  });
+
+  invoicesList.appendChild(newEntry);
+}
+
+function updateInvoiceNumbers() {
+  const invoiceEntries = document.querySelectorAll(".invoice-entry");
+  const invoiceNumbers = Array.from(invoiceEntries).map(entry => 
+    entry.querySelector(".invoice-number").value
+  ).filter(Boolean);
+  
+  return invoiceNumbers;
+}
+
+function updateInvoiceTotals() {
   let grandTotal = 0;
   const rows = $$("#confirmOrderProducts tr");
-  rows.forEach((_, idx) => {
-    const val = parseFloat(
-      document.getElementById(`totalPerProduct${idx}`).textContent
-    ) || 0;
-    grandTotal += val;
+  const invoiceTotalsList = $("#invoiceTotalsList");
+  invoiceTotalsList.innerHTML = "";
+  
+  const invoiceEntries = document.querySelectorAll(".invoice-entry");
+  
+  invoiceEntries.forEach((entry, index) => {
+    let invoiceTotal = 0;
+    rows.forEach((_, idx) => {
+      const val = parseFloat(
+        document.getElementById(`totalPerProduct${idx}`).textContent
+      ) || 0;
+      invoiceTotal += val / invoiceEntries.length; // Distribuir el total entre las facturas
+    });
+    grandTotal += invoiceTotal;
+    
+    const invoiceNumber = entry.querySelector(".invoice-number").value || `Factura ${index + 1}`;
+    invoiceTotalsList.innerHTML += `
+      <div style="margin-bottom: 0.5rem;">
+        <strong>${invoiceNumber}:</strong> Q<span class="invoice-total">${invoiceTotal.toFixed(2)}</span>
+      </div>
+    `;
   });
-  $("#invoiceTotal").textContent = grandTotal.toFixed(2);
+  
+  $("#grandTotal").textContent = grandTotal.toFixed(2);
 }
 function closeConfirmOrderModal() {
   $("#confirmOrderId").value = "";
-  $("#invoiceDate").value = "";
   $("#orderIdDisplay").textContent = "";
   $("#providerNameDisplay").textContent = "";
   $("#sucursalNameDisplay").textContent = "";
   $("#orderDateDisplay").textContent = "";
   $("#confirmOrderProducts").innerHTML = "";
-  $("#invoiceTotal").textContent = "0.00";
+  $("#invoicesList").innerHTML = `
+    <div class="invoice-entry">
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <label for="invoiceNumber"><strong>Número de Factura:</strong></label>
+          <input type="text" class="invoice-number" placeholder="Ingrese número de factura" />
+        </div>
+        <div>
+          <label for="invoiceDate"><strong>Fecha de Factura:</strong></label>
+          <input type="date" class="invoice-date" value="${new Date().toISOString().split('T')[0]}" />
+        </div>
+      </div>
+    </div>
+  `;
+  $("#invoiceTotalsList").innerHTML = "";
+  $("#grandTotal").textContent = "0.00";
   $("#confirmOrderModal").style.display = "none";
 }
 async function saveConfirmedOrder() {
@@ -1065,6 +1162,17 @@ async function saveConfirmedOrder() {
       return;
     }
 
+    // Verificar que haya al menos una factura con número
+    const invoiceNumbers = updateInvoiceNumbers();
+    if (invoiceNumbers.length === 0) {
+      Swal.fire({ 
+        icon: "error", 
+        title: "Error", 
+        text: "Debe ingresar al menos un número de factura." 
+      });
+      return;
+    }
+
     const orderDoc = await db.collection("orders").doc(orderId).get();
     if (!orderDoc.exists) {
       Swal.fire({ icon: "error", title: "Error", text: "Pedido no existe en DB" });
@@ -1072,12 +1180,13 @@ async function saveConfirmedOrder() {
     }
     const orderData = orderDoc.data();
 
-    // Fecha actual (auto)
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    const invoiceDateField = `${yyyy}-${mm}-${dd}`;
+    // Recolectar información de facturas
+    const invoiceEntries = document.querySelectorAll(".invoice-entry");
+    const invoices = Array.from(invoiceEntries).map(entry => ({
+      invoiceNumber: entry.querySelector(".invoice-number").value,
+      invoiceDate: entry.querySelector(".invoice-date").value || new Date().toISOString().split('T')[0],
+      total: parseFloat(entry.closest(".invoice-entry").querySelector(".invoice-total")?.textContent || "0")
+    })).filter(invoice => invoice.invoiceNumber);
 
     const rows = $$("#confirmOrderProducts tr");
     let mismatchedQuantities = false;
@@ -1106,7 +1215,9 @@ async function saveConfirmedOrder() {
       });
     });
 
-    const invoices = [{ invoiceNumber: "", invoiceDate: invoiceDateField }];
+    // Usar los datos de factura ya recolectados anteriormente
+    const invoicesList = invoices;
+
     const invoiceTotalValue = Number(totalFactura.toFixed(2));
     const pendingInvoice = false;
 
@@ -1124,7 +1235,7 @@ async function saveConfirmedOrder() {
       if (!reason) return;
 
       await db.collection("orders").doc(orderId).update({
-        invoices,
+        invoices: invoicesList,
         pendingInvoice,
         receivedProducts,
         invoiceTotal: invoiceTotalValue,
@@ -1143,7 +1254,7 @@ async function saveConfirmedOrder() {
     }
 
     await db.collection("orders").doc(orderId).update({
-      invoices,
+      invoices: invoicesList,
       pendingInvoice,
       receivedProducts,
       invoiceTotal: invoiceTotalValue,
