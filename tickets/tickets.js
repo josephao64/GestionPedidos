@@ -40,7 +40,7 @@ function wireFileLinks() {
       }
     }
   });
-});
+}
 
 async function initUserAndSucursal() {
   loggedInUsername = localStorage.getItem('usuarioLogueado');
