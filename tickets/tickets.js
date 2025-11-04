@@ -9,7 +9,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initUserAndSucursal();
   initAreasAndSubcategories();
   wireFilePreview();
+  wireFileLinks();
   loadMyTickets();
+});
+
+function wireFileLinks() {
+  document.addEventListener('click', async (e) => {
+    if (e.target.matches('.file-link')) {
+      e.preventDefault();
+      const filename = e.target.dataset.filename;
+      try {
+        const response = await fetch(e.target.href);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (error) {
+        console.error('Error descargando archivo:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al descargar',
+          text: 'No se pudo descargar el archivo. Intente más tarde.'
+        });
+      }
+    }
+  });
 });
 
 async function initUserAndSucursal() {
@@ -173,22 +203,47 @@ async function submitTicket() {
     for (const f of files) {
       if (f.size > 10 * 1024 * 1024) continue;
       const timestamp = Date.now();
-      const ref = firebase.storage().ref().child(`tickets/${ticketId}/${timestamp}_${f.name}`);
-      const metadata = {
-        contentType: f.type,
-        customMetadata: {
-          'Access-Control-Allow-Origin': '*'
+      const fileName = `${timestamp}_${f.name}`;
+      const ref = firebase.storage().ref().child(`tickets/${ticketId}/${fileName}`);
+      
+      // Convertir imagen a base64 si es una imagen
+      if (f.type.startsWith('image/')) {
+        const reader = new FileReader();
+        const imageData = await new Promise((resolve, reject) => {
+          reader.onload = e => resolve(e.target.result);
+          reader.onerror = e => reject(e);
+          reader.readAsDataURL(f);
+        });
+        
+        uploaded.push({ 
+          name: f.name, 
+          dataUrl: imageData, 
+          contentType: f.type, 
+          size: f.size,
+          timestamp 
+        });
+        
+        // También subir a Storage en segundo plano
+        try {
+          const snap = await ref.put(f, { contentType: f.type });
+          const url = await snap.ref.getDownloadURL();
+          uploaded[uploaded.length - 1].url = url;
+        } catch (error) {
+          console.warn('Error al subir a Storage:', error);
+          // Continuamos usando el dataUrl si falla la subida a Storage
         }
-      };
-      const snap = await ref.put(f, metadata);
-      const url = await snap.ref.getDownloadURL();
-      uploaded.push({ 
-        name: f.name, 
-        url, 
-        contentType: f.type, 
-        size: f.size,
-        timestamp 
-      });
+      } else {
+        // Para archivos que no son imágenes, intentar subir normalmente
+        const snap = await ref.put(f, { contentType: f.type });
+        const url = await snap.ref.getDownloadURL();
+        uploaded.push({ 
+          name: f.name, 
+          url, 
+          contentType: f.type, 
+          size: f.size,
+          timestamp 
+        });
+      }
     }
     baseData.attachments = uploaded;
 
@@ -224,14 +279,20 @@ function attachmentsHTML(att) {
   if (!att || !att.length) return '';
   const items = att.map(a => {
     if (a.contentType && a.contentType.startsWith('image/')) {
+      // Usar dataUrl si está disponible, de lo contrario intentar con url
+      const imgSrc = a.dataUrl || a.url;
       return `
         <div class="preview-item">
-          <img src="${a.url}" alt="${a.name}" style="max-width: 200px; height: auto;" 
+          <img src="${imgSrc}" alt="${a.name}" style="max-width: 200px; height: auto;" 
                onerror="this.onerror=null; this.src='../resources/images/image-placeholder.png';" />
           <div>${a.name}</div>
         </div>`;
     }
-    return `<div class="preview-item"><a href="${a.url}" target="_blank">${a.name}</a></div>`;
+    return `<div class="preview-item">
+              <a href="${a.url}" target="_blank" class="file-link" data-filename="${a.name}">
+                ${a.name}
+              </a>
+            </div>`;
   }).join('');
   return `<div class="preview" style="margin-top:8px;">${items}</div>`;
 }
