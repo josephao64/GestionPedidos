@@ -1,0 +1,95 @@
+/**
+ * REGLAS DE FIRESTORE PARA DESARROLLO Y PRODUCCIÓN
+ * Copia y pega estas reglas en Firebase Console > Firestore > Rules
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Permitir lectura y escritura a todas las colecciones en desarrollo
+    // ⚠️ ADVERTENCIA: Estas reglas son muy permisivas, úsala solo para desarrollo
+    
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
+    // ========================================
+    // REGLAS MÁS SEGURAS PARA PRODUCCIÓN
+    // ========================================
+    
+    // Reglas para colección de usuarios
+    match /usuarios/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Reglas para colección de órdenes
+    match /orders/{orderId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Reglas para colección de empresas
+    match /empresas/{empresaId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Reglas para colección de sucursales
+    match /sucursales/{sucursalId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Reglas para colección de facturas
+    match /facturas_pagar/{facturaId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'saldoPendiente', 'revisadoPor', 'fechaRevision']));
+      allow delete: if request.auth != null;
+    }
+    
+    // Reglas para productos de inventario
+    match /inventoryProducts/{productId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Reglas para facturas (inventario)
+    match /invoices/{invoiceId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Reglas para proveedores
+    match /proveedores/{proveedorId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Reglas para cualquier otra colección
+    match /{collection}/{document} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
+
+/**
+ * INSTRUCCIONES:
+ * 
+ * 1. Ve a Firebase Console: https://console.firebase.google.com/
+ * 2. Selecciona tu proyecto (logisticdb-2e63c)
+ * 3. Ve a Firestore Database > Rules
+ * 4. Copia y pega las reglas que necesites
+ * 5. Usa las reglas "permisivas" para desarrollo
+ * 6. Usa las reglas "seguras" para producción
+ * 7. Haz clic en "Publish" para guardar
+ * 
+ * NOTA: Si aún sigues viendo el error 400, usa temporalmente
+ * las reglas permisivas para desarrollo.
+ */
+

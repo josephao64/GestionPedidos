@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuentas por Pagar</title>
+  <link rel="stylesheet" href="cuentasPorPagar.css">
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <script src="../database/connection.js"></script>
+  <script defer src="cuentasPorPagar.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header-compact">
+    <div class="header-left">
+      <h1>Cuentas por Pagar</h1>
+      <button class="btn-icon" onclick="goBackToMainMenu()" title="Volver al menú principal">
+        <i class="fa fa-arrow-left"></i> Menú
+      </button>
+    </div>
+    <div class="header-right">
+      <div id="welcome-user" class="user-info"></div>
+      <button class="btn-secondary" onclick="exportReport()">
+        <i class="fa fa-file-excel"></i> Exportar
+      </button>
+    </div>
+  </header>
+
+  <!-- Dashboard -->
+  <section class="dashboard-compact">
+    <!-- Widgets de Resumen -->
+    <div class="widgets-grid">
+      <div class="widget alert-red">
+        <div class="widget-icon"><i class="fa fa-exclamation-triangle"></i></div>
+        <div class="widget-content">
+          <div class="widget-label">Vencidas</div>
+          <div class="widget-value" id="widget-vencidas">Q 0.00</div>
+        </div>
+      </div>
+      
+      <div class="widget alert-orange">
+        <div class="widget-icon"><i class="fa fa-clock"></i></div>
+        <div class="widget-content">
+          <div class="widget-label">Vencen Hoy</div>
+          <div class="widget-value" id="widget-hoy">Q 0.00</div>
+        </div>
+      </div>
+      
+      <div class="widget alert-yellow">
+        <div class="widget-icon"><i class="fa fa-calendar-week"></i></div>
+        <div class="widget-content">
+          <div class="widget-label">Vencen Próximos 7 días</div>
+          <div class="widget-value" id="widget-7dias">Q 0.00</div>
+        </div>
+      </div>
+      
+      <div class="widget">
+        <div class="widget-icon"><i class="fa fa-file-invoice-dollar"></i></div>
+        <div class="widget-content">
+          <div class="widget-label">Pendientes</div>
+          <div class="widget-value" id="widget-pendientes">Q 0.00</div>
+        </div>
+      </div>
+      
+      <div class="widget">
+        <div class="widget-icon"><i class="fa fa-check-circle"></i></div>
+        <div class="widget-content">
+          <div class="widget-label">Confirmadas</div>
+          <div class="widget-value" id="widget-confirmadas">Q 0.00</div>
+        </div>
+      </div>
+      
+      <div class="widget success">
+        <div class="widget-icon"><i class="fa fa-money-check-alt"></i></div>
+        <div class="widget-content">
+          <div class="widget-label">Pagadas</div>
+          <div class="widget-value" id="widget-pagadas">Q 0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros Compactos -->
+    <div class="filters-panel">
+      <div class="filters-row">
+        <div class="filter-group">
+          <label>Empresa</label>
+          <select id="filter-empresa" class="filter-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>Sucursal</label>
+          <select id="filter-sucursal" class="filter-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>Proveedor</label>
+          <select id="filter-proveedor" class="filter-select">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>Estado</label>
+          <select id="filter-estado" class="filter-select">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendiente de Confirmación</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="pago_parcial">Pago Parcial</option>
+            <option value="pagada">Pagada</option>
+            <option value="rechazada">Rechazada</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="filters-row">
+        <div class="filter-group">
+          <label>Fecha Emisión</label>
+          <input type="date" id="filter-fecha-emision-inicio" class="filter-input">
+        </div>
+        <div class="filter-group">
+          <label>hasta</label>
+          <input type="date" id="filter-fecha-emision-fin" class="filter-input">
+        </div>
+        
+        <div class="filter-group">
+          <label>Fecha Vencimiento</label>
+          <input type="date" id="filter-fecha-venc-inicio" class="filter-input">
+        </div>
+        <div class="filter-group">
+          <label>hasta</label>
+          <input type="date" id="filter-fecha-venc-fin" class="filter-input">
+        </div>
+        
+        <div class="filter-group">
+          <label>Rango Monto</label>
+          <div class="range-inputs">
+            <input type="number" id="filter-monto-min" class="filter-input" placeholder="Min">
+            <span>-</span>
+            <input type="number" id="filter-monto-max" class="filter-input" placeholder="Max">
+          </div>
+        </div>
+      </div>
+      
+      <div class="filters-row">
+        <div class="search-group">
+          <label>Búsqueda Rápida</label>
+          <input type="text" id="search-box" class="search-input" placeholder="Buscar por # Factura o # Pedido">
+        </div>
+        
+        <div class="filter-actions">
+          <button class="btn-primary" onclick="applyFilters()">
+            <i class="fa fa-filter"></i> Filtrar
+          </button>
+          <button class="btn-secondary" onclick="clearFilters()">
+            <i class="fa fa-redo"></i> Limpiar
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tabs para diferentes vistas -->
+  <section class="content-section">
+    <div class="tabs-container">
+      <button class="tab-button active" onclick="switchTab('pendientes')">
+        <i class="fa fa-clock"></i> Pendientes de Confirmación
+      </button>
+      <button class="tab-button" onclick="switchTab('confirmadas')">
+        <i class="fa fa-file-check"></i> Confirmadas para Pagar
+      </button>
+      <button class="tab-button" onclick="switchTab('todas')">
+        <i class="fa fa-list"></i> Todas las Facturas
+      </button>
+    </div>
+
+    <!-- Tab: Pendientes de Confirmación -->
+    <div id="tab-pendientes" class="tab-content active">
+      <div class="tab-header">
+        <h2><i class="fa fa-exclamation-circle"></i> Facturas Pendientes de Confirmación</h2>
+        <p>Revisa y confirma las facturas ingresadas al sistema</p>
+      </div>
+      <div class="table-container">
+        <table id="pendientes-table" class="table-compact">
+          <thead>
+            <tr>
+              <th>Estado</th>
+              <th># Factura</th>
+              <th>Proveedor</th>
+              <th># Pedido</th>
+              <th>Fecha Emisión</th>
+              <th>Fecha Vencimiento</th>
+              <th>Total</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="pendientes-tbody">
+            <!-- Datos dinámicos -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Confirmadas para Pagar -->
+    <div id="tab-confirmadas" class="tab-content">
+      <div class="tab-header">
+        <h2><i class="fa fa-money-check-alt"></i> Facturas Confirmadas para Pagar</h2>
+        <p>Registra los pagos de las facturas aprobadas</p>
+      </div>
+      <div class="table-container">
+        <table id="confirmadas-table" class="table-compact">
+          <thead>
+            <tr>
+              <th>Estado</th>
+              <th># Factura</th>
+              <th>Proveedor</th>
+              <th># Pedido</th>
+              <th>Fecha Emisión</th>
+              <th>Fecha Vencimiento</th>
+              <th>Total</th>
+              <th>Saldo Pendiente</th>
+              <th>Días Vencidos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="confirmadas-tbody">
+            <!-- Datos dinámicos -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Todas las Facturas -->
+    <div id="tab-todas" class="tab-content">
+      <div class="tab-header">
+        <h2><i class="fa fa-list"></i> Todas las Facturas</h2>
+        <p>Vista completa de todas las facturas del sistema</p>
+      </div>
+      <div class="table-container">
+        <table id="todas-table" class="table-compact">
+          <thead>
+            <tr>
+              <th>Estado</th>
+              <th># Factura</th>
+              <th>Proveedor</th>
+              <th># Pedido</th>
+              <th>Fecha Emisión</th>
+              <th>Fecha Vencimiento</th>
+              <th>Total</th>
+              <th>Saldo Pendiente</th>
+              <th>Días Vencidos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="todas-tbody">
+            <!-- Datos dinámicos -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal: Revisión y Confirmación de Factura -->
+  <div id="modal-revision" class="modal">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2>Revisión y Confirmación de Factura</h2>
+        <button class="modal-close" onclick="closeReviewModal()">&times;</button>
+      </div>
+      
+      <div class="modal-body comparison-layout">
+        <!-- Sección 1: Datos del Pedido -->
+        <div class="comparison-panel">
+          <h3><i class="fa fa-shopping-cart"></i> Datos del Pedido</h3>
+          <div class="info-group">
+            <div class="info-row">
+              <span class="info-label"># Pedido:</span>
+              <a href="#" id="pedido-link" class="info-value link" onclick="viewOrder()"></a>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Proveedor:</span>
+              <span class="info-value" id="pedido-proveedor"></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Fecha Pedido:</span>
+              <span class="info-value" id="pedido-fecha"></span>
+            </div>
+          </div>
+          
+          <div class="items-section">
+            <h4>Items del Pedido</h4>
+            <table class="items-table-compact">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Precio Unit.</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="pedido-items">
+                <!-- Items dinámicos -->
+              </tbody>
+            </table>
+            <div class="totals-section">
+              <div class="total-row">
+                <span>Subtotal Esperado:</span>
+                <span id="pedido-subtotal">Q 0.00</span>
+              </div>
+              <div class="total-row">
+                <span>Impuestos Esperados:</span>
+                <span id="pedido-impuestos">Q 0.00</span>
+              </div>
+              <div class="total-row total-final">
+                <span>Total Esperado:</span>
+                <span id="pedido-total">Q 0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección 2: Datos de la Factura -->
+        <div class="comparison-panel">
+          <h3><i class="fa fa-file-invoice"></i> Datos de la Factura</h3>
+          <div class="info-group">
+            <div class="info-row">
+              <span class="info-label"># Factura:</span>
+              <span class="info-value" id="factura-numero"></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Fecha Emisión:</span>
+              <span class="info-value" id="factura-emision"></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Fecha Vencimiento:</span>
+              <span class="info-value" id="factura-vencimiento"></span>
+            </div>
+          </div>
+          
+          <div class="items-section">
+            <h4>Items de la Factura</h4>
+            <table class="items-table-compact">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Precio Unit.</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="factura-items">
+                <!-- Items dinámicos -->
+              </tbody>
+            </table>
+            <div class="totals-section">
+              <div class="total-row">
+                <span>Subtotal Facturado:</span>
+                <span id="factura-subtotal">Q 0.00</span>
+              </div>
+              <div class="total-row">
+                <span>Impuestos Facturados:</span>
+                <span id="factura-impuestos">Q 0.00</span>
+              </div>
+              <div class="total-row total-final">
+                <span>Total Facturado:</span>
+                <span id="factura-total">Q 0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección 3: Validación y Acciones -->
+        <div class="comparison-panel validation-panel">
+          <h3><i class="fa fa-check-circle"></i> Validación</h3>
+          
+          <div id="validation-result" class="validation-box">
+            <div class="validation-comparison">
+              <div class="comparison-row">
+                <span class="comparison-label">Total Esperado:</span>
+                <span id="comparison-expected" class="comparison-value">Q 0.00</span>
+              </div>
+              <div class="comparison-row">
+                <span class="comparison-label">Total Facturado:</span>
+                <span id="comparison-actual" class="comparison-value">Q 0.00</span>
+              </div>
+              <div id="comparison-result" class="comparison-result">
+                <!-- Resultado dinámico -->
+              </div>
+            </div>
+          </div>
+          
+          <div class="info-group">
+            <div class="info-row highlight">
+              <span class="info-label"><i class="fa fa-credit-card"></i> Crédito a Favor:</span>
+              <span class="info-value" id="credito-favor">Q 0.00</span>
+            </div>
+          </div>
+          
+          <div class="info-group">
+            <label>Adjuntar Documento (PDF/XML)</label>
+            <input type="file" id="file-attachment" accept=".pdf,.xml,.jpg,.png" class="file-input">
+            <div id="file-preview" class="file-preview"></div>
+          </div>
+          
+          <div class="info-group">
+            <label>Notas de Revisión *</label>
+            <textarea id="review-notes" class="textarea-notes" rows="3" placeholder="Ingrese observaciones sobre esta validación..."></textarea>
+          </div>
+          
+          <div class="modal-actions-review">
+            <button class="btn-danger" onclick="rejectInvoice()">
+              <i class="fa fa-times"></i> Rechazar Factura
+            </button>
+            <button class="btn-success" onclick="confirmInvoice()">
+              <i class="fa fa-check"></i> Confirmar Factura
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Registro de Pagos -->
+  <div id="modal-pagos" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fa fa-money-check"></i> Registrar Pago</h2>
+        <button class="modal-close" onclick="closePaymentsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="payment-info-section">
+          <h3>Información de la Factura</h3>
+          <div class="info-group">
+            <div class="info-row">
+              <span class="info-label"># Factura:</span>
+              <span class="info-value" id="payment-factura-numero"></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Proveedor:</span>
+              <span class="info-value" id="payment-proveedor"></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Total Factura:</span>
+              <span class="info-value text-amount" id="payment-total-factura"></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Saldo Pendiente:</span>
+              <span class="info-value text-amount" id="payment-saldo-pendiente"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="payment-details-section">
+          <h3>Detalles del Pago</h3>
+          
+          <div class="form-group">
+            <label>Monto a Pagar *</label>
+            <input type="number" id="payment-amount" class="form-input" step="0.01" min="0" required>
+          </div>
+
+          <div class="form-group">
+            <label>Fecha de Pago *</label>
+            <input type="date" id="payment-date" class="form-input" required>
+          </div>
+
+          <div class="form-group">
+            <label>Método de Pago *</label>
+            <select id="payment-method" class="form-select" required>
+              <option value="">Seleccione...</option>
+              <option value="transferencia">Transferencia Bancaria</option>
+              <option value="cheque">Cheque</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Número de Referencia/Comprobante</label>
+            <input type="text" id="payment-reference" class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label>Notas/Observaciones</label>
+            <textarea id="payment-notes" class="form-textarea" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-actions-payment">
+          <button class="btn-secondary" onclick="closePaymentsModal()">
+            <i class="fa fa-times"></i> Cancelar
+          </button>
+          <button class="btn-success" onclick="savePayment()">
+            <i class="fa fa-save"></i> Registrar Pago
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</body>
+</html>

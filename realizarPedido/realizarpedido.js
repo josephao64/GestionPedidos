@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await obtenerSucursalDelUsuario();
   document.getElementById('orderCreationContainer').style.display = 'none';
   setupInitialProductTable();
+  // Cargar selects del modal de promedios
+  await initUsageAverageModalControls();
 });
 
 async function obtenerSucursalDelUsuario() {
@@ -197,7 +199,7 @@ function addSelectedProductToTable() {
   const tbody = document.getElementById('newOrderTable').querySelector('tbody');
   if (tbody.rows.length > 0) {
     const lastRow = tbody.rows[tbody.rows.length - 1];
-    const qtyInput = lastRow.querySelector('input[type="number"]');
+    const qtyInput = lastRow.querySelector('input.qty-input') || lastRow.querySelector('input[type="number"]');
     if (!qtyInput.value || isNaN(qtyInput.value) || Number(qtyInput.value) <= 0) {
       Swal.fire({
         icon: 'warning',
@@ -232,12 +234,16 @@ function addSelectedProductToTable() {
   row.setAttribute('data-id', selectedProduct.id);
   const cell1 = row.insertCell(0);
   const cell2 = row.insertCell(1);
-  const cell3 = row.insertCell(2);
-  const cell4 = row.insertCell(3);
+  const cellAvg = row.insertCell(2);
+  const cellInv = row.insertCell(3);
+  const cell3 = row.insertCell(4);
+  const cell4 = row.insertCell(5);
 
   cell1.textContent = selectedProduct.name;
   cell2.textContent = selectedProduct.presentation;
-  cell3.innerHTML = `<input type="number" min="1" step="1" placeholder="Cantidad" />`; // step=1 para enteros
+  cellAvg.innerHTML = `<span class="avg-value" style="font-weight:bold;">-</span>`;
+  cellInv.innerHTML = `<input type="number" min="0" step="1" class="inventory-input" placeholder="Inventario" />`;
+  cell3.innerHTML = `<input type="number" min="1" step="1" class="qty-input" placeholder="Cantidad" />`; // step=1 para enteros
   cell4.innerHTML = `
     <button class="action-button edit-button" onclick="editNewOrderProduct(this)">
       <i class="fas fa-edit"></i>
@@ -248,11 +254,28 @@ function addSelectedProductToTable() {
   `;
   document.getElementById('newOrderProviderSelect').disabled = true;
   selectedProduct = null;
+
+  // Cargar promedio y mostrarlo
+  const providerId = document.getElementById('newOrderProviderSelect').value;
+  const sucursalId = (userRole === 'administrador')
+    ? document.getElementById('newOrderSucursalSelect').value || userSucursalId
+    : userSucursalId;
+  fetchUsageAverageValue(sucursalId, providerId, row.getAttribute('data-id'))
+    .then(avg => {
+      const span = row.querySelector('.avg-value');
+      span.textContent = (avg != null) ? Number(avg).toFixed(0) : '-';
+      span.setAttribute('data-avg', (avg != null) ? String(avg) : '');
+    })
+    .catch(() => {
+      const span = row.querySelector('.avg-value');
+      span.textContent = '-';
+      span.removeAttribute('data-avg');
+    });
 }
 
 function editNewOrderProduct(button) {
   const row = button.parentNode.parentNode;
-  const input = row.querySelector('input[type="number"]');
+  const input = row.querySelector('input.qty-input') || row.querySelector('input[type="number"]');
   const currentQuantity = input.value;
   const newQuantity = prompt('Nueva cantidad (entera y > 0):', currentQuantity);
   if (newQuantity === null) return;
@@ -400,13 +423,26 @@ async function saveNewOrder() {
   const tbody = document.getElementById('newOrderTable').querySelector('tbody');
   const rows = tbody.getElementsByTagName('tr');
   const products = [];
+  const inventoryByProductId = {};
   for (let i = 0; i < rows.length; i++) {
     const productId = rows[i].getAttribute('data-id');
     if (!productId) continue;
     const tds = rows[i].getElementsByTagName('td');
-    const qtyInput = rows[i].querySelector('input[type="number"]');
-    if (!qtyInput) continue;
+    const invInput = rows[i].querySelector('input.inventory-input');
+    const qtyInput = rows[i].querySelector('input.qty-input') || rows[i].querySelector('input[type="number"]');
+    if (!qtyInput || !invInput) continue;
+    const inv = Number(invInput.value);
     const qty = Number(qtyInput.value);
+    if (!Number.isInteger(inv) || inv < 0) {
+      isSaving = false;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Inventario inválido',
+        text: 'El inventario debe ser un número entero mayor o igual a 0.'
+      });
+      invInput.focus();
+      return;
+    }
     if (!Number.isInteger(qty) || qty <= 0) {
       isSaving = false;
       Swal.fire({
@@ -417,10 +453,12 @@ async function saveNewOrder() {
       qtyInput.focus();
       return;
     }
+    inventoryByProductId[productId] = inv;
     products.push({
       id: productId,
       name: tds[0].textContent,
       presentation: tds[1].textContent,
+      inventory: inv,
       quantity: qty
     });
   }
@@ -488,8 +526,27 @@ async function saveNewOrder() {
     showCancelButton: true,
     cancelButtonText: 'Cancelar',
     confirmButtonText: 'Confirmar'
-  }).then(result => {
+  }).then(async result => {
     if (!result.isConfirmed) { isSaving = false; return; }
+
+    // Advertencias por desviación de promedio antes de elegir destino
+    try {
+      const warnings = await buildAverageWarnings(details, sucursalId, providerId, inventoryByProductId);
+      if (warnings.length > 0) {
+        const listHtml = warnings.map(w => `<li><strong>${escapeHtml(w.name)}</strong>: pedido ${w.quantity}, sugerido ${w.suggested}</li>`).join('');
+        const warnRes = await Swal.fire({
+          title: 'Advertencia de Promedios',
+          html: `<p>Considerando inventario actual, algunos productos se desvían del sugerido.</p><ul style="text-align:left;">${listHtml}</ul><p>¿Desea continuar?</p>`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Continuar',
+          cancelButtonText: 'Revisar'
+        });
+        if (!warnRes.isConfirmed) { isSaving = false; return; }
+      }
+    } catch (e) {
+      // Si falla la validación de promedio, permitimos continuar
+    }
 
     // Paso 2: Seleccionar destino (Bodega o Tienda)
     Swal.fire({
@@ -676,4 +733,184 @@ function escapeHtml(str) {
     "'": '&#039;'
   };
   return str.replace(/[&<>"']/g, m => map[m]);
+}
+
+// =======================
+// PROMEDIOS DE USO (Firestore)
+// =======================
+
+async function initUsageAverageModalControls() {
+  try {
+    // Sucursales
+    const sucSel = document.getElementById('avgSucursalSelect');
+    if (!sucSel) return; // Modal no cargado aún
+    sucSel.innerHTML = '';
+    if (userRole === 'administrador') {
+      const snapSuc = await db.collection('sucursales').get();
+      const defOpt = document.createElement('option');
+      defOpt.value = '';
+      defOpt.textContent = '-- Selecciona una Sucursal --';
+      defOpt.disabled = true; defOpt.selected = true;
+      sucSel.appendChild(defOpt);
+      snapSuc.forEach(doc => {
+        const d = doc.data();
+        const o = document.createElement('option');
+        o.value = doc.id; o.textContent = d.name;
+        sucSel.appendChild(o);
+      });
+    } else {
+      const o = document.createElement('option');
+      o.value = userSucursalId; o.textContent = userSucursalName || 'Mi Sucursal';
+      sucSel.appendChild(o);
+      sucSel.disabled = true;
+    }
+
+    // Proveedores
+    const provSel = document.getElementById('avgProviderSelect');
+    provSel.innerHTML = '';
+    const snapProv = await db.collection('providers').get();
+    const defP = document.createElement('option');
+    defP.value = '';
+    defP.textContent = '-- Selecciona un Proveedor --';
+    defP.disabled = true; defP.selected = true;
+    provSel.appendChild(defP);
+    snapProv.forEach(doc => {
+      const d = doc.data();
+      const o = document.createElement('option');
+      o.value = doc.id; o.textContent = d.name;
+      provSel.appendChild(o);
+    });
+  } catch (e) {
+    // Ignorar errores de carga inicial
+  }
+}
+
+function showUsageAverageModal() {
+  const m = document.getElementById('usageAverageModal');
+  if (!m) return;
+  m.style.display = 'block';
+  // Preseleccionar sucursal si no admin
+  const sucSel = document.getElementById('avgSucursalSelect');
+  if (sucSel && userRole !== 'administrador') {
+    sucSel.value = userSucursalId;
+  }
+}
+
+function closeUsageAverageModal() {
+  const m = document.getElementById('usageAverageModal');
+  if (!m) return;
+  m.style.display = 'none';
+}
+
+async function loadProductsForAverage(providerId) {
+  if (!providerId) return;
+  try {
+    const sucSel = document.getElementById('avgSucursalSelect');
+    const sucursalIdSel = sucSel?.value || userSucursalId;
+    const tbody = document.getElementById('usageAverageTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    const snap = await db.collection('products').where('providerId', '==', providerId).get();
+    for (const doc of snap.docs) {
+      const prod = doc.data();
+      const tr = tbody.insertRow();
+      tr.setAttribute('data-id', doc.id);
+      tr.innerHTML = `
+        <td>${escapeHtml(prod.name || '')}</td>
+        <td>${escapeHtml(prod.presentation || '')}</td>
+        <td><input type="number" min="0" step="1" class="avg-input" placeholder="0" /></td>
+      `;
+      // Cargar valor existente
+      const avg = await fetchUsageAverageValue(sucursalIdSel, providerId, doc.id);
+      const input = tr.querySelector('.avg-input');
+      if (avg != null) input.value = Number(avg);
+    }
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al cargar productos: ' + e.message });
+  }
+}
+
+function filterAvgProducts() {
+  const v = (document.getElementById('avgProductSearch')?.value || '').toLowerCase();
+  const tbody = document.getElementById('usageAverageTable').querySelector('tbody');
+  const rows = tbody.getElementsByTagName('tr');
+  for (let i = 0; i < rows.length; i++) {
+    const nameTd = rows[i].getElementsByTagName('td')[0];
+    const txt = (nameTd?.textContent || '').toLowerCase();
+    rows[i].style.display = txt.indexOf(v) > -1 ? '' : 'none';
+  }
+}
+
+async function saveUsageAverages() {
+  const sucursalIdSel = document.getElementById('avgSucursalSelect')?.value || userSucursalId;
+  const providerIdSel = document.getElementById('avgProviderSelect')?.value || '';
+  if (!sucursalIdSel) {
+    Swal.fire({ icon: 'warning', title: 'Sucursal requerida', text: 'Seleccione una sucursal.' });
+    return;
+  }
+  if (!providerIdSel) {
+    Swal.fire({ icon: 'warning', title: 'Proveedor requerido', text: 'Seleccione un proveedor.' });
+    return;
+  }
+  const tbody = document.getElementById('usageAverageTable').querySelector('tbody');
+  const rows = tbody.getElementsByTagName('tr');
+  const batch = db.batch();
+  let count = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const productId = rows[i].getAttribute('data-id');
+    const input = rows[i].querySelector('.avg-input');
+    const val = Number(input?.value || 0);
+    const docId = `${sucursalIdSel}__${providerIdSel}__${productId}`;
+    const ref = db.collection('usageAverages').doc(docId);
+    if (val > 0) {
+      batch.set(ref, {
+        sucursalId: sucursalIdSel,
+        providerId: providerIdSel,
+        productId,
+        weeklyAverage: Math.round(val),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      count++;
+    } else {
+      // Si es 0, eliminamos el doc para limpiar
+      batch.delete(ref);
+    }
+  }
+  try {
+    await batch.commit();
+    Swal.fire({ icon: 'success', title: 'Guardado', text: `Promedios guardados (${count}).` });
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al guardar promedios: ' + e.message });
+  }
+}
+
+async function fetchUsageAverageValue(sucursalId, providerId, productId) {
+  if (!sucursalId || !providerId || !productId) return null;
+  const docId = `${sucursalId}__${providerId}__${productId}`;
+  const ref = await db.collection('usageAverages').doc(docId).get();
+  if (!ref.exists) return null;
+  const data = ref.data();
+  return typeof data.weeklyAverage === 'number' ? data.weeklyAverage : null;
+}
+
+async function buildAverageWarnings(details, sucursalId, providerId, inventoryByProductId) {
+  // sugerido = max(promedio - inventario, 0)
+  // Advertir: cantidad > 150% del sugerido, o cantidad < 50% del sugerido (si sugerido > 0)
+  const warnings = [];
+  for (const p of details.products) {
+    try {
+      const avg = await fetchUsageAverageValue(sucursalId, providerId, p.id);
+      const inv = Number(inventoryByProductId[p.id] ?? 0);
+      if (avg != null && avg >= 0 && inv >= 0) {
+        const suggested = Math.max(Math.round(avg) - inv, 0);
+        if (suggested === 0 && p.quantity > 0) {
+          warnings.push({ name: p.name, quantity: p.quantity, suggested });
+        } else if (suggested > 0) {
+          if (p.quantity > Math.ceil(suggested * 1.5) || p.quantity < Math.floor(suggested * 0.5)) {
+            warnings.push({ name: p.name, quantity: p.quantity, suggested });
+          }
+        }
+      }
+    } catch {}
+  }
+  return warnings;
 }

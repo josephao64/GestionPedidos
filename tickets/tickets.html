@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tickets de Incidencia</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-storage.js"></script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <link rel="stylesheet" href="tickets.css" />
+  <script src="../database/connection.js"></script>
+  <script defer src="tickets.js"></script>
+</head>
+<body>
+  <div class="header">
+    <h1>Sistema de Tickets</h1>
+    <div class="actions">
+      <button onclick="window.location.href='../index.html'">Volver</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Crear Ticket</h2>
+    <form id="ticketForm">
+      <div class="form-group">
+        <label>Área Afectada</label>
+        <select id="affectedArea"></select>
+      </div>
+
+      <div class="form-group" id="subCategoryGroup">
+        <label>Equipo / Incidente Específico</label>
+        <select id="subCategory"></select>
+      </div>
+
+      <div class="form-group" id="otherCategoryGroup" style="display: none;">
+        <label>Especificar</label>
+        <input type="text" id="otherCategory" placeholder="Describe el problema específico" />
+      </div>
+
+      <div class="form-group">
+        <label>Prioridad</label>
+        <div class="priority">
+          <label><input type="radio" name="priority" value="urgent" /> 🔴 Urgente</label>
+          <label><input type="radio" name="priority" value="normal" checked /> 🟡 Normal</label>
+          <label><input type="radio" name="priority" value="low" /> 🔵 Baja</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción del Inconveniente</label>
+        <textarea id="description" rows="4" placeholder="Describe el problema detalladamente (mínimo 15 caracteres)"></textarea>
+        <button type="button" class="link-like" onclick="insertTemplate()">¿Qué información incluir?</button>
+      </div>
+
+      <div class="form-group">
+        <label>Evidencia (Opcional)</label>
+        <input type="file" id="attachments" multiple accept=".jpg,.jpeg,.png,.mp4" />
+        <small>Máximo 5 archivos, 10MB c/u. Formatos: jpg, png, mp4</small>
+        <div id="preview" class="preview"></div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" onclick="submitTicket()" class="btn-primary">Enviar Ticket</button>
+        <button type="reset" class="btn-secondary">Limpiar</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="container">
+    <h2>Mis Tickets</h2>
+    <div id="ticketsList" class="tickets-list"></div>
+  </div>
+</body>
+</html>
+

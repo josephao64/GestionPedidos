@@ -663,7 +663,7 @@ function showOrderDetails(orderId) {
   db.collection("orders")
     .doc(orderId)
     .get()
-    .then((docSnap) => {
+    .then(async (docSnap) => {
       if (!docSnap.exists) {
         Swal.fire({ icon: "error", title: "No encontrado" });
         return;
@@ -680,16 +680,53 @@ function showOrderDetails(orderId) {
         html += `<table><thead><tr>
                    <th>Producto</th>
                    <th>Presentación</th>
+                   <th>Promedio Sem.</th>
+                   <th>Inventario</th>
+                   <th>Sugerido</th>
                    <th>Cantidad</th>
+                   <th>Estado</th>
                  </tr></thead><tbody>`;
-        order.products.forEach((prod) => {
-          html += `<tr>
-                     <td>${prod.name}</td>
-                     <td>${prod.presentation}</td>
-                     <td>${prod.quantity}</td>
-                   </tr>`;
-        });
-        html += `</tbody></table>`;
+
+        const sucursalId = order.sucursalId || userSucursalId;
+        const providerId = order.providerId || null;
+        const rows = [];
+
+        for (const prod of order.products) {
+          let avg = null;
+          if (providerId && prod.id) {
+            try {
+              avg = await fetchUsageAverageValueForPedidos(sucursalId, providerId, prod.id);
+            } catch (e) { avg = null; }
+          }
+          const inv = Number(prod.inventory ?? 0);
+          const avgNum = avg != null ? Number(avg) : null;
+          const suggested = avgNum != null ? Math.max(Math.round(avgNum) - inv, 0) : null;
+          const avgText = avgNum != null ? avgNum.toFixed(0) : "-";
+          const sugText = suggested != null ? String(suggested) : "-";
+
+          let estado = "OK";
+          let color = "#28a745"; // verde
+          if (suggested != null) {
+            if (suggested === 0 && prod.quantity > 0) { estado = "Más"; color = "#dc3545"; }
+            else if (suggested > 0) {
+              if (prod.quantity > Math.ceil(suggested * 1.5)) { estado = "Más"; color = "#dc3545"; }
+              else if (prod.quantity < Math.floor(suggested * 0.5)) { estado = "Menos"; color = "#fd7e14"; }
+            }
+          }
+
+          rows.push(`
+            <tr>
+              <td>${escapeHtml(prod.name)}</td>
+              <td>${escapeHtml(prod.presentation)}</td>
+              <td>${avgText}</td>
+              <td>${inv}</td>
+              <td>${sugText}</td>
+              <td>${prod.quantity}</td>
+              <td style="font-weight:bold; color:${color};">${estado}</td>
+            </tr>
+          `);
+        }
+        html += rows.join("") + `</tbody></table>`;
       }
       $("#orderDetails").innerHTML = html;
       $("#orderDetailsModal").style.display = "block";
@@ -720,6 +757,15 @@ function showOrderDetails(orderId) {
     .catch((err) =>
       Swal.fire({ icon: "error", title: "Error", text: err.message })
     );
+}
+
+async function fetchUsageAverageValueForPedidos(sucursalId, providerId, productId) {
+  if (!sucursalId || !providerId || !productId) return null;
+  const docId = `${sucursalId}__${providerId}__${productId}`;
+  const ref = await db.collection('usageAverages').doc(docId).get();
+  if (!ref.exists) return null;
+  const data = ref.data();
+  return typeof data.weeklyAverage === 'number' ? data.weeklyAverage : null;
 }
 function closeOrderDetailsModal() {
   $("#orderDetails").innerHTML = "";

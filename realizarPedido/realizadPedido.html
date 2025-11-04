@@ -33,6 +33,7 @@
 <body>
   <div class="buttons">
     <button onclick="showNewOrderForm()">Realizar Nuevo Pedido</button>
+    <button onclick="showUsageAverageModal()">Configurar Promedios</button>
     <button class="right" onclick="window.location.href='../index.html'">Volver a Principal</button>
   </div>
 
@@ -75,6 +76,8 @@
             <tr>
               <th>Producto</th>
               <th>Presentación</th>
+              <th>Promedio Sem.</th>
+              <th>Inventario Actual</th>
               <th>Cantidad</th>
               <th>Acciones</th>
             </tr>
@@ -92,6 +95,46 @@
 
     <div class="save-order-container">
       <button class="save-order-button" onclick="saveNewOrder()">Guardar Pedido</button>
+    </div>
+  </div>
+
+  <!-- Modal de Configuración de Promedios de Uso -->
+  <div id="usageAverageModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" onclick="closeUsageAverageModal()">&times;</span>
+      <h2>Configurar Promedios de Uso (semanal)</h2>
+
+      <div class="form-group">
+        <label for="avgSucursalSelect">Sucursal</label>
+        <select id="avgSucursalSelect"></select>
+      </div>
+
+      <div class="form-group">
+        <label for="avgProviderSelect">Proveedor</label>
+        <select id="avgProviderSelect" onchange="loadProductsForAverage(this.value)"></select>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="usageAverageTable">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Presentación</th>
+              <th>Promedio Semanal</th>
+            </tr>
+            <tr>
+              <th><input type="text" id="avgProductSearch" onkeyup="filterAvgProducts()" placeholder="Buscar Producto..." /></th>
+              <th></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top: 10px; text-align: right;">
+        <button onclick="saveUsageAverages()">Guardar Promedios</button>
+      </div>
     </div>
   </div>
 

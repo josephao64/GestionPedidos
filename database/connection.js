@@ -8,6 +8,25 @@ const firebaseConfig = {
     appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
   };
   
-  firebase.initializeApp(firebaseConfig);
+  // Inicializar Firebase solo si no está inicializado
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  
   const db = firebase.firestore();
+  
+  // Configurar Firestore
+  db.settings({
+    cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+    ignoreUndefinedProperties: true,
+    merge: true
+  });
+
+  // Configurar Storage para CORS
+  const storage = firebase.storage();
+  storage.setCustomAuthHeaders({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  });
   
