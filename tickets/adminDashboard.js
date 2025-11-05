@@ -1,18 +1,36 @@
 /* adminDashboard.js - SPA Kanban minimalista con Drag & Drop nativo */
 (function(){
-  // Datos iniciales en memoria (ejemplo)
-  const tickets = [
-    { id: 'TICKET-001', title: 'Error login', desc: 'Al iniciar sesión aparece error 500', priority: 'high', assigned: 'Juan', created: new Date().toLocaleString(), status: 'todo', image: null },
-    { id: 'TICKET-002', title: 'Impresora no imprime', desc: 'La impresora de cocina no imprime tickets', priority: 'normal', assigned: '', created: new Date().toLocaleString(), status: 'inprogress', image: null },
-    { id: 'TICKET-003', title: 'Actualizar menú', desc: 'Actualizar precios del menú digital', priority: 'low', assigned: 'Ana', created: new Date().toLocaleString(), status: 'done', image: null }
-  ];
+  // Datos iniciales en memoria
+  const tickets = [];
+  let ticketCounter = 0; // Contador para IDs incrementales
+  let activeFilters = {}; // Filtros activos
 
   // Helpers
   const byStatus = s => tickets.filter(t => t.status === s);
   const el = id => document.getElementById(id);
 
+  // Obtener el siguiente ID incremental
+  function getNextTicketId() {
+    ticketCounter++;
+    return ticketCounter;
+  }
+
+  // Asignar ID incremental a tickets existentes si no lo tienen
+  function assignIncrementalIds() {
+    tickets.forEach((t, index) => {
+      if (!t.incrementalId) {
+        t.incrementalId = index + 1;
+        ticketCounter = Math.max(ticketCounter, t.incrementalId);
+      }
+    });
+  }
+
   // Render
   function renderBoard(){
+    if (searchFilter || Object.keys(activeFilters).some(k => activeFilters[k])) {
+      filterTickets();
+      return;
+    }
     ['todo','inprogress','done'].forEach(status =>{
       const container = el('col-' + status);
       if (!container) return;
@@ -23,22 +41,68 @@
 
   function createCard(t){
     const card = document.createElement('div');
-    card.className = 'card ticket-card';
+    const priority = t.priority || 'normal';
+    const priorityClass = priority === 'urgent' ? 'urgent' : (priority === 'low' ? 'low' : 'normal');
+    card.className = `card ticket-card priority-${priorityClass}`;
     card.draggable = true;
     card.dataset.id = t.id;
 
     const body = document.createElement('div');
     body.className = 'card-body p-2';
     const hasAttachment = t.image || (Array.isArray(t.attachments) && t.attachments.length > 0);
+    
+    // Indicador de prioridad
+    const priorityEmoji = priority === 'urgent' ? '🔴' : (priority === 'low' ? '🔵' : '🟡');
+    const priorityText = priority === 'urgent' ? 'Urgente' : (priority === 'low' ? 'Baja' : 'Normal');
+    
+    // Formatear fecha
+    const createdDate = t.createdAt && t.createdAt.toDate ? t.createdAt.toDate() : (t.createdAtLocal ? new Date(t.createdAtLocal) : new Date());
+    const dateStr = createdDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+    
+    const sucursal = escapeHtml(t.sucursalName || t.sucursal || 'N/A');
+    const categoria = escapeHtml(t.category || t.subCategory || 'N/A');
+    const asignado = escapeHtml(t.assigned || 'Sin asignar');
+    
     body.innerHTML = `
-      <div class="d-flex justify-content-between align-items-start">
-        <div>
-          <h6 class="card-ticket-title mb-1">${escapeHtml(t.title)}</h6>
-          <div class="card-ticket-meta">${escapeHtml(t.id)} · ${escapeHtml(t.sucursalName || t.sucursal || '')} · <span class="text-muted">${escapeHtml(t.category || t.subCategory || '')} ${escapeHtml(t.assigned ? '· ' + t.assigned : '')}</span></div>
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="flex-grow-1">
+          <h6 class="card-ticket-title mb-2">
+            <span class="priority-indicator ${priorityClass}"></span>
+            <strong class="text-primary">#${t.incrementalId || 'N/A'}</strong> - ${escapeHtml(t.title)}
+          </h6>
+          <div class="card-ticket-info">
+            <div class="ticket-info-item">
+              <span class="info-label">Sucursal:</span>
+              <span class="info-value">${sucursal}</span>
+            </div>
+            <div class="ticket-info-item">
+              <span class="info-label">Categoría:</span>
+              <span class="info-value">${categoria}</span>
+            </div>
+            <div class="ticket-info-item">
+              <span class="info-label">Asignado:</span>
+              <span class="info-value">${asignado}</span>
+            </div>
+          </div>
+          <div class="card-ticket-meta mt-2 d-flex align-items-center justify-content-between">
+            <small class="text-muted">${dateStr}</small>
+            <span class="badge bg-${priorityClass === 'urgent' ? 'danger' : (priorityClass === 'low' ? 'info' : 'warning')} badge-attach">
+              ${priorityEmoji} ${priorityText}
+            </span>
+          </div>
         </div>
-        <div class="text-end">
-          ${hasAttachment ? '<span class="badge bg-secondary badge-attach">🖼️</span>' : ''}
+        <div class="text-end ms-2">
+          ${hasAttachment ? '<span class="badge bg-secondary badge-attach d-block mb-1">🖼️</span>' : ''}
         </div>
+      </div>
+      <div class="ticket-actions">
+        <button class="btn btn-sm btn-view" data-ticket-id="${t.id}">Ver</button>
+        <button class="btn btn-sm btn-delete" data-ticket-id="${t.id}" data-ticket-title="${escapeHtml(t.title)}" title="Eliminar ticket">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+          </svg>
+        </button>
       </div>
     `;
 
@@ -47,8 +111,30 @@
     // Click abre modal
     card.addEventListener('click', (evt) => {
       if (card.classList.contains('dragging')) return;
-      openModal(t);
+      // Si el click fue en el botón, prevenir propagación pero abrir modal
+      if (evt.target.tagName === 'BUTTON' && evt.target.classList.contains('btn-view')) {
+        evt.stopPropagation();
+        openModal(t);
+      } else if (evt.target.tagName === 'BUTTON' && evt.target.classList.contains('btn-delete')) {
+        evt.stopPropagation();
+        // No hacer nada aquí, el evento se maneja más abajo
+      } else if (!evt.target.closest('.btn-delete') && !evt.target.closest('.btn-view')) {
+        openModal(t);
+      }
     });
+
+    // Event listener para el botón de eliminar
+    const deleteBtn = card.querySelector('.btn-delete');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (evt) => {
+        evt.stopPropagation();
+        const ticketId = deleteBtn.dataset.ticketId;
+        const ticketTitle = deleteBtn.dataset.ticketTitle || 'este ticket';
+        if (confirm(`¿Estás seguro de que deseas eliminar el ticket "${ticketTitle}"?\n\nEsta acción no se puede deshacer.`)) {
+          deleteTicket(ticketId);
+        }
+      });
+    }
 
     // Drag events
     card.addEventListener('dragstart', (e) => {
@@ -76,12 +162,22 @@
     const wrap = el('modalComments');
     wrap.innerHTML = '';
     const comments = t.comments || [];
-    if (!comments.length) { wrap.innerHTML = '<div class="text-muted small">Sin comentarios</div>'; return; }
+    if (!comments.length) { 
+      wrap.innerHTML = '<div class="text-muted small text-center py-3">Sin comentarios</div>'; 
+      return; 
+    }
     comments.slice().reverse().forEach(c => {
       const d = document.createElement('div');
-      d.className = 'border p-2 mb-2 rounded';
+      d.className = 'comment-item';
       const when = c.createdAt && c.createdAt.toDate ? new Date(c.createdAt.toDate()).toLocaleString() : (c.createdAt || c.when || '');
-      d.innerHTML = `<div class="small text-muted">${escapeHtml(when)}</div><div>${escapeHtml(c.text)}</div>`;
+      const author = c.author || c.authorName || 'Usuario';
+      d.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start mb-1">
+          <span class="comment-author">${escapeHtml(author)}</span>
+          <span class="comment-time">${escapeHtml(when)}</span>
+        </div>
+        <div class="comment-text">${escapeHtml(c.text)}</div>
+      `;
       wrap.appendChild(d);
     });
   }
@@ -92,14 +188,25 @@
     if (t && t.data && typeof t.data === 'function') { data = t.data(); currentTicketRef = t.id; }
     else { currentTicketRef = data.id; }
 
+    // Actualizar título del modal con ID incremental
+    if (el('modalTitle')) {
+      el('modalTitle').textContent = `Ticket #${data.incrementalId || 'N/A'} - ${data.title || data.ticketId || 'Sin título'}`;
+    }
+
     el('modalSucursal').value = data.sucursalName || data.sucursal || '';
+    
+    // Formatear fecha para mostrar
+    const createdDate = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : (data.createdAtLocal ? new Date(data.createdAtLocal) : new Date());
+    const dateStr = createdDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    if (el('modalDate')) el('modalDate').value = dateStr;
+    
     el('modalTitleInput').value = data.title || data.ticketId || data.ticketId || '';
     el('modalCategory').value = data.category || data.subCategory || '';
     el('modalDescription').value = data.desc || data.description || '';
-    el('modalPriority').value = data.priority || 'normal';
+    el('modalPriority').value = data.priority === 'urgent' ? 'urgent' : (data.priority === 'low' ? 'low' : 'normal');
     el('modalAssigned').value = data.assigned || (data.reporter?.name) || '';
     el('modalStatus').value = mapStatusToUI(data.status || data.state || 'todo');
-  if (el('modalId')) el('modalId').value = data.id || data.ticketId || '';
+    if (el('modalId')) el('modalId').value = data.id || data.ticketId || '';
     // soportar adjuntos subidos a Firestore: 'attachments' (array) o propiedad 'image' (dataURL/local)
     let imageSrc = null;
     if (data.image) imageSrc = data.image;
@@ -130,16 +237,76 @@
     return 'todo';
   }
 
+  // Eliminar ticket
+  async function deleteTicket(ticketId) {
+    try {
+      // Eliminar de Firestore si está disponible
+      if (window.db && ticketId) {
+        await window.db.collection('tickets').doc(ticketId).delete();
+      }
+      
+      // Eliminar del array local
+      const index = tickets.findIndex(t => t.id === ticketId);
+      if (index !== -1) {
+        tickets.splice(index, 1);
+      }
+      
+      // Re-renderizar el board
+      renderBoard();
+      
+      // Cerrar modal si está abierto
+      if (bsModal) {
+        bsModal.hide();
+      }
+      
+      // Mostrar mensaje de éxito
+      alert('Ticket eliminado correctamente');
+    } catch (error) {
+      console.error('Error al eliminar ticket:', error);
+      alert('Error al eliminar el ticket: ' + (error.message || error));
+    }
+  }
+
   // Drag & Drop handlers for dropzones
   function wireDropzones(){
     document.querySelectorAll('.dropzone').forEach(zone =>{
-      zone.addEventListener('dragover', (e) =>{ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; zone.classList.add('drop-target'); });
-      zone.addEventListener('dragleave', () => zone.classList.remove('drop-target'));
-      zone.addEventListener('drop', (e) =>{ e.preventDefault(); zone.classList.remove('drop-target'); const id = e.dataTransfer.getData('text/plain'); const status = zone.dataset.status; moveTicketTo(id,status); });
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        zone.classList.add('drop-target');
+      });
+      zone.addEventListener('dragleave', (e) => {
+        // Solo quitar si realmente salimos de la zona
+        if (!zone.contains(e.relatedTarget)) {
+          zone.classList.remove('drop-target');
+        }
+      });
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('drop-target');
+        const id = e.dataTransfer.getData('text/plain');
+        const status = zone.dataset.status;
+        moveTicketTo(id, status);
+      });
+      zone.addEventListener('dragend', () => {
+        zone.classList.remove('drop-target');
+      });
     });
   }
 
-  function moveTicketTo(id,status){ const t = tickets.find(x=>x.id===id); if(!t) return; t.status = status; renderBoard(); }
+  function moveTicketTo(id,status){ 
+    const t = tickets.find(x=>x.id===id); 
+    if(!t) return; 
+    t.status = status;
+    // Actualizar en Firestore si está disponible
+    if (window.db && window.firebase && id) {
+      window.db.collection('tickets').doc(id).update({
+        status: status,
+        updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(e => console.warn('Error actualizando estado:', e));
+    }
+    renderBoard(); 
+  }
 
   // Create new ticket flow
   const createModalEl = el('createModal');
@@ -148,7 +315,9 @@
   if (el('btnCreate')) el('btnCreate').addEventListener('click', ()=>{
     const title = el('inputTitle').value.trim(); const desc = el('inputDesc').value.trim(); const priority = el('inputPriority').value; const assigned = el('inputAssigned').value.trim(); const file = el('inputImage').files[0];
     if(!title||!desc) return alert('Título y descripción obligatorios');
-    const newId = generateId(); const newTicket = { id:newId, title, desc, priority, assigned, created:new Date().toLocaleString(), status:'todo', image:null };
+    const newId = generateId(); 
+    const incrementalId = getNextTicketId();
+    const newTicket = { id:newId, incrementalId, title, desc, priority, assigned, created:new Date().toLocaleString(), status:'todo', image:null };
     if(file){ const reader = new FileReader(); reader.onload = (ev)=>{ newTicket.image = ev.target.result; tickets.unshift(newTicket); renderBoard(); bsCreate.hide(); el('createForm').reset(); }; reader.readAsDataURL(file); } else { tickets.unshift(newTicket); renderBoard(); bsCreate.hide(); el('createForm').reset(); }
   });
 
@@ -229,6 +398,7 @@
     try {
       const snap = await window.db.collection('tickets').get();
       tickets.length = 0;
+      ticketCounter = 0;
       snap.forEach(doc => {
         const d = doc.data();
         // normalize id
@@ -241,10 +411,164 @@
         d.sucursalName = d.sucursalName || d.sucursal || '';
         tickets.push(d);
       });
+      // Ordenar por fecha de creación (más antiguos primero para IDs incrementales)
+      tickets.sort((a, b) => {
+        const dateA = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : Date.parse(a.createdAtLocal || 0);
+        const dateB = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : Date.parse(b.createdAtLocal || 0);
+        return dateA - dateB; // Orden ascendente
+      });
+      // Asignar IDs incrementales
+      assignIncrementalIds();
       renderBoard();
+      loadFilterOptions();
     } catch (e) {
       console.warn('No se pudo cargar tickets desde Firestore:', e.message || e);
     }
+  }
+
+  // Búsqueda y filtros
+  let searchFilter = '';
+  function filterTickets() {
+    const filtered = tickets.filter(t => {
+      // Filtro de búsqueda de texto
+      if (searchFilter) {
+        const searchLower = searchFilter.toLowerCase();
+        const title = (t.title || '').toLowerCase();
+        const id = (t.ticketId || t.id || '').toLowerCase();
+        const sucursal = (t.sucursalName || t.sucursal || '').toLowerCase();
+        const category = ((t.category || t.subCategory) || '').toLowerCase();
+        const desc = ((t.desc || t.description) || '').toLowerCase();
+        const incrementalIdStr = String(t.incrementalId || '');
+        if (!(title.includes(searchLower) || id.includes(searchLower) || 
+             sucursal.includes(searchLower) || category.includes(searchLower) || 
+             desc.includes(searchLower) || incrementalIdStr.includes(searchLower))) {
+          return false;
+        }
+      }
+      
+      // Filtros activos
+      if (activeFilters.status && mapStatusToUI(t.status || t.state || 'todo') !== activeFilters.status) {
+        return false;
+      }
+      if (activeFilters.priority && t.priority !== activeFilters.priority) {
+        return false;
+      }
+      if (activeFilters.sucursal && (t.sucursalName || t.sucursal) !== activeFilters.sucursal) {
+        return false;
+      }
+      if (activeFilters.category && (t.category || t.subCategory) !== activeFilters.category) {
+        return false;
+      }
+      if (activeFilters.ticketId && t.incrementalId !== parseInt(activeFilters.ticketId)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Renderizar con tickets filtrados
+    ['todo','inprogress','done'].forEach(status => {
+      const container = el('col-' + status);
+      if (!container) return;
+      container.innerHTML = '';
+      filtered.filter(t => mapStatusToUI(t.status || t.state || 'todo') === status)
+        .forEach(t => container.appendChild(createCard(t)));
+    });
+  }
+
+  // Cargar opciones de filtros desde los tickets
+  function loadFilterOptions() {
+    const sucursales = new Set();
+    const categories = new Set();
+    
+    tickets.forEach(t => {
+      if (t.sucursalName || t.sucursal) sucursales.add(t.sucursalName || t.sucursal);
+      if (t.category || t.subCategory) categories.add(t.category || t.subCategory);
+    });
+    
+    // Llenar select de sucursales
+    const sucursalSelect = el('filterSucursal');
+    if (sucursalSelect) {
+      const currentValue = sucursalSelect.value;
+      sucursalSelect.innerHTML = '<option value="">Todas</option>';
+      Array.from(sucursales).sort().forEach(s => {
+        const option = document.createElement('option');
+        option.value = s;
+        option.textContent = s;
+        sucursalSelect.appendChild(option);
+      });
+      sucursalSelect.value = currentValue;
+    }
+    
+    // Llenar select de categorías
+    const categorySelect = el('filterCategory');
+    if (categorySelect) {
+      const currentValue = categorySelect.value;
+      categorySelect.innerHTML = '<option value="">Todas</option>';
+      Array.from(categories).sort().forEach(c => {
+        const option = document.createElement('option');
+        option.value = c;
+        option.textContent = c;
+        categorySelect.appendChild(option);
+      });
+      categorySelect.value = currentValue;
+    }
+  }
+
+  // Modal de filtros
+  const filtersModalEl = el('filtersModal');
+  const bsFiltersModal = filtersModalEl ? new bootstrap.Modal(filtersModalEl) : null;
+
+  // Botón de inicio
+  if (el('btnHome')) {
+    el('btnHome').addEventListener('click', () => {
+      window.location.href = '../INDEX.HTML';
+    });
+  }
+
+  // Búsqueda
+  if (el('searchInput')) {
+    el('searchInput').addEventListener('input', (e) => {
+      searchFilter = e.target.value.trim();
+      filterTickets();
+    });
+  }
+
+  // Filtros
+  if (el('btnFilters')) {
+    el('btnFilters').addEventListener('click', () => {
+      loadFilterOptions();
+      bsFiltersModal.show();
+    });
+  }
+
+  // Aplicar filtros
+  if (el('btnApplyFilters')) {
+    el('btnApplyFilters').addEventListener('click', () => {
+      activeFilters = {
+        status: el('filterStatus').value || null,
+        priority: el('filterPriority').value || null,
+        sucursal: el('filterSucursal').value || null,
+        category: el('filterCategory').value || null,
+        ticketId: el('filterTicketId').value || null
+      };
+      filterTickets();
+      bsFiltersModal.hide();
+    });
+  }
+
+  // Limpiar filtros
+  if (el('btnClearFilters')) {
+    el('btnClearFilters').addEventListener('click', () => {
+      activeFilters = {};
+      el('filterStatus').value = '';
+      el('filterPriority').value = '';
+      el('filterSucursal').value = '';
+      el('filterCategory').value = '';
+      el('filterTicketId').value = '';
+      filterTickets();
+      bsFiltersModal.hide();
+    });
   }
 
   function init(){

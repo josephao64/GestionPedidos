@@ -1,10 +1,373 @@
-/* adminDashboard.css - estilos mínimos para layout kanban */
-html,body{height:100%}
-.dropzone{min-height:60vh; padding:12px; overflow:auto}
-.ticket-card{cursor:grab; margin-bottom:10px}
-.ticket-card.dragging{opacity:0.5}
-.dropzone.drop-target{outline:3px dashed rgba(0,123,255,0.35); background:rgba(0,123,255,0.02)}
-.card-ticket-title{font-size:0.95rem; margin:0}
-.card-ticket-meta{font-size:0.8rem; color:#6c757d}
-.badge-attach{font-size:0.8rem}
-@media (max-width:767px){ .dropzone{min-height:40vh} }
+/* adminDashboard.css - Estilos mejorados para dashboard Kanban minimalista */
+:root {
+  --primary-color: #20c997; /* Azul verdoso */
+  --primary-dark: #17a085;
+  --bg-light: #f8f9fa;
+  --bg-white: #ffffff;
+  --text-dark: #212529;
+  --text-muted: #6c757d;
+  --border-color: #dee2e6;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--bg-light);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Navbar mejorado */
+.navbar {
+  background-color: var(--bg-white) !important;
+  box-shadow: var(--shadow-sm);
+  padding: 0.75rem 1rem;
+}
+
+.btn-home {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-home:hover {
+  background-color: var(--primary-dark);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.search-container {
+  width: 250px;
+}
+
+.search-container input {
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.search-container input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.15);
+}
+
+/* Columnas Kanban */
+.dropzone {
+  min-height: 60vh;
+  padding: 12px;
+  overflow-y: auto;
+  background-color: var(--bg-light);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.dropzone.drop-target {
+  outline: 3px dashed var(--primary-color);
+  outline-offset: -3px;
+  background-color: rgba(32, 201, 151, 0.05);
+  border-radius: 8px;
+}
+
+.card-header {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+
+/* Tarjetas de tickets mejoradas */
+.ticket-card {
+  cursor: grab;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-white);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.ticket-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--text-muted);
+  transition: width 0.2s ease;
+}
+
+/* Indicadores de prioridad */
+.ticket-card.priority-urgent::before {
+  background-color: #dc3545;
+  width: 4px;
+}
+
+.ticket-card.priority-normal::before {
+  background-color: #ffc107;
+  width: 4px;
+}
+
+.ticket-card.priority-low::before {
+  background-color: #0dcaf0;
+  width: 4px;
+}
+
+.ticket-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--primary-color);
+}
+
+.ticket-card.dragging {
+  opacity: 0.6;
+  transform: rotate(3deg);
+  box-shadow: var(--shadow-lg);
+  cursor: grabbing;
+}
+
+.ticket-card .card-body {
+  padding: 12px;
+}
+
+.card-ticket-title {
+  font-size: 0.95rem;
+  margin: 0 0 6px 0;
+  font-weight: 600;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Indicador de prioridad circular junto al título */
+.priority-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.priority-indicator.urgent {
+  background-color: #dc3545;
+  box-shadow: 0 0 4px rgba(220, 53, 69, 0.5);
+}
+
+.priority-indicator.normal {
+  background-color: #ffc107;
+  box-shadow: 0 0 4px rgba(255, 193, 7, 0.5);
+}
+
+.priority-indicator.low {
+  background-color: #0dcaf0;
+  box-shadow: 0 0 4px rgba(13, 202, 240, 0.5);
+}
+
+.card-ticket-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Información de tickets con etiquetas */
+.card-ticket-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px;
+  background-color: var(--bg-light);
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.ticket-info-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--text-dark);
+  min-width: 70px;
+  font-size: 0.75rem;
+}
+
+.info-value {
+  color: var(--text-muted);
+  flex: 1;
+  font-size: 0.75rem;
+}
+
+.badge-attach {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Botones de acción en tarjetas */
+.ticket-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.ticket-actions .btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ticket-actions .btn:hover {
+  color: var(--primary-color);
+  background-color: rgba(32, 201, 151, 0.1);
+}
+
+.ticket-actions .btn-delete {
+  color: #dc3545;
+  padding: 0.25rem 0.5rem;
+}
+
+.ticket-actions .btn-delete:hover {
+  color: #fff;
+  background-color: #dc3545;
+}
+
+.ticket-actions .btn-delete svg {
+  pointer-events: none;
+}
+
+/* Modal mejorado */
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+  background-color: var(--bg-white);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-footer {
+  background-color: var(--bg-light);
+}
+
+.modal-body label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.15);
+}
+
+/* Comentarios en modal */
+#modalComments {
+  background-color: var(--bg-light);
+  border-radius: 8px;
+}
+
+.comment-item {
+  background-color: var(--bg-white);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.comment-item:last-child {
+  margin-bottom: 0;
+}
+
+.comment-author {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-dark);
+}
+
+.comment-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.comment-text {
+  font-size: 0.9rem;
+  color: var(--text-dark);
+  margin-top: 0.25rem;
+}
+
+/* Botones primarios */
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .dropzone {
+    min-height: 40vh;
+  }
+  
+  .search-container {
+    width: 150px;
+  }
+  
+  .btn-home {
+    padding: 0.4rem 0.6rem;
+  }
+}
+
+/* Scrollbar personalizado */
+.dropzone::-webkit-scrollbar,
+#modalComments::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropzone::-webkit-scrollbar-track,
+#modalComments::-webkit-scrollbar-track {
+  background: var(--bg-light);
+  border-radius: 4px;
+}
+
+.dropzone::-webkit-scrollbar-thumb,
+#modalComments::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.dropzone::-webkit-scrollbar-thumb:hover,
+#modalComments::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

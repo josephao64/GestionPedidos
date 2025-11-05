@@ -264,6 +264,8 @@
   <!-- Se omiten aquí los modales de productos, movimientos, reajustes, catálogo, facturas y reportes (mantén el código existente) -->
   <!-- … (código completo de modales se mantiene sin cambios) … -->
 
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <!-- Firebase SDK y conexión a base de datos -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
@@ -371,45 +373,243 @@
     //  Notificaciones de nuevos tickets (solo admin)
     // =============================
     let ticketsNotifUnsub = null;
+    let ticketsNotifStartTime = null;
     const ticketsNotificados = new Set();
     const notifIcon = 'resources/images/logo.png';
+    
     function solicitarPermisoNotificaciones() {
-      if (!('Notification' in window)) return Promise.resolve('unsupported');
-      if (Notification.permission === 'granted') return Promise.resolve('granted');
-      if (Notification.permission === 'denied') return Promise.resolve('denied');
-      return Notification.requestPermission();
-    }
-    function mostrarNotifTicket(docData) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      const title = `Nuevo Ticket: ${docData.ticketId || 'Ticket'}`;
-      const body = `${docData.sucursalName ? docData.sucursalName + ' · ' : ''}${docData.area || ''}${docData.subCategory ? ' - ' + docData.subCategory : ''}`.trim();
-      try { new Notification(title, { body, icon: notifIcon }); } catch (_e) {}
-    }
-    function iniciarNotificacionesTicketsAdmin() {
-      if (ticketsNotifUnsub) return; // ya iniciado
-      solicitarPermisoNotificaciones().then((perm) => {
-        if (perm !== 'granted') return;
-        const startMs = Date.now();
-        try {
-          ticketsNotifUnsub = db.collection('tickets')
-            .orderBy('createdAt', 'desc')
-            .limit(25)
-            .onSnapshot((snap) => {
-              snap.docChanges().forEach((chg) => {
-                if (chg.type !== 'added') return;
-                const doc = chg.doc; const data = doc.data() || {};
-                if (ticketsNotificados.has(doc.id)) return;
-                const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().getTime() : Date.parse(data.createdAtLocal || 0);
-                if (!ts || ts + 2000 < startMs) { // evitar históricos al conectar
-                  ticketsNotificados.add(doc.id);
-                  return;
-                }
-                ticketsNotificados.add(doc.id);
-                mostrarNotifTicket(data);
+      if (!('Notification' in window)) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Notificaciones no disponibles',
+          text: 'Tu navegador no soporta notificaciones del sistema.',
+          timer: 3000
+        });
+        return Promise.resolve('unsupported');
+      }
+      
+      // Si ya está concedido, continuar
+      if (Notification.permission === 'granted') {
+        console.log('Permiso de notificaciones ya concedido');
+        // Mostrar mensaje breve confirmando que las notificaciones están activas
+        Swal.fire({
+          icon: 'success',
+          title: 'Notificaciones activas',
+          text: 'Las notificaciones del sistema están activas para nuevos tickets.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        return Promise.resolve('granted');
+      }
+      
+      // Si está denegado, mostrar instrucciones para habilitarlo
+      if (Notification.permission === 'denied') {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'Notificaciones bloqueadas',
+          html: `
+            <p>Las notificaciones del sistema están bloqueadas para este sitio.</p>
+            <p><strong>Para habilitarlas:</strong></p>
+            <ol style="text-align: left; display: inline-block;">
+              <li>Haz clic en el ícono de candado en la barra de direcciones</li>
+              <li>Busca "Notificaciones"</li>
+              <li>Cambia a "Permitir"</li>
+              <li>Recarga la página</li>
+            </ol>
+          `,
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#007BFF'
+        }).then(() => Promise.resolve('denied'));
+      }
+      
+      // Si es 'default', solicitar permiso con mensaje explicativo
+      return Swal.fire({
+        title: 'Activar Notificaciones del Sistema',
+        html: `
+          <p>Para recibir notificaciones cuando se creen nuevos tickets, necesitamos tu permiso.</p>
+          <p><strong>Las notificaciones aparecerán en Windows aunque no tengas la página abierta.</strong></p>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, permitir notificaciones',
+        cancelButtonText: 'No, gracias',
+        confirmButtonColor: '#007BFF',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Solicitar permiso del navegador
+          return Notification.requestPermission().then(perm => {
+            if (perm === 'granted') {
+              Swal.fire({
+                icon: 'success',
+                title: '¡Notificaciones activadas!',
+                text: 'Recibirás notificaciones del sistema cuando se creen nuevos tickets.',
+                timer: 3000,
+                showConfirmButton: false
               });
-            }, (err) => console.warn('onSnapshot tickets error:', err));
-        } catch (e) { console.warn('init notif tickets:', e); }
+              console.log('Permiso de notificaciones concedido');
+            } else if (perm === 'denied') {
+              Swal.fire({
+                icon: 'info',
+                title: 'Permiso denegado',
+                html: `
+                  <p>No recibirás notificaciones.</p>
+                  <p>Puedes cambiar esto en la configuración del navegador más tarde.</p>
+                `,
+                timer: 3000
+              });
+            } else {
+              Swal.fire({
+                icon: 'info',
+                title: 'Permiso pendiente',
+                text: 'No se pudo determinar el permiso. Verifica la configuración del navegador.',
+                timer: 3000
+              });
+            }
+            return perm;
+          }).catch(err => {
+            console.error('Error al solicitar permiso:', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Error al solicitar permisos: ' + err.message
+            });
+            return 'denied';
+          });
+        } else {
+          // Usuario canceló
+          Swal.fire({
+            icon: 'info',
+            title: 'Notificaciones desactivadas',
+            text: 'No recibirás notificaciones. Puedes activarlas más tarde desde la configuración.',
+            timer: 2000
+          });
+          return Promise.resolve('denied');
+        }
       });
+    }
+    
+    function mostrarNotifTicket(docData) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') {
+        console.warn('No se puede mostrar notificación: permiso no concedido');
+        return;
+      }
+      const title = `Nuevo Ticket: ${docData.ticketId || 'Ticket'}`;
+      const body = `${docData.sucursalName ? docData.sucursalName + ' · ' : ''}${docData.area || ''}${docData.subCategory ? ' - ' + docData.subCategory : ''}`.trim() || 'Sin descripción';
+      const priority = docData.priority === 'urgent' ? '🔴 Urgente' : docData.priority === 'normal' ? '🟡 Normal' : '🔵 Baja';
+      
+      try {
+        const notification = new Notification(title, {
+          body: `${body}\nPrioridad: ${priority}`,
+          icon: notifIcon,
+          badge: notifIcon,
+          tag: docData.ticketId || 'ticket',
+          requireInteraction: docData.priority === 'urgent',
+          silent: false
+        });
+        
+        notification.onclick = function() {
+          window.focus();
+          notification.close();
+        };
+        
+        console.log('Notificación mostrada:', title);
+      } catch (e) {
+        console.error('Error al mostrar notificación:', e);
+      }
+    }
+    
+    function iniciarNotificacionesTicketsAdmin() {
+      if (ticketsNotifUnsub) {
+        console.log('Listener de tickets ya iniciado');
+        return; // ya iniciado
+      }
+      
+      console.log('Iniciando notificaciones de tickets para admin...');
+      
+      // Pequeño delay para asegurar que la página esté completamente cargada
+      // Esto ayuda a que algunos navegadores acepten mejor la solicitud de permisos
+      setTimeout(() => {
+        solicitarPermisoNotificaciones().then((perm) => {
+          if (perm !== 'granted') {
+            console.warn('Permiso de notificaciones no concedido:', perm);
+            if (perm === 'default') {
+              // Si el usuario aún no ha decidido, mostrar un mensaje adicional
+              console.log('Permiso aún pendiente, el usuario puede activarlo más tarde');
+            }
+            return;
+          }
+          
+          // Mostrar confirmación si el permiso ya estaba concedido
+          if (Notification.permission === 'granted' && ticketsNotifUnsub === null) {
+            console.log('Permiso de notificaciones activo, iniciando listener...');
+          }
+          
+          // Marcar el tiempo de inicio (solo notificar tickets creados después de este momento)
+          ticketsNotifStartTime = Date.now() - 5000; // 5 segundos de margen
+          
+          try {
+            // Usar listener sin orderBy para evitar problemas de índice
+            // Escuchamos todos los cambios y filtramos por timestamp
+            ticketsNotifUnsub = db.collection('tickets')
+              .onSnapshot((snap) => {
+                console.log('Cambios detectados en tickets:', snap.docChanges().length);
+                
+                snap.docChanges().forEach((chg) => {
+                  // Solo procesar documentos nuevos (added)
+                  if (chg.type !== 'added') {
+                    return;
+                  }
+                  
+                  const doc = chg.doc;
+                  const data = doc.data() || {};
+                  
+                  // Evitar duplicados
+                  if (ticketsNotificados.has(doc.id)) {
+                    return;
+                  }
+                  
+                  // Obtener timestamp del ticket
+                  let ticketTime = null;
+                  if (data.createdAt && data.createdAt.toDate) {
+                    ticketTime = data.createdAt.toDate().getTime();
+                  } else if (data.createdAtLocal) {
+                    ticketTime = Date.parse(data.createdAtLocal);
+                  } else if (data.createdAt) {
+                    ticketTime = data.createdAt.getTime ? data.createdAt.getTime() : Date.now();
+                  }
+                  
+                  // Si no hay timestamp válido, usar el tiempo actual menos 1 minuto como fallback
+                  if (!ticketTime || isNaN(ticketTime)) {
+                    ticketTime = Date.now() - 60000;
+                  }
+                  
+                  // Solo notificar tickets creados después del inicio del listener (con margen de 5 segundos)
+                  if (ticketTime < ticketsNotifStartTime) {
+                    console.log('Ticket antiguo ignorado:', doc.id, 'Timestamp:', ticketTime, 'Inicio:', ticketsNotifStartTime);
+                    ticketsNotificados.add(doc.id);
+                    return;
+                  }
+                  
+                  // Marcar como notificado y mostrar
+                  ticketsNotificados.add(doc.id);
+                  console.log('Nuevo ticket detectado:', doc.id, data.ticketId, 'Timestamp:', ticketTime);
+                  mostrarNotifTicket(data);
+                });
+              }, (err) => {
+                console.error('Error en listener de tickets:', err);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error al escuchar nuevos tickets: ' + err.message });
+              });
+              
+            console.log('Listener de tickets iniciado correctamente');
+          } catch (e) {
+            console.error('Error al iniciar listener de tickets:', e);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Error al iniciar notificaciones: ' + e.message });
+          }
+        }).catch((err) => {
+          console.error('Error al solicitar permisos:', err);
+        });
+      }, 500); // Delay de 500ms para asegurar que la página esté lista
     }
 
     // Función para manejar el cierre de sesión

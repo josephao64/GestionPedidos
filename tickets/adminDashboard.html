@@ -11,10 +11,26 @@
 	</head>
 	<body>
 		<div class="container-fluid vh-100 d-flex flex-column">
-			<nav class="navbar navbar-expand-lg navbar-light bg-light">
+			<nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
 				<div class="container-fluid">
-					<a class="navbar-brand" href="#">TicketFlow - Admin</a>
-					<div class="d-flex">
+					<div class="d-flex align-items-center">
+						<button id="btnHome" class="btn btn-home" title="Ir al inicio">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/>
+								<path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 13.5V9.293l6-6Z"/>
+							</svg>
+						</button>
+					</div>
+					<div class="d-flex align-items-center gap-3">
+						<div class="search-container">
+							<input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Buscar tickets...">
+						</div>
+						<button id="btnFilters" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+							</svg>
+							Filtros
+						</button>
 						<button id="btnAdd" class="btn btn-primary btn-sm">+ Nuevo Ticket</button>
 					</div>
 				</div>
@@ -46,71 +62,78 @@
 			</main>
 
 			<!-- Modal Detalle Ticket -->
-					<div class="modal fade" id="ticketModal" tabindex="-1" aria-hidden="true">
+			<div class="modal fade" id="ticketModal" tabindex="-1" aria-hidden="true">
 				<div class="modal-dialog modal-lg modal-dialog-centered">
 					<div class="modal-content">
-						<div class="modal-header">
-									<h5 class="modal-title" id="modalTitle">Detalle Ticket</h5>
-									<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+						<div class="modal-header border-bottom">
+							<h5 class="modal-title fw-bold" id="modalTitle">Detalle Ticket</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
 						</div>
-									<div class="modal-body">
-														<form id="modalForm">
-															<input type="hidden" id="modalId" />
-										<div class="mb-2">
-											<label class="form-label">Sucursal</label>
-											<input id="modalSucursal" type="text" class="form-control" readonly>
-										</div>
-										<div class="mb-2">
-											<label class="form-label">Título</label>
-											<input id="modalTitleInput" type="text" class="form-control" required>
-										</div>
-										<div class="mb-2">
-											<label class="form-label">Categoría</label>
-											<input id="modalCategory" type="text" class="form-control">
-										</div>
-										<div class="mb-2">
-											<label class="form-label">Descripción</label>
-											<textarea id="modalDescription" class="form-control" rows="4"></textarea>
-										</div>
-										<div id="modalImageWrapper" class="mb-3 text-center" style="display:none;">
-											<img id="modalImage" class="img-fluid rounded" alt="Adjunto">
-										</div>
-										<div class="row g-2 mb-2">
-											<div class="col-md-4">
-												<label class="form-label">Prioridad</label>
-												<select id="modalPriority" class="form-select">
-													<option value="low">Baja</option>
-													<option value="normal">Normal</option>
-													<option value="high">Alta</option>
-												</select>
-											</div>
-											<div class="col-md-4">
-												<label class="form-label">Asignado a</label>
-												<input id="modalAssigned" type="text" class="form-control">
-											</div>
-											<div class="col-md-4">
-												<label class="form-label">Estado</label>
-												<select id="modalStatus" class="form-select">
-													<option value="todo">Pendiente</option>
-													<option value="inprogress">En Progreso</option>
-													<option value="done">Resuelto</option>
-												</select>
-											</div>
-										</div>
-
-										<hr>
-										<h6>Comentarios</h6>
-										<div id="modalComments" class="mb-2" style="max-height:200px;overflow:auto;"></div>
-										<div class="input-group mb-2">
-											<input id="newComment" type="text" class="form-control" placeholder="Escribe un comentario...">
-											<button id="btnAddComment" type="button" class="btn btn-outline-primary">Agregar</button>
-										</div>
-									</form>
-						</div>
-								<div class="modal-footer">
-									<button id="btnSaveTicket" type="button" class="btn btn-primary">Guardar cambios</button>
-									<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+						<div class="modal-body">
+							<form id="modalForm">
+								<input type="hidden" id="modalId" />
+								<div class="row g-3 mb-3">
+									<div class="col-md-6">
+										<label class="form-label small text-muted">Sucursal</label>
+										<input id="modalSucursal" type="text" class="form-control form-control-sm" readonly>
+									</div>
+									<div class="col-md-6">
+										<label class="form-label small text-muted">Fecha</label>
+										<input id="modalDate" type="text" class="form-control form-control-sm" readonly>
+									</div>
 								</div>
+								<div class="mb-3">
+									<label class="form-label small text-muted">Título</label>
+									<input id="modalTitleInput" type="text" class="form-control" required>
+								</div>
+								<div class="mb-3">
+									<label class="form-label small text-muted">Categoría</label>
+									<input id="modalCategory" type="text" class="form-control">
+								</div>
+								<div class="mb-3">
+									<label class="form-label small text-muted">Descripción</label>
+									<textarea id="modalDescription" class="form-control" rows="4"></textarea>
+								</div>
+								<div id="modalImageWrapper" class="mb-3 text-center" style="display:none;">
+									<img id="modalImage" class="img-fluid rounded shadow-sm" alt="Adjunto" style="max-height:300px;">
+								</div>
+								<div class="row g-2 mb-3">
+									<div class="col-md-4">
+										<label class="form-label small text-muted">Prioridad</label>
+										<select id="modalPriority" class="form-select form-select-sm">
+											<option value="low">🔵 Baja</option>
+											<option value="normal">🟡 Normal</option>
+											<option value="urgent">🔴 Urgente</option>
+										</select>
+									</div>
+									<div class="col-md-4">
+										<label class="form-label small text-muted">Asignado a</label>
+										<input id="modalAssigned" type="text" class="form-control form-control-sm">
+									</div>
+									<div class="col-md-4">
+										<label class="form-label small text-muted">Estado</label>
+										<select id="modalStatus" class="form-select form-select-sm">
+											<option value="todo">Pendiente</option>
+											<option value="inprogress">En Progreso</option>
+											<option value="done">Resuelto</option>
+										</select>
+									</div>
+								</div>
+								<hr class="my-4">
+								<h6 class="mb-3 fw-semibold">Comentarios</h6>
+								<div id="modalComments" class="mb-3 p-3 bg-light rounded" style="max-height:250px;overflow-y:auto;">
+									<div class="text-muted small text-center py-3">Sin comentarios</div>
+								</div>
+								<div class="input-group mb-0">
+									<input id="newComment" type="text" class="form-control form-control-sm" placeholder="Añadir comentario...">
+									<button id="btnAddComment" type="button" class="btn btn-primary btn-sm">Enviar</button>
+								</div>
+							</form>
+						</div>
+						<div class="modal-footer border-top bg-light">
+							<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+							<button id="btnSaveTicket" type="button" class="btn btn-primary btn-sm">Guardar cambios</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -156,6 +179,60 @@
 						<div class="modal-footer">
 							<button id="btnCreate" type="button" class="btn btn-primary">Crear</button>
 							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Modal Filtros -->
+			<div class="modal fade" id="filtersModal" tabindex="-1" aria-hidden="true">
+				<div class="modal-dialog modal-dialog-centered">
+					<div class="modal-content">
+						<div class="modal-header border-bottom">
+							<h5 class="modal-title fw-bold">Filtros</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+						</div>
+						<div class="modal-body">
+							<form id="filtersForm">
+								<div class="mb-3">
+									<label class="form-label small text-muted">Tipo de Ticket</label>
+									<select id="filterStatus" class="form-select form-select-sm">
+										<option value="">Todos</option>
+										<option value="todo">Pendiente</option>
+										<option value="inprogress">En Progreso</option>
+										<option value="done">Resuelto</option>
+									</select>
+								</div>
+								<div class="mb-3">
+									<label class="form-label small text-muted">Prioridad</label>
+									<select id="filterPriority" class="form-select form-select-sm">
+										<option value="">Todas</option>
+										<option value="urgent">🔴 Urgente</option>
+										<option value="normal">🟡 Normal</option>
+										<option value="low">🔵 Baja</option>
+									</select>
+								</div>
+								<div class="mb-3">
+									<label class="form-label small text-muted">Sucursal</label>
+									<select id="filterSucursal" class="form-select form-select-sm">
+										<option value="">Todas</option>
+									</select>
+								</div>
+								<div class="mb-3">
+									<label class="form-label small text-muted">Categoría/Tipo</label>
+									<select id="filterCategory" class="form-select form-select-sm">
+										<option value="">Todas</option>
+									</select>
+								</div>
+								<div class="mb-3">
+									<label class="form-label small text-muted">ID Ticket</label>
+									<input type="number" id="filterTicketId" class="form-control form-control-sm" placeholder="Buscar por ID..." min="1">
+								</div>
+							</form>
+						</div>
+						<div class="modal-footer border-top bg-light">
+							<button type="button" class="btn btn-secondary btn-sm" id="btnClearFilters">Limpiar</button>
+							<button type="button" class="btn btn-primary btn-sm" id="btnApplyFilters">Aplicar Filtros</button>
 						</div>
 					</div>
 				</div>
