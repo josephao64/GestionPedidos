@@ -9,38 +9,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initUserAndSucursal();
   initAreasAndSubcategories();
   wireFilePreview();
-  wireFileLinks();
   loadMyTickets();
 });
-
-function wireFileLinks() {
-  document.addEventListener('click', async (e) => {
-    if (e.target.matches('.file-link')) {
-      e.preventDefault();
-      const filename = e.target.dataset.filename;
-      try {
-        const response = await fetch(e.target.href);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } catch (error) {
-        console.error('Error descargando archivo:', error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error al descargar',
-          text: 'No se pudo descargar el archivo. Intente más tarde.'
-        });
-      }
-    }
-  });
-}
 
 async function initUserAndSucursal() {
   loggedInUsername = localStorage.getItem('usuarioLogueado');
@@ -99,14 +69,30 @@ function insertTemplate() {
   if (!area.value) area.value = t; else area.value += '\n\n' + t;
 }
 
+// Configuración de adjuntos
+const MAX_FILES = 3;
+const MAX_IMAGE_BYTES = 800 * 1024; // 800KB por imagen objetivo
+const MAX_DIMENSION = 1600; // px (se redimensiona manteniendo aspecto)
+
 function wireFilePreview() {
   const input = document.getElementById('attachments');
   const preview = document.getElementById('preview');
   input.addEventListener('change', () => {
     preview.innerHTML = '';
-    const files = Array.from(input.files || []);
-    files.slice(0, 5).forEach(f => {
-      if (f.size > 10 * 1024 * 1024) return; // 10MB
+    let files = Array.from(input.files || []);
+    // Filtrar solo imágenes válidas
+    const invalids = files.filter(f => !/^image\/(jpeg|png)$/.test(f.type));
+    if (invalids.length) {
+      Swal.fire({ icon: 'warning', title: 'Formato no permitido', text: 'Solo se aceptan imágenes JPG o PNG.' });
+      files = files.filter(f => /^image\/(jpeg|png)$/.test(f.type));
+    }
+    // Limitar a MAX_FILES
+    if (files.length > MAX_FILES) {
+      Swal.fire({ icon: 'info', title: 'Demasiadas imágenes', text: `Solo se subirán ${MAX_FILES} imágenes.` });
+      files = files.slice(0, MAX_FILES);
+    }
+    // Reconstruir FileList visualmente (solo para previo; el control mantiene los originales)
+    files.forEach(f => {
       const el = document.createElement('div');
       el.className = 'preview-item';
       if (f.type.startsWith('image/')) {
@@ -116,8 +102,6 @@ function wireFilePreview() {
         reader.onload = e => img.src = e.target.result;
         reader.readAsDataURL(f);
         el.appendChild(img);
-      } else {
-        el.textContent = f.name;
       }
       preview.appendChild(el);
     });
@@ -197,52 +181,26 @@ async function submitTicket() {
       assignmentGroup: assignGroup
     };
 
-    // Subir archivos si los hay
-    const files = Array.from(document.getElementById('attachments').files || []).slice(0, 5);
+    // Subir imágenes si las hay (máximo MAX_FILES y con compresión)
+    let files = Array.from(document.getElementById('attachments').files || []);
+    // Filtrar imágenes válidas
+    files = files.filter(f => /^image\/(jpeg|png)$/.test(f.type));
+    if (files.length > MAX_FILES) {
+      Swal.fire({ icon: 'info', title: 'Límite de imágenes', text: `Solo se subirán ${MAX_FILES} imágenes.` });
+      files = files.slice(0, MAX_FILES);
+    }
     const uploaded = [];
     for (const f of files) {
-      if (f.size > 10 * 1024 * 1024) continue;
-      const timestamp = Date.now();
-      const fileName = `${timestamp}_${f.name}`;
-      const ref = firebase.storage().ref().child(`tickets/${ticketId}/${fileName}`);
-      
-      // Convertir imagen a base64 si es una imagen
-      if (f.type.startsWith('image/')) {
-        const reader = new FileReader();
-        const imageData = await new Promise((resolve, reject) => {
-          reader.onload = e => resolve(e.target.result);
-          reader.onerror = e => reject(e);
-          reader.readAsDataURL(f);
-        });
-        
-        uploaded.push({ 
-          name: f.name, 
-          dataUrl: imageData, 
-          contentType: f.type, 
-          size: f.size,
-          timestamp 
-        });
-        
-        // También subir a Storage en segundo plano
-        try {
-          const snap = await ref.put(f, { contentType: f.type });
-          const url = await snap.ref.getDownloadURL();
-          uploaded[uploaded.length - 1].url = url;
-        } catch (error) {
-          console.warn('Error al subir a Storage:', error);
-          // Continuamos usando el dataUrl si falla la subida a Storage
-        }
-      } else {
-        // Para archivos que no son imágenes, intentar subir normalmente
-        const snap = await ref.put(f, { contentType: f.type });
-        const url = await snap.ref.getDownloadURL();
-        uploaded.push({ 
-          name: f.name, 
-          url, 
-          contentType: f.type, 
-          size: f.size,
-          timestamp 
-        });
+      const { blob, warned } = await compressImageIfNeeded(f, MAX_IMAGE_BYTES, MAX_DIMENSION);
+      if (!blob) { continue; }
+      const finalName = f.name.replace(/\.(png|jpg|jpeg)$/i, '') + '_compressed.jpg';
+      const ref = firebase.storage().ref().child(`tickets/${ticketId}/${Date.now()}_${finalName}`);
+      const metadata = { contentType: 'image/jpeg' };
+      const snap = await ref.put(blob, metadata);
+      const url = await snap.ref.getDownloadURL();
+      uploaded.push({ name: finalName, url, contentType: 'image/jpeg', size: blob.size });
+      if (warned) {
+        // Ya se mostró advertencia dentro de la función de compresión
       }
     }
     baseData.attachments = uploaded;
@@ -261,6 +219,50 @@ async function submitTicket() {
   }
 }
 
+// Comprimir imagen si excede el umbral; convertir todo a JPEG con calidad progresiva
+async function compressImageIfNeeded(file, maxBytes, maxDim) {
+  const warned = { value: false };
+  const readAsImage = (file) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const img = await readAsImage(file);
+  // Calcular dimensiones destino manteniendo aspecto
+  let { width, height } = img;
+  if (Math.max(width, height) > maxDim) {
+    if (width >= height) { height = Math.round((maxDim / width) * height); width = maxDim; }
+    else { width = Math.round((maxDim / height) * width); height = maxDim; }
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, width, height);
+  // Intentos de compresión reduciendo calidad
+  let quality = 0.85;
+  let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+  if (!blob) return { blob: null, warned: false };
+  while (blob.size > maxBytes && quality > 0.4) {
+    quality -= 0.1;
+    blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+    if (!blob) break;
+  }
+  if (!blob) return { blob: null, warned: false };
+  if (blob.size > maxBytes) {
+    Swal.fire({ icon: 'warning', title: 'Imagen muy pesada', text: 'Se comprimió la imagen al máximo permitido, pero aún supera el tamaño recomendado.' });
+    warned.value = true;
+  } else if (file.size > maxBytes) {
+    // Solo informar si hubo compresión efectiva
+    Swal.fire({ icon: 'info', title: 'Imágenes optimizadas', text: 'Se comprimieron una o más imágenes para cumplir el límite.' });
+    warned.value = true;
+  }
+  return { blob, warned: warned.value };
+}
+
 function ticketCardHTML(t) {
   const created = t.createdAt?.toDate ? t.createdAt.toDate().toLocaleString() : (t.createdAtLocal || '');
   return `
@@ -277,23 +279,7 @@ function ticketCardHTML(t) {
 
 function attachmentsHTML(att) {
   if (!att || !att.length) return '';
-  const items = att.map(a => {
-    if (a.contentType && a.contentType.startsWith('image/')) {
-      // Usar dataUrl si está disponible, de lo contrario intentar con url
-      const imgSrc = a.dataUrl || a.url;
-      return `
-        <div class="preview-item">
-          <img src="${imgSrc}" alt="${a.name}" style="max-width: 200px; height: auto;" 
-               onerror="this.onerror=null; this.src='../resources/images/image-placeholder.png';" />
-          <div>${a.name}</div>
-        </div>`;
-    }
-    return `<div class="preview-item">
-              <a href="${a.url}" target="_blank" class="file-link" data-filename="${a.name}">
-                ${a.name}
-              </a>
-            </div>`;
-  }).join('');
+  const items = att.map(a => `<div class="preview-item"><a href="${a.url}" target="_blank">${a.name}</a></div>`).join('');
   return `<div class="preview" style="margin-top:8px;">${items}</div>`;
 }
 

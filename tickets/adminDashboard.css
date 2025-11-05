@@ -1,0 +1,10 @@
+/* adminDashboard.css - estilos mínimos para layout kanban */
+html,body{height:100%}
+.dropzone{min-height:60vh; padding:12px; overflow:auto}
+.ticket-card{cursor:grab; margin-bottom:10px}
+.ticket-card.dragging{opacity:0.5}
+.dropzone.drop-target{outline:3px dashed rgba(0,123,255,0.35); background:rgba(0,123,255,0.02)}
+.card-ticket-title{font-size:0.95rem; margin:0}
+.card-ticket-meta{font-size:0.8rem; color:#6c757d}
+.badge-attach{font-size:0.8rem}
+@media (max-width:767px){ .dropzone{min-height:40vh} }

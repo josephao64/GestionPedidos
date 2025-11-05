@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Admin - Tickets (Kanban)</title>
+
+		<!-- Bootstrap 5 CSS -->
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link rel="stylesheet" href="adminDashboard.css">
+	</head>
+	<body>
+		<div class="container-fluid vh-100 d-flex flex-column">
+			<nav class="navbar navbar-expand-lg navbar-light bg-light">
+				<div class="container-fluid">
+					<a class="navbar-brand" href="#">TicketFlow - Admin</a>
+					<div class="d-flex">
+						<button id="btnAdd" class="btn btn-primary btn-sm">+ Nuevo Ticket</button>
+					</div>
+				</div>
+			</nav>
+
+			<main class="flex-fill overflow-auto pt-3">
+				<div class="row flex-nowrap gx-3" id="board" style="min-width:900px;">
+					<div class="col-12 col-sm-6 col-md-4">
+						<div class="card h-100">
+							<div class="card-header bg-primary text-white">Pendiente</div>
+							<div class="card-body dropzone" data-status="todo" id="col-todo"></div>
+						</div>
+					</div>
+
+					<div class="col-12 col-sm-6 col-md-4">
+						<div class="card h-100">
+							<div class="card-header bg-info text-white">En Progreso</div>
+							<div class="card-body dropzone" data-status="inprogress" id="col-inprogress"></div>
+						</div>
+					</div>
+
+					<div class="col-12 col-sm-6 col-md-4">
+						<div class="card h-100">
+							<div class="card-header bg-success text-white">Resuelto</div>
+							<div class="card-body dropzone" data-status="done" id="col-done"></div>
+						</div>
+					</div>
+				</div>
+			</main>
+
+			<!-- Modal Detalle Ticket -->
+					<div class="modal fade" id="ticketModal" tabindex="-1" aria-hidden="true">
+				<div class="modal-dialog modal-lg modal-dialog-centered">
+					<div class="modal-content">
+						<div class="modal-header">
+									<h5 class="modal-title" id="modalTitle">Detalle Ticket</h5>
+									<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+						</div>
+									<div class="modal-body">
+														<form id="modalForm">
+															<input type="hidden" id="modalId" />
+										<div class="mb-2">
+											<label class="form-label">Sucursal</label>
+											<input id="modalSucursal" type="text" class="form-control" readonly>
+										</div>
+										<div class="mb-2">
+											<label class="form-label">Título</label>
+											<input id="modalTitleInput" type="text" class="form-control" required>
+										</div>
+										<div class="mb-2">
+											<label class="form-label">Categoría</label>
+											<input id="modalCategory" type="text" class="form-control">
+										</div>
+										<div class="mb-2">
+											<label class="form-label">Descripción</label>
+											<textarea id="modalDescription" class="form-control" rows="4"></textarea>
+										</div>
+										<div id="modalImageWrapper" class="mb-3 text-center" style="display:none;">
+											<img id="modalImage" class="img-fluid rounded" alt="Adjunto">
+										</div>
+										<div class="row g-2 mb-2">
+											<div class="col-md-4">
+												<label class="form-label">Prioridad</label>
+												<select id="modalPriority" class="form-select">
+													<option value="low">Baja</option>
+													<option value="normal">Normal</option>
+													<option value="high">Alta</option>
+												</select>
+											</div>
+											<div class="col-md-4">
+												<label class="form-label">Asignado a</label>
+												<input id="modalAssigned" type="text" class="form-control">
+											</div>
+											<div class="col-md-4">
+												<label class="form-label">Estado</label>
+												<select id="modalStatus" class="form-select">
+													<option value="todo">Pendiente</option>
+													<option value="inprogress">En Progreso</option>
+													<option value="done">Resuelto</option>
+												</select>
+											</div>
+										</div>
+
+										<hr>
+										<h6>Comentarios</h6>
+										<div id="modalComments" class="mb-2" style="max-height:200px;overflow:auto;"></div>
+										<div class="input-group mb-2">
+											<input id="newComment" type="text" class="form-control" placeholder="Escribe un comentario...">
+											<button id="btnAddComment" type="button" class="btn btn-outline-primary">Agregar</button>
+										</div>
+									</form>
+						</div>
+								<div class="modal-footer">
+									<button id="btnSaveTicket" type="button" class="btn btn-primary">Guardar cambios</button>
+									<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+								</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Modal Crear Ticket -->
+			<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+				<div class="modal-dialog modal-lg modal-dialog-centered">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title">Crear Ticket</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+						</div>
+						<div class="modal-body">
+							<form id="createForm">
+								<div class="mb-3">
+									<label class="form-label">Título</label>
+									<input id="inputTitle" type="text" class="form-control" required maxlength="80">
+								</div>
+								<div class="mb-3">
+									<label class="form-label">Descripción</label>
+									<textarea id="inputDesc" class="form-control" rows="4" required minlength="10"></textarea>
+								</div>
+								<div class="row g-2">
+									<div class="col-md-4">
+										<label class="form-label">Prioridad</label>
+										<select id="inputPriority" class="form-select">
+											<option value="low">Baja</option>
+											<option value="normal" selected>Normal</option>
+											<option value="high">Alta</option>
+										</select>
+									</div>
+									<div class="col-md-4">
+										<label class="form-label">Asignado a</label>
+										<input id="inputAssigned" type="text" class="form-control">
+									</div>
+									<div class="col-md-4">
+										<label class="form-label">Adjuntar imagen (opcional)</label>
+										<input id="inputImage" type="file" accept="image/*" class="form-control">
+									</div>
+								</div>
+							</form>
+						</div>
+						<div class="modal-footer">
+							<button id="btnCreate" type="button" class="btn btn-primary">Crear</button>
+							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+		<!-- Bootstrap 5 JS (Popper incluido) -->
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+		<!-- Firebase SDKs (v8 namespace) -->
+		<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-storage.js"></script>
+		<!-- Conexión a Firebase (inicializa db y storage en window) -->
+		<script src="../database/connection.js"></script>
+		<script src="adminDashboard.js"></script>
+		<script>
+		// Notificaciones de nuevos tickets también en el dashboard admin
+		(function(){
+		  const notifIcon = '../resources/images/logo.png';
+		  const notified = new Set();
+		  function requestPerm(){
+		    if(!('Notification' in window)) return Promise.resolve('unsupported');
+		    if(Notification.permission==='granted') return Promise.resolve('granted');
+		    if(Notification.permission==='denied') return Promise.resolve('denied');
+		    return Notification.requestPermission();
+		  }
+		  function notifyTicket(d){
+		    if(!('Notification' in window) || Notification.permission!=='granted') return;
+		    const title = `Nuevo Ticket: ${d.ticketId||'Ticket'}`;
+		    const body = `${d.sucursalName? d.sucursalName+' · ' : ''}${d.area||''}${d.subCategory? ' - '+d.subCategory:''}`.trim();
+		    try{ new Notification(title,{ body, icon: notifIcon }); }catch(_e){}
+		  }
+		  document.addEventListener('DOMContentLoaded', function(){
+		    requestPerm().then((perm)=>{
+		      if(perm!=='granted' || !window.db) return;
+		      const startMs = Date.now();
+		      try{
+		        window.ticketsUnsubNotify && window.ticketsUnsubNotify();
+		      }catch(_){ }
+		      try{
+		        window.ticketsUnsubNotify = window.db.collection('tickets')
+		          .orderBy('createdAt','desc')
+		          .limit(25)
+		          .onSnapshot((snap)=>{
+		            snap.docChanges().forEach((chg)=>{
+		              if(chg.type!=='added') return;
+		              const doc = chg.doc; const data = doc.data()||{};
+		              if(notified.has(doc.id)) return;
+		              const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().getTime() : Date.parse(data.createdAtLocal||0);
+		              if(!ts || ts + 2000 < startMs){ notified.add(doc.id); return; }
+		              notified.add(doc.id);
+		              notifyTicket(data);
+		            });
+		          }, (err)=>console.warn('onSnapshot tickets error:',err));
+		      }catch(e){ console.warn('init notif tickets:', e); }
+		    });
+		  });
+		})();
+		</script>
+	</body>
+</html>

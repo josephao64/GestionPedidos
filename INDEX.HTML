@@ -94,9 +94,9 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 150px;
-      height: 150px;
-      font-size: 18px;
+      width: clamp(110px, 22vw, 150px);
+      height: clamp(110px, 22vw, 150px);
+      font-size: clamp(14px, 2.2vw, 18px);
       text-align: center;
       text-decoration: none;
       color: white;
@@ -147,7 +147,7 @@
     /* =====================================
        Responsividad para dispositivos móviles
        ===================================== */
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
       .welcome-container {
         top: 10px;
         right: 10px;
@@ -163,21 +163,35 @@
       .menu-principal {
         font-size: 28px;
       }
+      /* Reorganizar menú izquierdo para que no se salga de la pantalla */
       .oe_menu {
-        top: 55%;
-        left: 10px;
-        transform: translateY(-55%);
+        position: static;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin: 10px;
+        transform: none;
       }
-      .oe_menu a, .menu-button {
-        width: 120px;
-        height: 120px;
-        font-size: 16px;
-      }
+      .oe_menu li { margin: 0; }
+      /* Menú derecho como barra inferior flexible */
       .right-menu {
-        bottom: 10px;
-        right: 10px;
-        gap: 8px;
+        position: static;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin: 10px;
       }
+    }
+
+    /* Ajustes extra para pantallas muy pequeñas */
+    @media (max-width: 576px) {
+      .menu-principal { font-size: 24px; }
+      .logo-container img { max-width: 120px; }
     }
   </style>
 </head>
@@ -199,7 +213,8 @@
     <ul class="oe_menu">
       <li><a href="realizarPedido/realizadPedido.html">Realizar pedidos</a></li>
       <li><a href="gestionPedidos/pedidos.html">Gestión de Pedidos</a></li>
-        <li><a href="tickets/tickets.html">Tickets</a></li>
+      <li class="admin-only"><a href="tickets/tickets.html">Tickets</a></li>
+      <li class="admin-only"><a href="tickets/adminDashboard.html">Dashboard Tickets</a></li>
     </ul>
     <div class="right-menu">
       <!-- Botón "Empresa" (exclusivo para administradores) -->
@@ -270,6 +285,8 @@
         adminElements.forEach(element => {
           element.style.display = 'inline-block';
         });
+        // Iniciar notificaciones de nuevos tickets para administradores
+        try { iniciarNotificacionesTicketsAdmin(); } catch (e) { console.warn('Notif tickets admin:', e); }
       } else if (rol === 'view') {
         // For view-only users, show only order management
         const oeMenu = document.querySelector('.oe_menu');
@@ -348,6 +365,51 @@
       } else {
         window.location.href = 'login.html';
       }
+    }
+
+    // =============================
+    //  Notificaciones de nuevos tickets (solo admin)
+    // =============================
+    let ticketsNotifUnsub = null;
+    const ticketsNotificados = new Set();
+    const notifIcon = 'resources/images/logo.png';
+    function solicitarPermisoNotificaciones() {
+      if (!('Notification' in window)) return Promise.resolve('unsupported');
+      if (Notification.permission === 'granted') return Promise.resolve('granted');
+      if (Notification.permission === 'denied') return Promise.resolve('denied');
+      return Notification.requestPermission();
+    }
+    function mostrarNotifTicket(docData) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const title = `Nuevo Ticket: ${docData.ticketId || 'Ticket'}`;
+      const body = `${docData.sucursalName ? docData.sucursalName + ' · ' : ''}${docData.area || ''}${docData.subCategory ? ' - ' + docData.subCategory : ''}`.trim();
+      try { new Notification(title, { body, icon: notifIcon }); } catch (_e) {}
+    }
+    function iniciarNotificacionesTicketsAdmin() {
+      if (ticketsNotifUnsub) return; // ya iniciado
+      solicitarPermisoNotificaciones().then((perm) => {
+        if (perm !== 'granted') return;
+        const startMs = Date.now();
+        try {
+          ticketsNotifUnsub = db.collection('tickets')
+            .orderBy('createdAt', 'desc')
+            .limit(25)
+            .onSnapshot((snap) => {
+              snap.docChanges().forEach((chg) => {
+                if (chg.type !== 'added') return;
+                const doc = chg.doc; const data = doc.data() || {};
+                if (ticketsNotificados.has(doc.id)) return;
+                const ts = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().getTime() : Date.parse(data.createdAtLocal || 0);
+                if (!ts || ts + 2000 < startMs) { // evitar históricos al conectar
+                  ticketsNotificados.add(doc.id);
+                  return;
+                }
+                ticketsNotificados.add(doc.id);
+                mostrarNotifTicket(data);
+              });
+            }, (err) => console.warn('onSnapshot tickets error:', err));
+        } catch (e) { console.warn('init notif tickets:', e); }
+      });
     }
 
     // Función para manejar el cierre de sesión

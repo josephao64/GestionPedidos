@@ -15,7 +15,7 @@
 
   <link rel="stylesheet" href="tickets.css" />
   <script src="../database/connection.js"></script>
-  <script defer src="tickets.js"></script>
+  <script src="tickets.js"></script>
 </head>
 <body>
   <div class="header">
@@ -60,8 +60,8 @@
 
       <div class="form-group">
         <label>Evidencia (Opcional)</label>
-        <input type="file" id="attachments" multiple accept=".jpg,.jpeg,.png,.mp4" />
-        <small>Máximo 5 archivos, 10MB c/u. Formatos: jpg, png, mp4</small>
+        <input type="file" id="attachments" multiple accept="image/jpeg,image/png" />
+        <small>Máximo 3 imágenes. Si superan el peso, se comprimirán automáticamente.</small>
         <div id="preview" class="preview"></div>
       </div>
 
