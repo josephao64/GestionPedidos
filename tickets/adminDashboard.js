@@ -61,48 +61,38 @@
     
     const sucursal = escapeHtml(t.sucursalName || t.sucursal || 'N/A');
     const categoria = escapeHtml(t.category || t.subCategory || 'N/A');
-    const asignado = escapeHtml(t.assigned || 'Sin asignar');
+    const dateStrLarge = createdDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
     
     body.innerHTML = `
-      <div class="d-flex justify-content-between align-items-start mb-2">
+      <div class="ticket-date-large mb-2">${dateStrLarge}</div>
+      <div class="d-flex justify-content-between align-items-start mb-1">
         <div class="flex-grow-1">
-          <h6 class="card-ticket-title mb-2">
+          <h6 class="card-ticket-title mb-1">
             <span class="priority-indicator ${priorityClass}"></span>
             <strong class="text-primary">#${t.incrementalId || 'N/A'}</strong> - ${escapeHtml(t.title)}
           </h6>
-          <div class="card-ticket-info">
-            <div class="ticket-info-item">
-              <span class="info-label">Sucursal:</span>
-              <span class="info-value">${sucursal}</span>
-            </div>
-            <div class="ticket-info-item">
-              <span class="info-label">Categoría:</span>
-              <span class="info-value">${categoria}</span>
-            </div>
-            <div class="ticket-info-item">
-              <span class="info-label">Asignado:</span>
-              <span class="info-value">${asignado}</span>
-            </div>
-          </div>
-          <div class="card-ticket-meta mt-2 d-flex align-items-center justify-content-between">
-            <small class="text-muted">${dateStr}</small>
-            <span class="badge bg-${priorityClass === 'urgent' ? 'danger' : (priorityClass === 'low' ? 'info' : 'warning')} badge-attach">
-              ${priorityEmoji} ${priorityText}
-            </span>
+          <div class="card-ticket-info-compact">
+            <span class="badge bg-light text-dark me-1">📍 ${sucursal}</span>
+            <span class="badge bg-light text-dark">📂 ${categoria}</span>
           </div>
         </div>
         <div class="text-end ms-2">
-          ${hasAttachment ? '<span class="badge bg-secondary badge-attach d-block mb-1">🖼️</span>' : ''}
+          ${hasAttachment ? '<span class="badge bg-secondary badge-attach">🖼️</span>' : ''}
         </div>
       </div>
-      <div class="ticket-actions">
-        <button class="btn btn-sm btn-view" data-ticket-id="${t.id}">Ver</button>
-        <button class="btn btn-sm btn-delete" data-ticket-id="${t.id}" data-ticket-title="${escapeHtml(t.title)}" title="Eliminar ticket">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-          </svg>
-        </button>
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <span class="badge bg-${priorityClass === 'urgent' ? 'danger' : (priorityClass === 'low' ? 'info' : 'warning')} badge-attach">
+          ${priorityEmoji} ${priorityText}
+        </span>
+        <div class="ticket-actions-compact">
+          <button class="btn btn-sm btn-view" data-ticket-id="${t.id}">Ver</button>
+          <button class="btn btn-sm btn-delete" data-ticket-id="${t.id}" data-ticket-title="${escapeHtml(t.title)}" title="Eliminar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+              <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>
+          </button>
+        </div>
       </div>
     `;
 
@@ -204,7 +194,6 @@
     el('modalCategory').value = data.category || data.subCategory || '';
     el('modalDescription').value = data.desc || data.description || '';
     el('modalPriority').value = data.priority === 'urgent' ? 'urgent' : (data.priority === 'low' ? 'low' : 'normal');
-    el('modalAssigned').value = data.assigned || (data.reporter?.name) || '';
     el('modalStatus').value = mapStatusToUI(data.status || data.state || 'todo');
     if (el('modalId')) el('modalId').value = data.id || data.ticketId || '';
     // soportar adjuntos subidos a Firestore: 'attachments' (array) o propiedad 'image' (dataURL/local)
@@ -313,11 +302,11 @@
   const bsCreate = createModalEl ? new bootstrap.Modal(createModalEl) : null;
   if (el('btnAdd')) el('btnAdd').addEventListener('click', ()=> bsCreate.show());
   if (el('btnCreate')) el('btnCreate').addEventListener('click', ()=>{
-    const title = el('inputTitle').value.trim(); const desc = el('inputDesc').value.trim(); const priority = el('inputPriority').value; const assigned = el('inputAssigned').value.trim(); const file = el('inputImage').files[0];
+    const title = el('inputTitle').value.trim(); const desc = el('inputDesc').value.trim(); const priority = el('inputPriority').value; const file = el('inputImage').files[0];
     if(!title||!desc) return alert('Título y descripción obligatorios');
     const newId = generateId(); 
     const incrementalId = getNextTicketId();
-    const newTicket = { id:newId, incrementalId, title, desc, priority, assigned, created:new Date().toLocaleString(), status:'todo', image:null };
+    const newTicket = { id:newId, incrementalId, title, desc, priority, created:new Date().toLocaleString(), status:'todo', image:null };
     if(file){ const reader = new FileReader(); reader.onload = (ev)=>{ newTicket.image = ev.target.result; tickets.unshift(newTicket); renderBoard(); bsCreate.hide(); el('createForm').reset(); }; reader.readAsDataURL(file); } else { tickets.unshift(newTicket); renderBoard(); bsCreate.hide(); el('createForm').reset(); }
   });
 
@@ -328,7 +317,6 @@
       const category = el('modalCategory').value.trim();
       const desc = el('modalDescription').value.trim();
       const priority = el('modalPriority').value;
-      const assigned = el('modalAssigned').value.trim();
       const status = el('modalStatus').value;
 
       // find ticket in memory
@@ -343,14 +331,13 @@
             description: desc || undefined,
             desc: desc || undefined,
             priority: priority || undefined,
-            assigned: assigned || undefined,
             status: status || undefined,
             updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
           });
         } catch (e) { alert('Error al guardar en Firestore: ' + (e.message || e)); }
       } else if (local) {
         // update local object
-        local.title = title; local.category = category; local.desc = desc; local.priority = priority; local.assigned = assigned; local.status = status;
+        local.title = title; local.category = category; local.desc = desc; local.priority = priority; local.status = status;
       }
 
       // reflect locally
@@ -463,6 +450,34 @@
         return false;
       }
       
+      // Filtros de fecha
+      if (activeFilters.dateFrom || activeFilters.dateTo || activeFilters.dateExact) {
+        const ticketDate = t.createdAt && t.createdAt.toDate ? t.createdAt.toDate() : (t.createdAtLocal ? new Date(t.createdAtLocal) : new Date());
+        const ticketDateOnly = new Date(ticketDate.getFullYear(), ticketDate.getMonth(), ticketDate.getDate());
+        
+        if (activeFilters.dateExact) {
+          const exactDate = new Date(activeFilters.dateExact);
+          const exactDateOnly = new Date(exactDate.getFullYear(), exactDate.getMonth(), exactDate.getDate());
+          if (ticketDateOnly.getTime() !== exactDateOnly.getTime()) {
+            return false;
+          }
+        } else {
+          if (activeFilters.dateFrom) {
+            const fromDate = new Date(activeFilters.dateFrom);
+            if (ticketDateOnly < fromDate) {
+              return false;
+            }
+          }
+          if (activeFilters.dateTo) {
+            const toDate = new Date(activeFilters.dateTo);
+            toDate.setHours(23, 59, 59, 999); // Incluir todo el día
+            if (ticketDateOnly > toDate) {
+              return false;
+            }
+          }
+        }
+      }
+      
       return true;
     });
     
@@ -534,6 +549,49 @@
     });
   }
 
+  // Filtros individuales
+  ['filterSucursal', 'filterCategory', 'filterPriority', 'filterStatus', 'filterTicketId', 'filterDateFrom', 'filterDateTo', 'filterDateExact'].forEach(filterId => {
+    const filterEl = el(filterId);
+    if (filterEl) {
+      filterEl.addEventListener('change', () => {
+        applyFiltersFromUI();
+        filterTickets();
+      });
+      if (filterId.includes('Date') || filterId === 'filterTicketId') {
+        filterEl.addEventListener('input', () => {
+          applyFiltersFromUI();
+          filterTickets();
+        });
+      }
+    }
+  });
+
+  // Función para aplicar filtros desde UI
+  function applyFiltersFromUI() {
+    activeFilters = {
+      status: el('filterStatus')?.value || null,
+      priority: el('filterPriority')?.value || null,
+      sucursal: el('filterSucursal')?.value || null,
+      category: el('filterCategory')?.value || null,
+      ticketId: el('filterTicketId')?.value || null,
+      dateFrom: el('filterDateFrom')?.value || null,
+      dateTo: el('filterDateTo')?.value || null,
+      dateExact: el('filterDateExact')?.value || null
+    };
+    // Si hay fecha exacta, limpiar rango
+    if (activeFilters.dateExact) {
+      activeFilters.dateFrom = null;
+      activeFilters.dateTo = null;
+      if (el('filterDateFrom')) el('filterDateFrom').value = '';
+      if (el('filterDateTo')) el('filterDateTo').value = '';
+    }
+    // Si hay rango, limpiar fecha exacta
+    if (activeFilters.dateFrom || activeFilters.dateTo) {
+      activeFilters.dateExact = null;
+      if (el('filterDateExact')) el('filterDateExact').value = '';
+    }
+  }
+
   // Filtros
   if (el('btnFilters')) {
     el('btnFilters').addEventListener('click', () => {
@@ -542,32 +600,21 @@
     });
   }
 
-  // Aplicar filtros
-  if (el('btnApplyFilters')) {
-    el('btnApplyFilters').addEventListener('click', () => {
-      activeFilters = {
-        status: el('filterStatus').value || null,
-        priority: el('filterPriority').value || null,
-        sucursal: el('filterSucursal').value || null,
-        category: el('filterCategory').value || null,
-        ticketId: el('filterTicketId').value || null
-      };
-      filterTickets();
-      bsFiltersModal.hide();
-    });
-  }
-
   // Limpiar filtros
   if (el('btnClearFilters')) {
     el('btnClearFilters').addEventListener('click', () => {
       activeFilters = {};
-      el('filterStatus').value = '';
-      el('filterPriority').value = '';
-      el('filterSucursal').value = '';
-      el('filterCategory').value = '';
-      el('filterTicketId').value = '';
+      searchFilter = '';
+      if (el('filterStatus')) el('filterStatus').value = '';
+      if (el('filterPriority')) el('filterPriority').value = '';
+      if (el('filterSucursal')) el('filterSucursal').value = '';
+      if (el('filterCategory')) el('filterCategory').value = '';
+      if (el('filterTicketId')) el('filterTicketId').value = '';
+      if (el('filterDateFrom')) el('filterDateFrom').value = '';
+      if (el('filterDateTo')) el('filterDateTo').value = '';
+      if (el('filterDateExact')) el('filterDateExact').value = '';
+      if (el('searchInput')) el('searchInput').value = '';
       filterTickets();
-      bsFiltersModal.hide();
     });
   }
 

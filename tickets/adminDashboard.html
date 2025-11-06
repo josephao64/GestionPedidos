@@ -13,12 +13,74 @@
 		<div class="container-fluid vh-100 d-flex flex-column">
 			<nav class="navbar navbar-expand-lg navbar-light bg-light">
 				<div class="container-fluid">
-					<a class="navbar-brand" href="#">TicketFlow - Admin</a>
-					<div class="d-flex">
+					<a class="navbar-brand" href="#">Dashboard Tickets - Admin</a>
+					<div class="d-flex gap-2">
+						<a href="../INDEX.HTML" class="btn btn-outline-secondary btn-sm">← Volver</a>
 						<button id="btnAdd" class="btn btn-primary btn-sm">+ Nuevo Ticket</button>
 					</div>
 				</div>
 			</nav>
+
+			<!-- Barra de filtros y búsqueda -->
+			<div class="filters-bar bg-white border-bottom p-3">
+				<div class="row g-2 align-items-end">
+					<div class="col-md-3">
+						<label class="form-label small mb-1">🔍 Buscar</label>
+						<input type="text" id="searchInput" class="form-control form-control-sm" placeholder="ID, título, descripción...">
+					</div>
+					<div class="col-md-2">
+						<label class="form-label small mb-1">📍 Sucursal</label>
+						<select id="filterSucursal" class="form-select form-select-sm">
+							<option value="">Todas</option>
+						</select>
+					</div>
+					<div class="col-md-2">
+						<label class="form-label small mb-1">📂 Tipo/Categoría</label>
+						<select id="filterCategory" class="form-select form-select-sm">
+							<option value="">Todas</option>
+						</select>
+					</div>
+					<div class="col-md-2">
+						<label class="form-label small mb-1">⚡ Prioridad</label>
+						<select id="filterPriority" class="form-select form-select-sm">
+							<option value="">Todas</option>
+							<option value="urgent">🔴 Urgente</option>
+							<option value="normal">🟡 Normal</option>
+							<option value="low">🔵 Baja</option>
+						</select>
+					</div>
+					<div class="col-md-2">
+						<label class="form-label small mb-1">📊 Estado</label>
+						<select id="filterStatus" class="form-select form-select-sm">
+							<option value="">Todos</option>
+							<option value="todo">Pendiente</option>
+							<option value="inprogress">En Progreso</option>
+							<option value="done">Resuelto</option>
+						</select>
+					</div>
+					<div class="col-md-1">
+						<button id="btnClearFilters" class="btn btn-outline-secondary btn-sm w-100">Limpiar</button>
+					</div>
+				</div>
+				<div class="row g-2 mt-2">
+					<div class="col-md-2">
+						<label class="form-label small mb-1">🆔 ID Ticket</label>
+						<input type="number" id="filterTicketId" class="form-control form-control-sm" placeholder="Ej: 123">
+					</div>
+					<div class="col-md-2">
+						<label class="form-label small mb-1">📅 Desde</label>
+						<input type="date" id="filterDateFrom" class="form-control form-control-sm">
+					</div>
+					<div class="col-md-2">
+						<label class="form-label small mb-1">📅 Hasta</label>
+						<input type="date" id="filterDateTo" class="form-control form-control-sm">
+					</div>
+					<div class="col-md-2">
+						<label class="form-label small mb-1">📅 Fecha específica</label>
+						<input type="date" id="filterDateExact" class="form-control form-control-sm">
+					</div>
+				</div>
+			</div>
 
 			<main class="flex-fill overflow-auto pt-3">
 				<div class="row flex-nowrap gx-3" id="board" style="min-width:900px;">
@@ -61,6 +123,10 @@
 											<input id="modalSucursal" type="text" class="form-control" readonly>
 										</div>
 										<div class="mb-2">
+											<label class="form-label">Fecha de creación</label>
+											<input id="modalDate" type="text" class="form-control fw-bold fs-5" readonly>
+										</div>
+										<div class="mb-2">
 											<label class="form-label">Título</label>
 											<input id="modalTitleInput" type="text" class="form-control" required>
 										</div>
@@ -84,11 +150,7 @@
 													<option value="high">Alta</option>
 												</select>
 											</div>
-											<div class="col-md-4">
-												<label class="form-label">Asignado a</label>
-												<input id="modalAssigned" type="text" class="form-control">
-											</div>
-											<div class="col-md-4">
+											<div class="col-md-6">
 												<label class="form-label">Estado</label>
 												<select id="modalStatus" class="form-select">
 													<option value="todo">Pendiente</option>
@@ -142,11 +204,7 @@
 											<option value="high">Alta</option>
 										</select>
 									</div>
-									<div class="col-md-4">
-										<label class="form-label">Asignado a</label>
-										<input id="inputAssigned" type="text" class="form-control">
-									</div>
-									<div class="col-md-4">
+									<div class="col-md-6">
 										<label class="form-label">Adjuntar imagen (opcional)</label>
 										<input id="inputImage" type="file" accept="image/*" class="form-control">
 									</div>
