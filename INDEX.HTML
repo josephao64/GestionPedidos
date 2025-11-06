@@ -213,7 +213,7 @@
     <ul class="oe_menu">
       <li><a href="realizarPedido/realizadPedido.html">Realizar pedidos</a></li>
       <li><a href="gestionPedidos/pedidos.html">Gestión de Pedidos</a></li>
-      <li class="admin-only"><a href="tickets/tickets.html">Tickets</a></li>
+      <li><a href="tickets/tickets.html">Tickets</a></li>
       <li class="admin-only"><a href="tickets/adminDashboard.html">Dashboard Tickets</a></li>
     </ul>
     <div class="right-menu">
@@ -388,17 +388,9 @@
         return Promise.resolve('unsupported');
       }
       
-      // Si ya está concedido, continuar
+      // Si ya está concedido, continuar sin mostrar mensaje
       if (Notification.permission === 'granted') {
         console.log('Permiso de notificaciones ya concedido');
-        // Mostrar mensaje breve confirmando que las notificaciones están activas
-        Swal.fire({
-          icon: 'success',
-          title: 'Notificaciones activas',
-          text: 'Las notificaciones del sistema están activas para nuevos tickets.',
-          timer: 2000,
-          showConfirmButton: false
-        });
         return Promise.resolve('granted');
       }
       
