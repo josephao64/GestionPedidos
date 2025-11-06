@@ -3,79 +3,162 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tickets de Incidencia</title>
+  <title>Tickets de Incidencia · App</title>
 
-  <!-- Firebase -->
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- TU CSS (misma carpeta que este HTML) -->
+  <link rel="stylesheet" href="./tickets.css">
+
+  <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-storage.js"></script>
 
   <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-  <link rel="stylesheet" href="tickets.css" />
-  <script src="../database/connection.js"></script>
-  <script src="tickets.js"></script>
 </head>
 <body>
-  <div class="header">
-    <h1>Sistema de Tickets</h1>
-    <div class="actions">
-      <button onclick="window.location.href='../index.html'">Volver</button>
+  <nav class="navbar navbar-light bg-white border-bottom sticky-top">
+    <div class="container-xl">
+      <a class="navbar-brand fw-semibold" href="#">🎫 Tickets</a>
+      <div class="d-flex gap-2">
+        <a href="../index.html" class="btn btn-outline-secondary btn-sm rounded-pill">Volver</a>
+      </div>
     </div>
+  </nav>
+
+  <main class="container-xl my-4">
+    <div class="row g-4">
+      <div class="col-12 col-lg-3">
+        <div class="p-3 bg-white app-card">
+          <div class="mb-2 text-muted small">Menú</div>
+          <ul class="nav nav-pills flex-lg-column gap-2" id="menuTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="tab-create" data-bs-toggle="pill" data-bs-target="#view-create" type="button" role="tab">➕ Crear ticket</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-list" data-bs-toggle="pill" data-bs-target="#view-list" type="button" role="tab">📄 Visualizar tickets</button>
+            </li>
+          </ul>
   </div>
 
-  <div class="container">
-    <h2>Crear Ticket</h2>
-    <form id="ticketForm">
-      <div class="form-group">
-        <label>Área Afectada</label>
-        <select id="affectedArea"></select>
-      </div>
-
-      <div class="form-group" id="subCategoryGroup">
-        <label>Equipo / Incidente Específico</label>
-        <select id="subCategory"></select>
-      </div>
-
-      <div class="form-group" id="otherCategoryGroup" style="display: none;">
-        <label>Especificar</label>
-        <input type="text" id="otherCategory" placeholder="Describe el problema específico" />
-      </div>
-
-      <div class="form-group">
-        <label>Prioridad</label>
-        <div class="priority">
-          <label><input type="radio" name="priority" value="urgent" /> 🔴 Urgente</label>
-          <label><input type="radio" name="priority" value="normal" checked /> 🟡 Normal</label>
-          <label><input type="radio" name="priority" value="low" /> 🔵 Baja</label>
+        <div class="p-3 bg-white app-card mt-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="small text-muted">Usuario</div>
+              <div id="uiUsername" class="fw-semibold">—</div>
+              <div id="uiSucursal" class="text-muted small">—</div>
+            </div>
+            <span class="badge bg-light text-dark rounded-pill" id="uiRole">—</span>
+          </div>
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Descripción del Inconveniente</label>
-        <textarea id="description" rows="4" placeholder="Describe el problema detalladamente (mínimo 15 caracteres)"></textarea>
-        <button type="button" class="link-like" onclick="insertTemplate()">¿Qué información incluir?</button>
+      <div class="col-12 col-lg-9">
+        <div class="tab-content" id="views">
+          <!-- CREAR -->
+          <section class="tab-pane fade show active" id="view-create" role="tabpanel" aria-labelledby="tab-create">
+            <div class="app-card p-4">
+              <h2 class="h4 mb-3">Crear ticket</h2>
+              <form id="ticketForm" class="needs-validation" novalidate>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Área afectada</label>
+                    <select id="affectedArea" class="form-select rounded-3" required></select>
+                  </div>
+
+                  <div class="col-md-6" id="subCategoryGroup">
+                    <label class="form-label">Equipo / incidente específico</label>
+                    <select id="subCategory" class="form-select rounded-3"></select>
       </div>
 
-      <div class="form-group">
-        <label>Evidencia (Opcional)</label>
-        <input type="file" id="attachments" multiple accept="image/jpeg,image/png" />
-        <small>Máximo 3 imágenes. Si superan el peso, se comprimirán automáticamente.</small>
-        <div id="preview" class="preview"></div>
+                  <div class="col-md-6 d-none" id="otherCategoryGroup">
+                    <label class="form-label">Especificar</label>
+                    <input type="text" id="otherCategory" class="form-control rounded-3" placeholder="Describe el problema específico" />
       </div>
 
-      <div class="form-actions">
-        <button type="button" onclick="submitTicket()" class="btn-primary">Enviar Ticket</button>
-        <button type="reset" class="btn-secondary">Limpiar</button>
+                  <div class="col-md-6">
+                    <label class="form-label d-block">Prioridad</label>
+                    <div class="btn-group" role="group">
+                      <input type="radio" class="btn-check" name="priority" id="p1" value="urgent">
+                      <label class="btn btn-outline-danger rounded-pill" for="p1">🔴 Urgente</label>
+                      <input type="radio" class="btn-check" name="priority" id="p2" value="normal" checked>
+                      <label class="btn btn-outline-warning rounded-pill" for="p2">🟡 Normal</label>
+                      <input type="radio" class="btn-check" name="priority" id="p3" value="low">
+                      <label class="btn btn-outline-primary rounded-pill" for="p3">🔵 Baja</label>
+        </div>
+      </div>
+
+                  <div class="col-12">
+                    <label class="form-label">Descripción del inconveniente</label>
+                    <textarea id="description" class="form-control rounded-3" rows="4" placeholder="Describe el problema detalladamente (mínimo 15 caracteres)" required></textarea>
+                    <div class="mt-2">
+                      <button type="button" class="btn btn-link p-0" onclick="insertTemplate()">¿Qué información incluir?</button>
+                    </div>
+      </div>
+
+                  <div class="col-12">
+                    <label class="form-label">Evidencia (opcional)</label>
+                    <input type="file" id="attachments" class="form-control rounded-3" multiple accept="image/jpeg,image/png" />
+                    <div class="form-text">Máximo 3 imágenes. Si superan el peso, se comprimirán automáticamente.</div>
+                    <div id="preview" class="d-flex gap-2 flex-wrap mt-2"></div>
+      </div>
+
+                  <div class="col-12 d-flex gap-2 mt-2">
+                    <button type="button" onclick="submitTicket()" class="btn btn-primary rounded-pill px-4">Enviar ticket</button>
+                    <button type="reset" class="btn btn-outline-secondary rounded-pill">Limpiar</button>
+                  </div>
       </div>
     </form>
   </div>
+          </section>
 
-  <div class="container">
-    <h2>Mis Tickets</h2>
-    <div id="ticketsList" class="tickets-list"></div>
+          <!-- LISTAR -->
+          <section class="tab-pane fade" id="view-list" role="tabpanel" aria-labelledby="tab-list">
+            <div class="app-card p-4 mb-3">
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <div class="input-group w-auto">
+                  <span class="input-group-text rounded-start-3">🔎</span>
+                  <input id="filterSearch" type="search" class="form-control rounded-end-3" placeholder="Buscar por ID, área, sub…">
+                </div>
+                <select id="filterStatus" class="form-select rounded-3 w-auto">
+                  <option value="">Estado: Todos</option>
+                  <option value="open">Abiertos</option>
+                  <option value="in_progress">En progreso</option>
+                  <option value="closed">Cerrados</option>
+                </select>
+                <select id="filterPriority" class="form-select rounded-3 w-auto">
+                  <option value="">Prioridad: Todas</option>
+                  <option value="urgent">Urgente</option>
+                  <option value="normal">Normal</option>
+                  <option value="low">Baja</option>
+                </select>
+                <button id="btnRefresh" class="btn btn-outline-primary rounded-pill ms-auto">Actualizar</button>
+              </div>
+            </div>
+
+            <div class="app-card p-4">
+              <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="badge bg-primary-subtle text-primary rounded-pill">Total: <span id="kpiTotal">0</span></span>
+                <span class="badge bg-warning-subtle text-warning rounded-pill">Abiertos: <span id="kpiOpen">0</span></span>
+                <span class="badge bg-info-subtle text-info rounded-pill">En progreso: <span id="kpiProg">0</span></span>
+                <span class="badge bg-success-subtle text-success rounded-pill">Cerrados: <span id="kpiClosed">0</span></span>
+              </div>
+              <div id="ticketsList" class="row g-3"></div>
+              <div id="emptyState" class="text-center text-muted py-5 d-none">No hay tickets para mostrar.</div>
+            </div>
+          </section>
+        </div>
+      </div>
   </div>
+  </main>
+
+  <!-- Conexión Firebase/DB del proyecto -->
+  <script src="../database/connection.js"></script>
+  <!-- Lógica de la app -->
+  <script src="./tickets.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
