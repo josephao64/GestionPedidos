@@ -69,24 +69,23 @@ body{
   margin-bottom:.25rem;
 }
 
-/* LISTA (móvil una columna) */
+/* ================== LISTA / GRID DE TARJETAS ================== */
+/* Por defecto (móvil): 1 columna */
 #contactsGrid,
-#contactsList{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
+.contacts-grid{
+  display:grid !important;              /* fuerza grid aunque lleve clases .d-flex de Bootstrap */
+  grid-template-columns:1fr;
+  gap:12px;
 }
 
-/* ============ TARJETA CONTACTO COMPACTA ============ */
-/* Grid para colocar el NOMBRE a la derecha del avatar sin cambiar el HTML */
+/* ========= TARJETA CONTACTO COMPACTA ========= */
 .contact-card{
   background:var(--card-bg);
   border-radius:12px;
   box-shadow:var(--shadow-card);
-  padding:12px; /* compacto */
+  padding:12px;
   display:grid;
-  grid-template-columns:56px 1fr;   /* avatar | contenido */
-  grid-auto-rows:auto;
+  grid-template-columns:56px 1fr; /* avatar | contenido */
   column-gap:10px;
   row-gap:4px;
 }
@@ -97,7 +96,7 @@ body{
   background:var(--primary);color:#fff;
   display:flex;align-items:center;justify-content:center;
   font-weight:700;font-size:1.1rem;
-  grid-column:1;grid-row:1 / span 3; /* ocupa alto del encabezado */
+  grid-column:1;grid-row:1 / span 3;
   align-self:start;
 }
 
@@ -105,14 +104,14 @@ body{
 .contact-name{
   grid-column:2;
   margin:0 0 2px 0;
-  font-size:1.05rem;           /* compacto */
+  font-size:1.05rem;
   font-weight:600;
   color:var(--text);
   line-height:1.1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 
-/* Info (empresa/sucursal/email/teléfono) bajo el nombre, alineado a la derecha del avatar */
+/* Info (empresa / email / teléfono) debajo del nombre */
 .contact-info{
   grid-column:2;
   display:flex;align-items:center;gap:8px;
@@ -120,11 +119,11 @@ body{
 }
 .contact-info i{color:var(--text-2)}
 
-/* Badges bajo la info, aún en columna derecha */
+/* Badges debajo de la info */
 .contact-badges{
   grid-column:2;
   display:flex;flex-wrap:wrap;gap:4px;
-  margin:.25rem 0 .25rem 0;
+  margin:.25rem 0;
 }
 .badge-custom{
   font-size:.7rem;font-weight:600;color:#fff;border-radius:20px;padding:2px 8px;
@@ -133,7 +132,7 @@ body{
 .badge-proveedor{background:var(--tag-proveedor)}
 .badge-general{background:var(--tag-general)}
 
-/* Acciones ocupan todo el ancho al final */
+/* Acciones al final (ocupan todo el ancho) */
 .contact-actions{
   grid-column:1 / -1;
   border-top:1px solid var(--subtle-2);
@@ -149,7 +148,7 @@ body{
 .btn-icon.danger{color:#dc3545}
 .btn-icon:hover{opacity:.9}
 
-/* Separador sutil por si lo usas */
+/* Separador (si lo usas en algunas vistas) */
 .sep{height:1px;background:var(--subtle-2);grid-column:1 / -1;margin:.35rem 0 .5rem}
 
 /* BOTÓN CARGAR MÁS */
@@ -158,15 +157,25 @@ body{
   background:var(--primary);color:#fff;font-weight:500;margin:14px 0 8px 0
 }
 
-/* GRID RESPONSIVE (cuando listés en columnas) */
-.contacts-grid{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:10px;
+/* ====== RESPONSIVE ESCRITORIO: VARIAS TARJETAS LADO A LADO ======
+   SOLO en pantallas >= 992px (monitor) se muestran en varias columnas.
+   En móvil y tablet queda 1 columna. */
+@media (min-width:992px){
+  .container-fluid{max-width:1140px}
+  #contactsGrid,
+  .contacts-grid{
+    display:grid !important;                         /* anula .d-flex */
+    grid-template-columns:repeat(3,minmax(320px,1fr));
+    gap:16px;
+    align-items:start;
+  }
 }
-@media(min-width:576px){
-  .container-fluid{max-width:480px}
-  .contacts-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+@media (min-width:1200px){
+  .container-fluid{max-width:1320px}
+  #contactsGrid,
+  .contacts-grid{
+    grid-template-columns:repeat(4,minmax(300px,1fr));
+  }
 }
 
 /* ESTADO VACÍO / SKELETON */
@@ -201,6 +210,6 @@ body{
 .btn-sm-custom{padding:.25rem .5rem;font-size:.875rem}
 
 /* MOVIL */
-@media(max-width:768px){
+@media(max-width:991.98px){
   .contact-actions{flex-wrap:wrap}
 }
