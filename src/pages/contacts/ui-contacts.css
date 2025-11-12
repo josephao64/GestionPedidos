@@ -1,0 +1,123 @@
+/* ======= PALETA EXACTA ======= */
+:root{
+  --ui-bg:#f4f7f9;        /* fondo app */
+  --ui-white:#ffffff;     /* tarjetas/navbar */
+  --ui-primary:#0d6efd;   /* azul */
+  --ui-text:#212529;      /* títulos */
+  --ui-muted:#6c757d;     /* secundarios */
+  --ui-line:#e9ecef;      /* separadores/bordes */
+  --ui-line-2:#ced4da;
+
+  /* tags */
+  --tag-orange:#fd7e14;   /* Cliente */
+  --tag-green:#20c997;    /* Proveedor */
+  --tag-purple:#6f42c1;   /* General */
+}
+
+/* ======= BASE ======= */
+html,body{background:var(--ui-bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:var(--ui-text)}
+.text-primary{color:var(--ui-primary)!important}
+
+/* ======= NAVBAR ======= */
+.ui-nav{box-shadow:0 2px 4px rgba(0,0,0,.05)}
+.ui-nav .btn{border-radius:8px}
+
+/* ======= TOOLBAR ======= */
+.ui-toolbar{border-radius:12px}
+.ui-label{font-size:.8rem;font-weight:600;color:var(--ui-muted);margin-bottom:.35rem}
+
+/* ======= GRID ======= */
+#contactsGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  gap:1rem;
+  padding-bottom:72px;
+}
+
+/* ======= CARD (Réplica mockup) ======= */
+.contact-card{
+  background:var(--ui-white);
+  border:1px solid rgba(0,0,0,.04);
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+  padding:16px;
+  position:relative;
+}
+
+.contact-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:6px
+}
+
+/* Avatar circular (50x50) */
+.contact-avatar{
+  width:50px;height:50px;border-radius:50%;
+  object-fit:cover;display:block;flex-shrink:0;
+  background:#e9ecef;
+}
+
+/* Si usas iniciales en un div */
+.contact-avatar__fallback{
+  width:50px;height:50px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:#e9ecef;color:var(--ui-primary);font-weight:700
+}
+
+.contact-name{
+  font-size:1.15rem;font-weight:600;color:var(--ui-text);line-height:1.15;margin:0
+}
+.contact-title{
+  font-size:.85rem;font-weight:400;color:var(--ui-muted);margin-top:2px
+}
+
+/* Tag píldora */
+.badge-chip{
+  display:inline-block;color:#fff;border-radius:20px;
+  padding:3px 10px;font-size:.75rem;font-weight:600;line-height:1;
+}
+
+/* Cuerpo: separador superior sutil */
+.contact-body{
+  border-top:1px solid #f0f0f0;margin-top:10px;padding-top:10px
+}
+.row-item{display:flex;align-items:center;gap:10px;color:#495057;font-size:.9rem;margin:6px 0}
+.row-item i{color:var(--ui-muted);font-size:.95rem;width:16px;text-align:center}
+
+/* Acciones al pie: enlaces de texto */
+.contact-actions{
+  border-top:1px solid #f0f0f0;margin-top:10px;padding-top:10px;
+  display:flex;gap:16px;justify-content:flex-end
+}
+.action-link{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:.85rem;font-weight:500;color:var(--ui-muted);
+  text-decoration:none;cursor:pointer;transition:color .2s ease
+}
+.action-link:hover{color:var(--ui-primary)}
+.action-link.delete:hover{color:#dc3545}
+
+/* ======= BADGES por tipo ======= */
+.badge-cliente{background:var(--tag-orange)}
+.badge-proveedor{background:var(--tag-green)}
+.badge-general{background:var(--tag-purple)}
+
+/* ======= ESTADOS VACÍOS ======= */
+.empty-state{text-align:center;color:var(--ui-muted);padding:2.5rem 1rem}
+.empty-state i{font-size:3rem;opacity:.4;margin-bottom:.5rem}
+
+/* ======= RESPONSIVE MÓVIL (igual al mockup) ======= */
+@media (max-width:768px){
+  #contactsGrid{grid-template-columns:1fr;gap:.75rem}
+  .contact-card{padding:14px;border-radius:12px}
+  .contact-name{font-size:1.08rem}
+  .row-item{margin:5px 0}
+}
+
+/* ======= BOTÓN PRINCIPAL (Cargar más) ======= */
+#btnLoadMore{
+  background:var(--ui-primary);border-color:var(--ui-primary);
+  border-radius:8px;font-weight:500;padding:10px 16px
+}
+
+/* ======= UTILIDADES ======= */
+.badge-custom{border-radius:20px;padding:.3rem .6rem;font-size:.72rem;font-weight:600}
+.contact-badges{display:flex;gap:.35rem;flex-wrap:wrap;margin:.35rem 0}

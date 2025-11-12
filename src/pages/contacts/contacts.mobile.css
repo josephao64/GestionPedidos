@@ -1,0 +1,133 @@
+:root{
+  --primary-color:#0d6efd;
+  --bg-light:#f8f9fa;
+  --text-dark:#343a40;
+  --text-muted:#6c757d;
+  --card-radius:16px;
+  --transition:all .25s ease;
+}
+
+html,body{background:var(--bg-light);font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+
+/* Navbar */
+.navbar .navbar-brand{color:var(--text-dark)}
+.navbar .btn{border-radius:10px}
+
+/* Toolbar */
+.toolbar{border-radius:14px}
+.form-label-compact{font-size:.8rem;font-weight:600;color:#6c757d;margin-bottom:.35rem}
+
+/* GRID —— desktop: tarjetas en rejilla, móvil: lista */
+#contactsGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:1rem;
+  padding-bottom:80px;
+}
+
+/* Tarjeta compacta al estilo mockup */
+.contact-card{
+  background:#fff;
+  border-radius:14px;
+  border:1px solid rgba(0,0,0,.06);
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  padding:.9rem 1rem .75rem;
+  transition:var(--transition);
+  position:relative;
+  overflow:hidden;
+}
+.contact-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.12)}
+
+/* Reutilizamos lo que genera tu JS */
+.contact-name{
+  font-size:1.02rem;
+  font-weight:700;
+  color:#1f2d3d;
+  margin-bottom:.2rem;
+}
+.contact-info{
+  font-size:.9rem;
+  color:var(--text-muted);
+  display:flex;
+  align-items:center;
+  gap:.35rem;
+  margin-bottom:.15rem;
+}
+.contact-badges{
+  display:flex;gap:.35rem;flex-wrap:wrap;margin:.35rem 0 .25rem;
+}
+.badge-custom{
+  font-size:.7rem;
+  padding:.2rem .55rem;
+  border-radius:8px;
+  font-weight:600;
+}
+
+/* Acciones */
+.contact-actions{
+  display:flex;
+  gap:.35rem;
+  border-top:1px solid #eef1f4;
+  padding-top:.55rem;
+  margin-top:.5rem;
+  justify-content:flex-end;
+}
+.btn-icon{
+  border:none;background:transparent;color:#6b7280;
+  padding:.25rem .4rem;border-radius:10px
+}
+.btn-icon:hover{background:#f3f4f6}
+.btn-icon.primary{color:var(--primary-color)}
+.btn-icon.success{color:#22c55e}
+.btn-icon.danger{color:#ef4444}
+
+/* Empty state */
+.empty-state{
+  text-align:center;
+  padding:3rem 1rem;
+  color:#6c757d;
+}
+.empty-state i{font-size:3rem;opacity:.5;margin-bottom:1rem}
+
+/* Lista / ítems con icono y truncado */
+.contact-info i{width:16px;text-align:center;color:#aeb5bd}
+
+/* ======== MÓVIL ======== */
+@media (max-width: 768px){
+  /* Filtros colapsan por defecto (lo maneja Bootstrap).
+     Hacemos el grid a 1 columna y tarjetas más “flat” como en el mockup */
+  #contactsGrid{
+    grid-template-columns:1fr;
+    gap:.75rem;
+  }
+
+  .contact-card{
+    padding:.8rem .9rem .6rem;
+    border-radius:12px;
+  }
+
+  .contact-name{font-size:1rem}
+  .contact-info{font-size:.9rem}
+
+  /* Reducir márgenes y altura para que quepan más tarjetas en pantalla */
+  .contact-badges{margin:.25rem 0}
+  .contact-actions{padding-top:.45rem;margin-top:.4rem}
+}
+
+/* Lista de categorías (admin) */
+.scrollable-list{max-height:420px;overflow:auto}
+.tree-node{
+  padding:.5rem .75rem;border-left:2px solid #e9ecef;margin:.25rem 0;border-radius:8px
+}
+.tree-node:hover{background:#f5f7fb}
+.tree-node.active{background:#e7f3ff;border-left-color:var(--primary-color)}
+
+/* Inputs dinámicos email/phone */
+.email-phone-item{
+  display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem
+}
+.email-phone-item input{flex:1}
+.email-phone-item select{width:120px}
+
+/* Pequeños detalles */
+.category-path{font-size:.8rem;color:var(--primary-color);margin-top:.25rem}
