@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Contactos</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- CSS separado -->
+  <link rel="stylesheet" href="contacts.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white mb-4">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">
+        <i class="fas fa-address-book me-2"></i>Contactos
+      </a>
+      <div class="d-flex gap-2">
+        <a href="../../../../INDEX.HTML" class="btn btn-outline-secondary btn-sm">
+          <i class="fas fa-arrow-left me-1"></i>Volver
+        </a>
+        <button id="btnNewContact" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus me-1"></i>Nuevo
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid">
+    <!-- Toolbar de Filtros -->
+    <div class="toolbar">
+      <div class="row g-3">
+        <div class="col-12 col-md-3">
+          <div class="filter-group">
+            <label><i class="fas fa-filter me-1"></i>Ámbito</label>
+            <select id="filterScope" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="general">Generales</option>
+              <option value="branch">Por Sucursal</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-12 col-md-3" id="branchFilterContainer" style="display: none;">
+          <div class="filter-group">
+            <label><i class="fas fa-building me-1"></i>Sucursal</label>
+            <select id="filterBranch" class="form-select form-select-sm">
+              <option value="">Todas</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-12 col-md-3">
+          <div class="filter-group">
+            <label><i class="fas fa-tag me-1"></i>Tipo</label>
+            <select id="filterType" class="form-select form-select-sm">
+              <option value="">Todos</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-12 col-md-3">
+          <div class="filter-group">
+            <label><i class="fas fa-folder me-1"></i>Categoría</label>
+            <select id="filterCategory" class="form-select form-select-sm">
+              <option value="">Todas</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="filter-group">
+            <label><i class="fas fa-search me-1"></i>Búsqueda</label>
+            <input type="text" id="searchInput" class="form-control form-control-sm" 
+                   placeholder="Nombre, email, teléfono...">
+          </div>
+        </div>
+        <div class="col-12 col-md-3">
+          <div class="filter-group">
+            <label><i class="fas fa-building me-1"></i>Empresa</label>
+            <input type="text" id="filterCompany" class="form-control form-control-sm" 
+                   placeholder="Filtrar por empresa...">
+          </div>
+        </div>
+        <div class="col-12 col-md-2">
+          <div class="filter-group">
+            <label><i class="fas fa-tags me-1"></i>Tags</label>
+            <input type="text" id="filterTags" class="form-control form-control-sm" 
+                   placeholder="Buscar tag...">
+          </div>
+        </div>
+        <div class="col-12 col-md-3">
+          <div class="filter-group">
+            <label><i class="fas fa-calendar me-1"></i>Fecha Desde</label>
+            <input type="date" id="filterDateFrom" class="form-control form-control-sm">
+          </div>
+        </div>
+        <div class="col-12 col-md-3">
+          <div class="filter-group">
+            <label><i class="fas fa-calendar me-1"></i>Fecha Hasta</label>
+            <input type="date" id="filterDateTo" class="form-control form-control-sm">
+          </div>
+        </div>
+        <div class="col-12 col-md-6">
+          <div class="filter-group d-flex gap-2 align-items-end">
+            <button id="btnClearFilters" class="btn btn-outline-secondary btn-sm">
+              <i class="fas fa-times me-1"></i>Limpiar
+            </button>
+            <button id="btnImport" class="btn btn-outline-info btn-sm">
+              <i class="fas fa-file-import me-1"></i>Importar CSV
+            </button>
+            <button id="btnExport" class="btn btn-outline-success btn-sm">
+              <i class="fas fa-file-export me-1"></i>Exportar
+            </button>
+            <div class="ms-auto" id="adminButtons" style="display: none;">
+              <button id="btnManageTypes" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-cog me-1"></i>Tipos
+              </button>
+              <button id="btnManageCategories" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-sitemap me-1"></i>Categorías
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenedor de Contactos -->
+    <div id="contactsContainer">
+      <div class="contacts-grid" id="contactsGrid"></div>
+      <div id="loadingIndicator" class="text-center py-4" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+      <button id="btnLoadMore" class="btn btn-outline-primary w-100 mb-4" style="display: none;">
+        Cargar más contactos
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Ver Contacto -->
+  <div class="modal fade" id="viewContactModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detalle de Contacto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item">
+              <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabGeneral">General</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabContact">Contacto</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabNotes">Notas</button>
+            </li>
+          </ul>
+          <div class="tab-content mt-3">
+            <div class="tab-pane fade show active" id="tabGeneral">
+              <div id="viewGeneralContent"></div>
+            </div>
+            <div class="tab-pane fade" id="tabContact">
+              <div id="viewContactContent"></div>
+            </div>
+            <div class="tab-pane fade" id="tabNotes">
+              <div id="viewNotesContent"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-primary" id="btnEditFromView">
+            <i class="fas fa-edit me-1"></i>Editar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Crear/Editar Contacto -->
+  <div class="modal fade" id="contactFormModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="formModalTitle">Nuevo Contacto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="contactForm">
+            <input type="hidden" id="contactId">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Ámbito <span class="text-danger">*</span></label>
+                <select id="formScope" class="form-select" required>
+                  <option value="general">General</option>
+                  <option value="branch">Sucursal</option>
+                </select>
+              </div>
+              <div class="col-12" id="formBranchContainer" style="display: none;">
+                <label class="form-label">Sucursal <span class="text-danger">*</span></label>
+                <select id="formBranch" class="form-select">
+                  <option value="">Seleccionar...</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Tipo <span class="text-danger">*</span></label>
+                <select id="formType" class="form-select" required>
+                  <option value="">Seleccionar...</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Categoría</label>
+                <select id="formCategory" class="form-select">
+                  <option value="">Sin categoría</option>
+                </select>
+                <div class="category-path" id="categoryPath"></div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-floating">
+                  <input type="text" id="formFirstName" class="form-control" placeholder="Nombre" required>
+                  <label>Nombre <span class="text-danger">*</span></label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-floating">
+                  <input type="text" id="formLastName" class="form-control" placeholder="Apellido" required>
+                  <label>Apellido <span class="text-danger">*</span></label>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-floating">
+                  <input type="text" id="formCompany" class="form-control" placeholder="Empresa" list="companyList">
+                  <label>Empresa</label>
+                </div>
+                <datalist id="companyList"></datalist>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Tags</label>
+                <textarea id="formTags" class="form-control" rows="4" placeholder="Un tag por línea..."></textarea>
+                <small class="text-muted">Un tag por línea</small>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Emails</label>
+                <div id="emailsContainer"></div>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="btnAddEmail">
+                  <i class="fas fa-plus me-1"></i>Agregar Email
+                </button>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Teléfonos</label>
+                <div id="phonesContainer"></div>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="btnAddPhone">
+                  <i class="fas fa-plus me-1"></i>Agregar Teléfono
+                </button>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Dirección</label>
+                <div class="row g-2">
+                  <div class="col-12">
+                    <input type="text" id="formAddressLine1" class="form-control" placeholder="Línea 1">
+                  </div>
+                  <div class="col-12">
+                    <input type="text" id="formAddressLine2" class="form-control" placeholder="Línea 2">
+                  </div>
+                  <div class="col-md-4">
+                    <input type="text" id="formCity" class="form-control" placeholder="Ciudad">
+                  </div>
+                  <div class="col-md-4">
+                    <input type="text" id="formState" class="form-control" placeholder="Estado/Departamento">
+                  </div>
+                  <div class="col-md-4">
+                    <input type="text" id="formZip" class="form-control" placeholder="Código Postal">
+                  </div>
+                  <div class="col-md-12">
+                    <input type="text" id="formCountry" class="form-control" placeholder="País" value="Guatemala">
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Notas</label>
+                <textarea id="formNotes" class="form-control" rows="3"></textarea>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSaveContact">
+            <i class="fas fa-save me-1"></i>Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Gestionar Tipos -->
+  <div class="modal fade" id="manageTypesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Gestionar Tipos de Contacto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex justify-content-between mb-3">
+            <button class="btn btn-primary btn-sm" id="btnNewType">
+              <i class="fas fa-plus me-1"></i>Nuevo Tipo
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Descripción</th>
+                  <th>Color</th>
+                  <th>Orden</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="typesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Gestionar Categorías -->
+  <div class="modal fade" id="manageCategoriesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Gestionar Categorías</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex justify-content-between mb-3">
+            <button class="btn btn-primary btn-sm" id="btnNewCategory">
+              <i class="fas fa-plus me-1"></i>Nueva Categoría Raíz
+            </button>
+          </div>
+          <div class="scrollable-list" id="categoriesTree"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Form Tipo -->
+  <div class="modal fade" id="typeFormModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="typeFormTitle">Nuevo Tipo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="typeForm">
+            <input type="hidden" id="typeId">
+            <div class="mb-3">
+              <label class="form-label">Nombre <span class="text-danger">*</span></label>
+              <input type="text" id="typeName" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Descripción</label>
+              <textarea id="typeDescription" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Color</label>
+              <input type="color" id="typeColor" class="form-control form-control-color" value="#007bff">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Orden</label>
+              <input type="number" id="typeSort" class="form-control" value="0">
+            </div>
+            <div class="form-check">
+              <input type="checkbox" id="typeActive" class="form-check-input" checked>
+              <label class="form-check-label" for="typeActive">Activo</label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSaveType">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Form Categoría -->
+  <div class="modal fade" id="categoryFormModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="categoryFormTitle">Nueva Categoría</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="categoryForm">
+            <input type="hidden" id="categoryId">
+            <div class="mb-3">
+              <label class="form-label">Categoría Padre</label>
+              <select id="categoryParent" class="form-select">
+                <option value="">Ninguna (Raíz)</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Nombre <span class="text-danger">*</span></label>
+              <input type="text" id="categoryName" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Orden</label>
+              <input type="number" id="categorySort" class="form-control" value="0">
+            </div>
+            <div class="form-check">
+              <input type="checkbox" id="categoryActive" class="form-check-input" checked>
+              <label class="form-check-label" for="categoryActive">Activo</label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSaveCategory">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input oculto para importar CSV -->
+  <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+
+  <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../../../../database/connection.js"></script>
+  <script src="contacts.js"></script>
+</body>
+</html>
