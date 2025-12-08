@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +18,7 @@
       position: relative;
       min-height: 100vh;
     }
+
     /* =====================================
        Contenedor para el mensaje de bienvenida
        ===================================== */
@@ -32,6 +34,7 @@
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       z-index: 1000;
     }
+
     /* =====================================
        Contenedor para el logo centrado en la parte superior
        ===================================== */
@@ -41,11 +44,13 @@
       align-items: center;
       padding: 20px 0;
     }
+
     .logo-container img {
       max-width: 200px;
       width: 100%;
       height: auto;
     }
+
     /* =====================================
        Mensaje central "MENU PRINCIPAL"
        ===================================== */
@@ -60,6 +65,7 @@
       text-align: center;
       z-index: 500;
     }
+
     /* =====================================
        Contenedor de Navegación
        ===================================== */
@@ -71,6 +77,7 @@
       padding-left: 20px;
       position: relative;
     }
+
     /* =====================================
        Menú de Opciones (oe_menu)
        ===================================== */
@@ -87,10 +94,13 @@
       transform: translateY(-50%);
       z-index: 600;
     }
+
     .oe_menu li {
       margin: 10px 0;
     }
-    .oe_menu a, .menu-button {
+
+    .oe_menu a,
+    .menu-button {
       display: flex;
       justify-content: center;
       align-items: center;
@@ -106,9 +116,12 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
-    .oe_menu a:hover, .menu-button:hover {
+
+    .oe_menu a:hover,
+    .menu-button:hover {
       background-color: #0056b3;
     }
+
     /* =====================================
        Contenedor del Menú Derecho (right-menu)
        ===================================== */
@@ -121,17 +134,21 @@
       gap: 10px;
       z-index: 600;
     }
+
     /* Botón exclusivo para administradores: Empresa, Bodega y Reportes */
     .menu-button.admin-only {
       display: none;
     }
+
     /* Estilos específicos para el botón de Cerrar Sesión */
     .menu-button#logout-button {
       background-color: #f44336;
     }
+
     .menu-button#logout-button:hover {
       background-color: #da190b;
     }
+
     /* =====================================
        Elementos exclusivos para administradores
        (se mostrarán mediante JavaScript si el rol es 'administrador')
@@ -139,11 +156,12 @@
     .admin-only {
       display: none;
     }
-    
+
     /* Ocultar enlaces específicos para usuarios view */
     .view-user .realizar-pedido {
       display: none;
     }
+
     /* =====================================
        Responsividad para dispositivos móviles
        ===================================== */
@@ -154,15 +172,19 @@
         font-size: 16px;
         padding: 8px 16px;
       }
+
       .logo-container {
         padding: 15px 0;
       }
+
       .logo-container img {
         max-width: 150px;
       }
+
       .menu-principal {
         font-size: 28px;
       }
+
       /* Reorganizar menú izquierdo para que no se salga de la pantalla */
       .oe_menu {
         position: static;
@@ -175,7 +197,11 @@
         margin: 10px;
         transform: none;
       }
-      .oe_menu li { margin: 0; }
+
+      .oe_menu li {
+        margin: 0;
+      }
+
       /* Menú derecho como barra inferior flexible */
       .right-menu {
         position: static;
@@ -190,11 +216,50 @@
 
     /* Ajustes extra para pantallas muy pequeñas */
     @media (max-width: 576px) {
-      .menu-principal { font-size: 24px; }
-      .logo-container img { max-width: 120px; }
+      .menu-principal {
+        font-size: 24px;
+        position: static;
+        transform: none;
+        margin: 20px 0;
+      }
+
+      .logo-container img {
+        max-width: 120px;
+      }
+
+      .oe_menu {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .oe_menu li {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      .oe_menu a,
+      .menu-button {
+        width: 80%;
+        height: 60px;
+        /* Smaller height for list view */
+        font-size: 16px;
+      }
+
+      .right-menu {
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+      }
+
+      .right-menu .menu-button {
+        width: 80%;
+        height: 50px;
+      }
     }
   </style>
 </head>
+
 <body>
   <!-- Contenedor para el mensaje de bienvenida -->
   <div class="welcome-container" id="welcome-message">Bienvenido, Usuario</div>
@@ -218,15 +283,20 @@
     </ul>
     <div class="right-menu">
       <!-- Botón "Empresa" (exclusivo para administradores) -->
-      <button class="menu-button admin-only" id="empresa-button" onclick="window.location.href='empresa/empresaMenu.html'">Empresa</button>
+      <button class="menu-button admin-only" id="empresa-button"
+        onclick="window.location.href='empresa/empresaMenu.html'">Empresa</button>
       <!-- Botón "Bodega" (exclusivo para administradores) -->
-      <button class="menu-button admin-only" id="bodega-button" onclick="window.location.href='InventarioBodega/inventory.html'">Bodega</button>
+      <button class="menu-button admin-only" id="bodega-button"
+        onclick="window.location.href='InventarioBodega/inventory.html'">Bodega</button>
       <!-- Botón "Reportes" (exclusivo para administradores) -->
-      <button class="menu-button admin-only" id="reportes-button" onclick="window.location.href='reportes/reportes.html'">Reportes</button>
+      <button class="menu-button admin-only" id="reportes-button"
+        onclick="window.location.href='reportes/reportes.html'">Reportes</button>
       <!-- Botón "Cuentas por Pagar" (exclusivo para administradores) -->
-      <button class="menu-button admin-only" id="cuentas-pagar-button" onclick="window.location.href='CuentasPorPagar/cuentasPorPagar.html'">Cuentas por Pagar</button>
+      <button class="menu-button admin-only" id="cuentas-pagar-button"
+        onclick="window.location.href='CuentasPorPagar/cuentasPorPagar.html'">Cuentas por Pagar</button>
       <!-- Botón "Contactos" (exclusivo para administradores) -->
-      <button class="menu-button admin-only" id="contactos-button" onclick="window.location.href='src/pages/contacts/contacts.html'">Contactos</button>
+      <button class="menu-button admin-only" id="contactos-button"
+        onclick="window.location.href='src/pages/contacts/contacts.html'">Contactos</button>
       <button class="menu-button" id="logout-button">Cerrar Sesión</button>
     </div>
   </div>
@@ -235,7 +305,8 @@
   <!-- … (código completo de modales y demás se deja sin cambios) … -->
 
   <!-- Contenedor oculto para exportar el diseño de factura -->
-  <div id="exportInvoiceContainer" style="display:none; padding:20px; border:1px solid #ccc; max-width:600px; margin:20px auto; font-family: Arial, sans-serif;">
+  <div id="exportInvoiceContainer"
+    style="display:none; padding:20px; border:1px solid #ccc; max-width:600px; margin:20px auto; font-family: Arial, sans-serif;">
     <h2 style="text-align:center; margin-bottom:20px;">Factura</h2>
     <div style="margin-bottom:10px;">
       <strong>Número:</strong> <span id="exportInvoiceNum"></span>
@@ -326,7 +397,7 @@
           bodegaButton.classList.remove('admin-only');
           bodegaButton.style.display = 'inline-block';
           bodegaButton.textContent = 'Inventario Bodega';
-          bodegaButton.onclick = function() {
+          bodegaButton.onclick = function () {
             window.location.href = 'InventarioBodega/salidas encargado bodega/salidas.html';
           };
         } else {
@@ -337,7 +408,7 @@
             newButton.className = 'menu-button';
             newButton.id = 'bodega-button';
             newButton.textContent = 'Inventario Bodega';
-            newButton.onclick = function() {
+            newButton.onclick = function () {
               window.location.href = 'InventarioBodega/salidas encargado bodega/salidas.html';
             };
             rightMenu.appendChild(newButton);
@@ -378,7 +449,7 @@
     let ticketsNotifStartTime = null;
     const ticketsNotificados = new Set();
     const notifIcon = 'resources/images/logo.png';
-    
+
     function solicitarPermisoNotificaciones() {
       if (!('Notification' in window)) {
         Swal.fire({
@@ -389,13 +460,13 @@
         });
         return Promise.resolve('unsupported');
       }
-      
+
       // Si ya está concedido, continuar sin mostrar mensaje
       if (Notification.permission === 'granted') {
         console.log('Permiso de notificaciones ya concedido');
         return Promise.resolve('granted');
       }
-      
+
       // Si está denegado, mostrar instrucciones para habilitarlo
       if (Notification.permission === 'denied') {
         return Swal.fire({
@@ -415,7 +486,7 @@
           confirmButtonColor: '#007BFF'
         }).then(() => Promise.resolve('denied'));
       }
-      
+
       // Si es 'default', solicitar permiso con mensaje explicativo
       return Swal.fire({
         title: 'Activar Notificaciones del Sistema',
@@ -482,7 +553,7 @@
         }
       });
     }
-    
+
     function mostrarNotifTicket(docData) {
       if (!('Notification' in window) || Notification.permission !== 'granted') {
         console.warn('No se puede mostrar notificación: permiso no concedido');
@@ -491,7 +562,7 @@
       const title = `Nuevo Ticket: ${docData.ticketId || 'Ticket'}`;
       const body = `${docData.sucursalName ? docData.sucursalName + ' · ' : ''}${docData.area || ''}${docData.subCategory ? ' - ' + docData.subCategory : ''}`.trim() || 'Sin descripción';
       const priority = docData.priority === 'urgent' ? '🔴 Urgente' : docData.priority === 'normal' ? '🟡 Normal' : '🔵 Baja';
-      
+
       try {
         const notification = new Notification(title, {
           body: `${body}\nPrioridad: ${priority}`,
@@ -501,26 +572,26 @@
           requireInteraction: docData.priority === 'urgent',
           silent: false
         });
-        
-        notification.onclick = function() {
+
+        notification.onclick = function () {
           window.focus();
           notification.close();
         };
-        
+
         console.log('Notificación mostrada:', title);
       } catch (e) {
         console.error('Error al mostrar notificación:', e);
       }
     }
-    
+
     function iniciarNotificacionesTicketsAdmin() {
       if (ticketsNotifUnsub) {
         console.log('Listener de tickets ya iniciado');
         return; // ya iniciado
       }
-      
+
       console.log('Iniciando notificaciones de tickets para admin...');
-      
+
       // Pequeño delay para asegurar que la página esté completamente cargada
       // Esto ayuda a que algunos navegadores acepten mejor la solicitud de permisos
       setTimeout(() => {
@@ -533,36 +604,36 @@
             }
             return;
           }
-          
+
           // Mostrar confirmación si el permiso ya estaba concedido
           if (Notification.permission === 'granted' && ticketsNotifUnsub === null) {
             console.log('Permiso de notificaciones activo, iniciando listener...');
           }
-          
+
           // Marcar el tiempo de inicio (solo notificar tickets creados después de este momento)
           ticketsNotifStartTime = Date.now() - 5000; // 5 segundos de margen
-          
+
           try {
             // Usar listener sin orderBy para evitar problemas de índice
             // Escuchamos todos los cambios y filtramos por timestamp
             ticketsNotifUnsub = db.collection('tickets')
               .onSnapshot((snap) => {
                 console.log('Cambios detectados en tickets:', snap.docChanges().length);
-                
+
                 snap.docChanges().forEach((chg) => {
                   // Solo procesar documentos nuevos (added)
                   if (chg.type !== 'added') {
                     return;
                   }
-                  
+
                   const doc = chg.doc;
                   const data = doc.data() || {};
-                  
+
                   // Evitar duplicados
                   if (ticketsNotificados.has(doc.id)) {
                     return;
                   }
-                  
+
                   // Obtener timestamp del ticket
                   let ticketTime = null;
                   if (data.createdAt && data.createdAt.toDate) {
@@ -572,19 +643,19 @@
                   } else if (data.createdAt) {
                     ticketTime = data.createdAt.getTime ? data.createdAt.getTime() : Date.now();
                   }
-                  
+
                   // Si no hay timestamp válido, usar el tiempo actual menos 1 minuto como fallback
                   if (!ticketTime || isNaN(ticketTime)) {
                     ticketTime = Date.now() - 60000;
                   }
-                  
+
                   // Solo notificar tickets creados después del inicio del listener (con margen de 5 segundos)
                   if (ticketTime < ticketsNotifStartTime) {
                     console.log('Ticket antiguo ignorado:', doc.id, 'Timestamp:', ticketTime, 'Inicio:', ticketsNotifStartTime);
                     ticketsNotificados.add(doc.id);
                     return;
                   }
-                  
+
                   // Marcar como notificado y mostrar
                   ticketsNotificados.add(doc.id);
                   console.log('Nuevo ticket detectado:', doc.id, data.ticketId, 'Timestamp:', ticketTime);
@@ -594,7 +665,7 @@
                 console.error('Error en listener de tickets:', err);
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Error al escuchar nuevos tickets: ' + err.message });
               });
-              
+
             console.log('Listener de tickets iniciado correctamente');
           } catch (e) {
             console.error('Error al iniciar listener de tickets:', e);
@@ -613,11 +684,12 @@
     }
 
     logoutButton.addEventListener('click', cerrarSesion);
-    empresaButton.addEventListener('click', function() {
+    empresaButton.addEventListener('click', function () {
       window.location.href = 'empresa/empresaMenu.html';
     });
 
     window.onload = verificarUsuario;
   </script>
 </body>
+
 </html>

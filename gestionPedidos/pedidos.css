@@ -307,26 +307,62 @@ h1 {
    Responsividad
    ========================================================= */
 @media screen and (max-width: 768px) {
-  .modal-content {
-    width: 95%;
-    padding: 15px;
+  .header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .header h1 {
+    margin-bottom: 10px;
+    font-size: 1.5em;
+  }
+
+  .tab-container {
+    flex-wrap: wrap;
   }
 
   .tab-button {
     font-size: 14px;
-    padding: 8px 16px;
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    flex: 1 1 40%; /* Allow buttons to grow and wrap */
+    text-align: center;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 15px;
+    margin: 10% auto; /* More margin on top */
+  }
+
+  .order-card {
+    padding: 10px;
   }
 
   .order-card h3 {
-    font-size: 1em;
+    font-size: 1.1em;
   }
 
   .order-card p {
     font-size: 0.9em;
   }
+  
+  /* Stack buttons in order card */
+  .order-card button {
+    width: 100%;
+    margin: 5px 0;
+    display: block;
+  }
 
   .progress-step .step-label {
     font-size: 10px;
+    display: none; /* Hide labels on very small screens if needed, or keep small */
+  }
+  
+  .progress-step .step-number {
+      width: 25px;
+      height: 25px;
+      font-size: 12px;
   }
 
   .modal h2 {
@@ -335,6 +371,18 @@ h1 {
 
   #invoiceTotalContainer {
     font-size: 1em;
+    text-align: center;
+  }
+  
+  /* Make tables scrollable */
+  .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+  }
+  
+  .table th, .table td {
+      padding: 8px;
+      font-size: 14px;
   }
 }
 

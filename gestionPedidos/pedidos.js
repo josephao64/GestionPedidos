@@ -156,7 +156,7 @@ function wireStaticButtons() {
     if (id) exportAsReceivedOrderImage(id);
   });
   $("#btnAddInvoice")?.addEventListener("click", addNewInvoiceEntry);
-  
+
   // Manejo de cálculos de facturas
   $("#confirmOrderProducts").addEventListener("input", (e) => {
     if (e.target.matches('input[type="number"]')) {
@@ -510,9 +510,8 @@ function updateStatus(orderDocId, newStatus) {
       try {
         await db.collection("orders").doc(orderDocId).update({ status: newStatus });
         Swal.fire({ icon: "success", title: `Estado cambiado a '${newStatus}'` });
-        // Refresca la vista automáticamente
-        attachInProcessListener();
-        attachCompletedListener();
+        Swal.fire({ icon: "success", title: `Estado cambiado a '${newStatus}'` });
+        // Refresca la vista automáticamente gracias al onSnapshot
         closeChangeStatusModal();
       } catch (err) {
         Swal.fire({ icon: "error", title: "Error", text: err.message });
@@ -533,13 +532,49 @@ function forceCompleteOrder(orderDocId) {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        await db.collection("orders").doc(orderDocId).update({
+        const orderRef = db.collection("orders").doc(orderDocId);
+        const docSnap = await orderRef.get();
+        if (!docSnap.exists) throw new Error("Pedido no encontrado");
+        const orderData = docSnap.data();
+
+        const batch = db.batch();
+
+        batch.update(orderRef, {
           status: "sucursalRecibioPedido",
           mismatchComment: result.value,
           commentSource: "admin",
           pendingInvoice: false,
           mismatchedQuantities: false,
         });
+
+        // Crear facturas en Cuentas por Pagar si existen
+        if (orderData.invoices && Array.isArray(orderData.invoices)) {
+          orderData.invoices.forEach((inv) => {
+            const facturaRef = db.collection('facturas_pagar').doc();
+            const fechaEmision = new Date(inv.invoiceDate);
+            const fechaVencimiento = new Date(fechaEmision);
+            fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
+
+            batch.set(facturaRef, {
+              numeroFactura: inv.invoiceNumber,
+              pedidoId: orderDocId,
+              orderId: orderData.orderId,
+              proveedorId: orderData.providerName,
+              proveedorNombre: orderData.providerName,
+              fechaEmision: inv.invoiceDate,
+              fechaVencimiento: fechaVencimiento.toISOString().split('T')[0],
+              total: inv.total,
+              saldoPendiente: inv.total,
+              estado: 'pendiente',
+              empresaId: orderData.sucursalId,
+              sucursalId: orderData.sucursalId,
+              fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
+              notasRevision: `Excepción: ${result.value}`
+            });
+          });
+        }
+
+        await batch.commit();
         Swal.fire({ icon: "success", title: "Pedido completado con excepción" });
       } catch (err) {
         Swal.fire({ icon: "error", title: "Error", text: err.message });
@@ -603,9 +638,8 @@ function createProgressBarHTML(flowArray, currentStatus) {
       </div>
     `;
     if (idx < flowArray.length - 1) {
-      progressHTML += `<div class="progress-line ${
-        idx < currentIndex ? "completed" : ""
-      }"></div>`;
+      progressHTML += `<div class="progress-line ${idx < currentIndex ? "completed" : ""
+        }"></div>`;
     }
   });
   progressHTML += `</div>`;
@@ -743,8 +777,8 @@ function showOrderDetails(orderId) {
       if (editBtn) {
         if (
           (order.status === "pending" ||
-          userPermissions.canEditOrder ||
-          userRole === "administrador") &&
+            userPermissions.canEditOrder ||
+            userRole === "administrador") &&
           userRole !== "view"
         ) {
           editBtn.style.display = "inline-block";
@@ -809,7 +843,11 @@ function editOrder(orderDocId) {
         order.products.forEach((prod) => {
           const tr = document.createElement("tr");
           tr.innerHTML = `
-            <td><input type="text" value="${prod.name}" class="editProdName"/></td>
+            <td>
+              <input type="text" value="${prod.name}" class="editProdName"/>
+              <input type="hidden" value="${prod.inventory || 0}" class="editProdInventory"/>
+              <input type="hidden" value="${prod.id || ''}" class="editProdId"/>
+            </td>
             <td><input type="text" value="${prod.presentation}" class="editProdPresentation"/></td>
             <td><input type="number" value="${prod.quantity}" min="0" class="editProdQuantity"/></td>
             <td><button type="button" data-action="removeRow">Eliminar</button></td>
@@ -827,7 +865,11 @@ function addProductRow() {
   const tbody = $("#editOrderProducts");
   const newRow = document.createElement("tr");
   newRow.innerHTML = `
-    <td><input type="text" placeholder="Nombre del producto" class="editProdName"/></td>
+    <td>
+      <input type="text" placeholder="Nombre del producto" class="editProdName"/>
+      <input type="hidden" value="0" class="editProdInventory"/>
+      <input type="hidden" value="" class="editProdId"/>
+    </td>
     <td><input type="text" placeholder="Presentación" class="editProdPresentation"/></td>
     <td><input type="number" placeholder="Cantidad" min="0" class="editProdQuantity"/></td>
     <td><button type="button" data-action="removeRow">Eliminar</button></td>
@@ -850,11 +892,17 @@ async function saveEditedOrder() {
     const prodQuantities = Array.from($$(".editProdQuantity")).map(
       (input) => parseFloat(input.value) || 0
     );
+    const prodInventories = Array.from($$(".editProdInventory")).map(
+      (input) => parseFloat(input.value) || 0
+    );
+    const prodIds = Array.from($$(".editProdId")).map((input) => input.value);
 
     const products = prodNames.map((name, i) => ({
       name,
       presentation: prodPresentations[i],
       quantity: prodQuantities[i],
+      inventory: prodInventories[i],
+      id: prodIds[i]
     }));
 
     await db.collection("orders").doc(orderDocId).update({
@@ -869,6 +917,12 @@ async function saveEditedOrder() {
       title: "Pedido editado",
       text: "Se han guardado los cambios.",
     });
+
+    // Si el modal de detalles está abierto, refrescarlo
+    if ($("#orderDetailsModal").style.display === "block") {
+      showOrderDetails(orderDocId);
+    }
+
     closeEditOrderModal();
   } catch (error) {
     Swal.fire({ icon: "error", title: "Error", text: error.message });
@@ -1085,7 +1139,7 @@ async function confirmOrder(orderId) {
         );
       });
     }
-    
+
     // Inicializar totales
     $("#invoiceTotalsList").innerHTML = "";
     $("#grandTotal").textContent = "0.00";
@@ -1129,7 +1183,7 @@ function addNewInvoiceEntry() {
       <button type="button" class="remove-invoice" style="height: 2rem;">×</button>
     </div>
   `;
-  
+
   newEntry.querySelector(".remove-invoice").addEventListener("click", (e) => {
     e.target.closest(".invoice-entry").remove();
     updateInvoiceTotals();
@@ -1140,10 +1194,10 @@ function addNewInvoiceEntry() {
 
 function updateInvoiceNumbers() {
   const invoiceEntries = document.querySelectorAll(".invoice-entry");
-  const invoiceNumbers = Array.from(invoiceEntries).map(entry => 
+  const invoiceNumbers = Array.from(invoiceEntries).map(entry =>
     entry.querySelector(".invoice-number").value
   ).filter(Boolean);
-  
+
   return invoiceNumbers;
 }
 
@@ -1152,9 +1206,9 @@ function updateInvoiceTotals() {
   const rows = $$("#confirmOrderProducts tr");
   const invoiceTotalsList = $("#invoiceTotalsList");
   invoiceTotalsList.innerHTML = "";
-  
+
   const invoiceEntries = document.querySelectorAll(".invoice-entry");
-  
+
   invoiceEntries.forEach((entry, index) => {
     let invoiceTotal = 0;
     rows.forEach((_, idx) => {
@@ -1164,7 +1218,7 @@ function updateInvoiceTotals() {
       invoiceTotal += val / invoiceEntries.length; // Distribuir el total entre las facturas
     });
     grandTotal += invoiceTotal;
-    
+
     const invoiceNumber = entry.querySelector(".invoice-number").value || `Factura ${index + 1}`;
     invoiceTotalsList.innerHTML += `
       <div style="margin-bottom: 0.5rem;">
@@ -1172,7 +1226,7 @@ function updateInvoiceTotals() {
       </div>
     `;
   });
-  
+
   $("#grandTotal").textContent = grandTotal.toFixed(2);
 }
 function closeConfirmOrderModal() {
@@ -1211,10 +1265,10 @@ async function saveConfirmedOrder() {
     // Verificar que haya al menos una factura con número
     const invoiceNumbers = updateInvoiceNumbers();
     if (invoiceNumbers.length === 0) {
-      Swal.fire({ 
-        icon: "error", 
-        title: "Error", 
-        text: "Debe ingresar al menos un número de factura." 
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Debe ingresar al menos un número de factura."
       });
       return;
     }
@@ -1308,6 +1362,39 @@ async function saveConfirmedOrder() {
       mismatchComment: "",
       status: "sucursalRecibioPedido",
     });
+
+    // Crear entradas en Cuentas por Pagar
+    try {
+      const batch = db.batch();
+      invoicesList.forEach((inv) => {
+        const facturaRef = db.collection('facturas_pagar').doc();
+        const fechaEmision = new Date(inv.invoiceDate);
+        const fechaVencimiento = new Date(fechaEmision);
+        fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
+
+        batch.set(facturaRef, {
+          numeroFactura: inv.invoiceNumber,
+          pedidoId: orderId,
+          orderId: orderData.orderId,
+          proveedorId: orderData.providerName,
+          proveedorNombre: orderData.providerName,
+          fechaEmision: inv.invoiceDate,
+          fechaVencimiento: fechaVencimiento.toISOString().split('T')[0],
+          total: inv.total,
+          saldoPendiente: inv.total,
+          estado: 'pendiente',
+          empresaId: orderData.sucursalId,
+          sucursalId: orderData.sucursalId,
+          fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+      await batch.commit();
+      console.log("Facturas creadas en Cuentas por Pagar");
+    } catch (err) {
+      console.error("Error al crear facturas en Cuentas por Pagar:", err);
+      // No bloqueamos el flujo principal si esto falla, pero avisamos
+      Swal.fire({ icon: "warning", title: "Advertencia", text: "Pedido guardado, pero hubo un error al generar las cuentas por pagar." });
+    }
 
     Swal.fire({
       icon: "success",
@@ -1475,9 +1562,8 @@ function exportAsReceptionImageNoPreview(order, fileName) {
 
   if (order.lastEditTimestamp) {
     const editDate = new Date(order.lastEditTimestamp.toDate());
-    exportReceptionLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()} por: ${
-      order.lastEditedBy || "N/A"
-    }`;
+    exportReceptionLastEditHidden.textContent = `Pedido editado el: ${editDate.toLocaleString()} por: ${order.lastEditedBy || "N/A"
+      }`;
   } else {
     exportReceptionLastEditHidden.textContent = "";
   }
@@ -1550,9 +1636,7 @@ async function markOrderAsTaken(orderId) {
       try {
         await db.collection("orders").doc(orderId).update({ status: "pedidoTomado" });
         Swal.fire({ icon: "success", title: "Pedido Tomado" });
-        // Actualiza la vista automáticamente
-        attachInProcessListener();
-        attachCompletedListener();
+        // Actualiza la vista automáticamente gracias al onSnapshot
       } catch (err) {
         Swal.fire({ icon: "error", title: "Error", text: err.message });
       }
