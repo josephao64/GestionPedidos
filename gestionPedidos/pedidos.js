@@ -845,11 +845,11 @@ function editOrder(orderDocId) {
           tr.innerHTML = `
             <td>
               <input type="text" value="${prod.name}" class="editProdName"/>
-              <input type="hidden" value="${prod.inventory || 0}" class="editProdInventory"/>
               <input type="hidden" value="${prod.id || ''}" class="editProdId"/>
             </td>
             <td><input type="text" value="${prod.presentation}" class="editProdPresentation"/></td>
             <td><input type="number" value="${prod.quantity}" min="0" class="editProdQuantity"/></td>
+            <td><input type="number" value="${prod.inventory || 0}" min="0" class="editProdInventory"/></td>
             <td><button type="button" data-action="removeRow">Eliminar</button></td>
           `;
           tbody.appendChild(tr);
@@ -867,11 +867,11 @@ function addProductRow() {
   newRow.innerHTML = `
     <td>
       <input type="text" placeholder="Nombre del producto" class="editProdName"/>
-      <input type="hidden" value="0" class="editProdInventory"/>
       <input type="hidden" value="" class="editProdId"/>
     </td>
     <td><input type="text" placeholder="Presentación" class="editProdPresentation"/></td>
     <td><input type="number" placeholder="Cantidad" min="0" class="editProdQuantity"/></td>
+    <td><input type="number" placeholder="Inventario" min="0" value="0" class="editProdInventory"/></td>
     <td><button type="button" data-action="removeRow">Eliminar</button></td>
   `;
   tbody.appendChild(newRow);

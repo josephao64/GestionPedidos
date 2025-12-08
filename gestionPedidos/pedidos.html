@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gestión de Pedidos</title>
   <link rel="stylesheet" href="pedidos.css" />
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
@@ -13,6 +14,7 @@
   <script src="../database/connection.js"></script>
   <script defer src="pedidos.js"></script>
 </head>
+
 <body>
   <div class="header">
     <h1>Gestión de Pedidos</h1>
@@ -26,33 +28,33 @@
   <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
     <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
     <select id="sucursalFilter"></select>
-    
+
     <label for="providerFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Proveedor:</label>
     <select id="providerFilter"></select>
-    
+
     <label for="estadoFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Estado:</label>
     <select id="estadoFilter">
       <option value="all" selected>Todos</option>
       <option value="pending">Pendiente</option>
       <option value="delivery">Entrega en Bodega/Tienda</option>
     </select>
-    
+
     <label for="deliveryTypeFilter" style="font-weight: bold; margin-left: 1rem;">Tipo de Entrega:</label>
     <select id="deliveryTypeFilter">
       <option value="all" selected>Todos</option>
       <option value="Tienda">Entrega en Tienda</option>
       <option value="Bodega">Entrega en Bodega</option>
     </select>
-    
+
     <label for="sortOrder" style="font-weight: bold; margin-left: 1rem;">Ordenar por:</label>
     <select id="sortOrder">
       <option value="masReciente" selected>Más Reciente</option>
       <option value="masAntiguo">Más Antiguo</option>
     </select>
-    
+
     <label for="idSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por ID:</label>
-    <input type="text" id="idSearchInput" placeholder="Ej. 123" style="width: 100px;"/>
-    
+    <input type="text" id="idSearchInput" placeholder="Ej. 123" style="width: 100px;" />
+
     <label for="dateSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por Fecha:</label>
     <input type="date" id="dateSearchInput" />
   </div>
@@ -118,12 +120,13 @@
                 <th>Producto</th>
                 <th>Presentación</th>
                 <th>Cantidad</th>
+                <th>Inventario</th>
                 <th>Acción</th>
               </tr>
             </thead>
             <tbody id="editOrderProducts"></tbody>
           </table>
-          <br/>
+          <br />
           <div>
             <button type="button" id="btnAddProductRow">Agregar Producto</button>
             <button type="button" id="btnSaveEditedOrder">Guardar Cambios</button>
@@ -138,7 +141,7 @@
     <div class="modal-content">
       <span id="btnCloseConfirmOrder" class="close">&times;</span>
       <h2>Ingresar Cantidades Recibidas</h2>
-      <input type="hidden" id="confirmOrderId" value=""/>
+      <input type="hidden" id="confirmOrderId" value="" />
 
       <div id="invoiceDetails">
         <div id="invoicesList">
@@ -218,8 +221,10 @@
   </div>
 
   <!-- Plantilla exportación Recepción -->
-  <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 1200px;">
-    <img id="exportReceptionLogo" src="../resources/images/logo.png" alt="Logo" style="width: 100px; height: auto; margin-bottom: 20px;">
+  <div id="exportReceptionHiddenContainer"
+    style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 1200px;">
+    <img id="exportReceptionLogo" src="../resources/images/logo.png" alt="Logo"
+      style="width: 100px; height: auto; margin-bottom: 20px;">
     <h2>Recepción de Pedido</h2>
     <p><strong>ID Pedido:</strong> <span id="exportReceptionOrderIdHidden"></span></p>
     <p><strong>Proveedor:</strong> <span id="exportReceptionProviderHidden"></span></p>
@@ -276,7 +281,8 @@
 
   <script>
     // Compatibilidad con llamadas externas existentes
-    window.downloadExportReceptionImage = function(id){ const elId = id || document.getElementById("confirmOrderId")?.value || ""; if (elId) document.dispatchEvent(new CustomEvent("exportReception", { detail: elId })); };
+    window.downloadExportReceptionImage = function (id) { const elId = id || document.getElementById("confirmOrderId")?.value || ""; if (elId) document.dispatchEvent(new CustomEvent("exportReception", { detail: elId })); };
   </script>
 </body>
+
 </html>
