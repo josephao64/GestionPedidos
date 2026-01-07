@@ -1,4 +1,4 @@
-
+﻿
 // empleados.js
 let currentEmpleadoId = null;
 
@@ -126,8 +126,17 @@ async function loadEmployees() {
 
         // Apply Filters
         const filtered = employees.filter(emp => {
-            // Sucursal Filter
-            if (filterSucursal !== 'all' && emp.sucursalId !== filterSucursal) return false;
+            // Sucursal Filter with Temporary Logic
+            if (filterSucursal !== 'all') {
+                const belongsToBranch = emp.sucursalId === filterSucursal;
+                const matchesTempBranch = emp.isTempTransfer && emp.tempSucursalId === filterSucursal;
+
+                // If filtering by branch, show:
+                // 1. Employees who belong to this branch (unless filtered out by other means, but here we usually show them even if lent out, with a note).
+                // 2. Employees from OTHER branches who are temporarily here.
+
+                if (!belongsToBranch && !matchesTempBranch) return false;
+            }
 
             // Puesto Filter
             if (filterPuesto !== 'all' && emp.positionId !== filterPuesto) return false;
@@ -158,7 +167,7 @@ async function loadEmployees() {
 
         let html = `
             <table style="width: 100%; border-collapse: collapse;">
-                <thead>
+                <thead id="employeesTableHeader">
                     <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                         <th style="padding: 12px;">Nombre</th>
                         <th style="padding: 12px;">DPI / Código</th>
@@ -179,13 +188,23 @@ async function loadEmployees() {
             } else {
                 // Check probation
                 let isProbation = false;
+                let probationEndDateStr = '';
+
                 if (data.startDate) {
                     const start = new Date(data.startDate).getTime();
-                    if (now - start < probationMs) isProbation = true;
+                    if (now - start < probationMs) {
+                        isProbation = true;
+                        const endDate = new Date(start + probationMs);
+                        probationEndDateStr = endDate.toLocaleDateString("es-GT");
+                    }
                 }
 
                 if (isProbation) {
-                    statusLabel = '<span style="background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: 600;">En Prueba</span>';
+                    statusLabel = `
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <span style="background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: 600;">En Prueba</span>
+                            <span style="font-size: 0.65rem; color: #92400e; margin-top: 2px;">Fin: ${probationEndDateStr}</span>
+                        </div>`;
                 } else {
                     statusLabel = '<span style="background: #ecfdf5; color: #10b981; padding: 4px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: 600;">Activo</span>';
                 }
@@ -199,6 +218,21 @@ async function loadEmployees() {
                 nameContent += `<div style="font-size: 0.7rem; color: #d97706; background: #fffbeb; display: inline-block; padding: 2px 6px; border-radius: 4px; margin-top: 2px;"><i class="fas fa-bolt"></i> Pedidos Flash</div>`;
             }
 
+            // Transfer Indicators
+            // Transfer Indicators
+            let sucursalDisplay = '';
+
+            if (data.isTempTransfer) {
+                // Always show where they ARE physically
+                sucursalDisplay = `<span style="font-weight:bold;">${data.tempSucursalName}</span>`;
+                sucursalDisplay += `<div style="font-size: 0.7rem; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">
+                    <i class="fas fa-info-circle"></i> De: ${data.sucursalName} (Temporal)
+                 </div>`;
+            } else {
+                sucursalDisplay = data.sucursalName || 'N/A';
+            }
+
+
             html += `
                 <tr style="border-bottom: 1px solid var(--border);">
                     <td style="padding: 12px;">
@@ -208,13 +242,17 @@ async function loadEmployees() {
                         <div>${data.dpi || 'N/A'}</div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); font-weight:bold;">${displayCode}</div>
                     </td>
-                    <td style="padding: 12px;">${data.sucursalName || 'N/A'}</td>
+                    <td style="padding: 12px;">${sucursalDisplay}</td>
                     <td style="padding: 12px;">${data.positionName || 'N/A'}</td>
                     <td style="padding: 12px;">${statusLabel}</td>
                     <td style="padding: 12px;">
                         <button class="btn btn-info" style="padding: 4px 8px; font-size: 0.75rem; background: #3b82f6; border: none;" onclick="viewEmployeeDetails('${data.id}')" title="Ver Detalles"><i class="fas fa-eye"></i></button>
                         <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="editEmpleado('${data.id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.75rem; background: #8b5cf6; border: none;" onclick="openTransferModal('${data.id}')" title="Trasladar"><i class="fas fa-exchange-alt"></i></button>
                         ${data.status !== 'inactive' ? `<button class="btn btn-warning" style="padding: 4px 8px; font-size: 0.75rem;" onclick="inactivateEmpleado('${data.id}', '${data.fullName}')" title="Dar de Baja"><i class="fas fa-user-slash"></i></button>` : ''}
+                        
+                        ${data.isTempTransfer ? `<button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75rem; background: #10b981; border: none;" onclick="endTempTransfer('${data.id}', '${data.fullName}', '${data.tempSucursalName}', '${data.sucursalName}')" title="Finalizar Préstamo (Regresar)"><i class="fas fa-undo-alt"></i></button>` : ''}
+                        
                         <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="deleteEmpleado('${data.id}', '${data.fullName}')" title="Eliminar Permanentemente"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
@@ -234,7 +272,7 @@ async function viewEmployeeDetails(id) {
     try {
         const doc = await db.collection('employees').doc(id).get();
         if (!doc.exists) {
-            Swal.fire('Error', 'No se encontró el empleado', 'error');
+            Swal.fire('Error', 'No se encontrÃ³ el empleado', 'error');
             return;
         }
         const data = doc.data();
@@ -251,22 +289,22 @@ async function viewEmployeeDetails(id) {
 
             // Build Termination Info for Standard View
             terminationInfo = `
-                <tr><td colspan="2" style="padding:10px; background:#fee2e2; font-weight:bold; color:#b91c1c; text-align:center;">Información de Baja</td></tr>
+                <tr><td colspan="2" style="padding:10px; background:#fee2e2; font-weight:bold; color:#b91c1c; text-align:center;">InformaciÃ³n de Baja</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Fecha Baja:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${endDateFormatted}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Motivo:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.terminationReason || 'N/A'}</td></tr>
-                <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Calificación:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.terminationJustification || 'N/A'}</td></tr>
+                <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>CalificaciÃ³n:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.terminationJustification || 'N/A'}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Comentarios:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.terminationComments || 'N/A'}</td></tr>
             `;
 
             // If settlement data exists, add the breakdown
             if (data.settlementData) {
                 terminationInfo += `
-                    <tr><td colspan="2" style="padding:10px; background:#e0f2fe; font-weight:bold; color:#0369a1; text-align:center; border-top: 2px solid #fff;">Cálculo de Liquidación</td></tr>
+                    <tr><td colspan="2" style="padding:10px; background:#e0f2fe; font-weight:bold; color:#0369a1; text-align:center; border-top: 2px solid #fff;">CÃ¡lculo de LiquidaciÃ³n</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">Aguinaldo:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.aguinaldo || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">Bono 14:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.bono14 || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">Vacaciones:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.vacations || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">Salario Pendiente:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.pendingSalary || 0).toFixed(2)}</td></tr>
-                    <tr><td style="padding:8px; border-bottom:1px solid #eee;">Indemnización:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.indemnization || 0).toFixed(2)}</td></tr>
+                    <tr><td style="padding:8px; border-bottom:1px solid #eee;">IndemnizaciÃ³n:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.indemnization || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee; font-weight:bold; font-size:1.1em;">TOTAL:</td><td style="padding:8px; border-bottom:1px solid #eee; font-weight:bold; font-size:1.1em; color:#16a34a;">Q${(sData.total || 0).toFixed(2)}</td></tr>
                 `;
 
@@ -276,17 +314,17 @@ async function viewEmployeeDetails(id) {
                     <div style="font-family: 'Times New Roman', serif; text-align: left; padding: 40px; line-height: 1.5; color: #000;">
                         <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
                             <h2 style="margin: 0; text-transform: uppercase;">${data.subEmpresa || 'EMPRESA PROPIA'}</h2>
-                            <p style="margin: 5px 0;">LIQUIDACIÓN LABORAL Y FINIQUITO</p>
+                            <p style="margin: 5px 0;">LIQUIDACIÃ“N LABORAL Y FINIQUITO</p>
                         </div>
                         <p style="text-align: right;">Guatemala, ${todayFormatted}</p>
                         <p>
                             <strong>Nombre:</strong> ${data.fullName}<br>
                             <strong>DPI:</strong> ${data.dpi} <br>
-                            <strong>Código:</strong> ${data.employeeCode || data.nit || 'N/A'}<br>
+                            <strong>CÃ³digo:</strong> ${data.employeeCode || data.nit || 'N/A'}<br>
                             <strong>Fecha de Baja:</strong> ${endDateFormatted} <br>
                             <strong>Motivo:</strong> ${data.terminationReason} (${data.terminationJustification || ''})
                         </p>
-                        <p>Por medio de la presente se detalla el cálculo de prestaciones laborales correspondientes hasta la fecha de finalización de la relación laboral:</p>
+                        <p>Por medio de la presente se detalla el cÃ¡lculo de prestaciones laborales correspondientes hasta la fecha de finalizaciÃ³n de la relaciÃ³n laboral:</p>
                         <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #000;">
                             <thead>
                                 <tr style="background: #f3f4f6;">
@@ -299,7 +337,7 @@ async function viewEmployeeDetails(id) {
                                 <tr><td style="border: 1px solid #000; padding: 8px;">Bono 14 Proporcional</td><td style="border: 1px solid #000; padding: 8px; text-align: right;">${(sData.bono14 || 0).toFixed(2)}</td></tr>
                                 <tr><td style="border: 1px solid #000; padding: 8px;">Vacaciones Pendientes</td><td style="border: 1px solid #000; padding: 8px; text-align: right;">${(sData.vacations || 0).toFixed(2)}</td></tr>
                                 <tr><td style="border: 1px solid #000; padding: 8px;">Salario Pendiente</td><td style="border: 1px solid #000; padding: 8px; text-align: right;">${(sData.pendingSalary || 0).toFixed(2)}</td></tr>
-                                ${(sData.indemnization > 0) ? `<tr><td style="border: 1px solid #000; padding: 8px;">Indemnización</td><td style="border: 1px solid #000; padding: 8px; text-align: right;">${sData.indemnization.toFixed(2)}</td></tr>` : ''}
+                                ${(sData.indemnization > 0) ? `<tr><td style="border: 1px solid #000; padding: 8px;">IndemnizaciÃ³n</td><td style="border: 1px solid #000; padding: 8px; text-align: right;">${sData.indemnization.toFixed(2)}</td></tr>` : ''}
                                 <tr style="font-weight: bold; background: #e5e7eb;">
                                     <td style="border: 1px solid #000; padding: 8px; text-align: right;">TOTAL A RECIBIR</td>
                                     <td style="border: 1px solid #000; padding: 8px; text-align: right;">Q${total}</td>
@@ -307,7 +345,7 @@ async function viewEmployeeDetails(id) {
                             </tbody>
                         </table>
                         <p style="margin-top: 30px;">
-                            Recibí a mi entera satisfacción la cantidad de <strong>Q${total}</strong>, declarando que con este pago la empresa no me adeuda ninguna otra cantidad por concepto de prestaciones laborales, salarios o indemnizaciones.
+                            RecibÃ­ a mi entera satisfacciÃ³n la cantidad de <strong>Q${total}</strong>, declarando que con este pago la empresa no me adeuda ninguna otra cantidad por concepto de prestaciones laborales, salarios o indemnizaciones.
                         </p>
                         <div style="margin-top: 60px; display: flex; justify-content: space-between;">
                             <div style="text-align: center; width: 45%;">
@@ -325,19 +363,66 @@ async function viewEmployeeDetails(id) {
             }
         }
 
+        // Fetch Transfer History
+        let historyHtml = '';
+        try {
+            const histSnap = await db.collection('employees').doc(id).collection('transferHistory').orderBy('date', 'desc').get();
+            if (!histSnap.empty) {
+                historyHtml = `
+                    <div style="margin-top: 20px; border-top: 2px solid var(--border); padding-top: 15px;">
+                        <h4 style="margin-bottom: 10px; color: var(--primary);">Historial de Traslados</h4>
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="background: #f8fafc; text-align: left;">
+                                    <th style="padding: 6px; border-bottom: 1px solid var(--border);">Fecha</th>
+                                    <th style="padding: 6px; border-bottom: 1px solid var(--border);">Tipo</th>
+                                    <th style="padding: 6px; border-bottom: 1px solid var(--border);">Origen</th>
+                                    <th style="padding: 6px; border-bottom: 1px solid var(--border);">Destino</th>
+                                    <th style="padding: 6px; border-bottom: 1px solid var(--border);">Comentarios</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                histSnap.forEach(hDoc => {
+                    const h = hDoc.data();
+                    const dateStr = h.date ? new Date(h.date.seconds * 1000).toLocaleDateString() : 'N/A';
+                    const typeLabel = h.type === 'fixed' ? '<span style="color: purple; font-weight: bold;">Definitivo</span>' : '<span style="color: orange; font-weight: bold;">Temporal</span>';
+
+                    historyHtml += `
+                        <tr>
+                            <td style="padding: 6px; border-bottom: 1px solid #eee;">${dateStr}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #eee;">${typeLabel}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #eee;">${h.fromSucursalName || 'N/A'}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #eee;">${h.toSucursalName || 'N/A'}</td>
+                            <td style="padding: 6px; border-bottom: 1px solid #eee;">${h.comments || '-'}</td>
+                        </tr>
+                    `;
+                });
+                historyHtml += `</tbody></table></div>`;
+            } else {
+                historyHtml = '<p style="margin-top: 15px; font-size: 0.9em; color: var(--text-muted);">Sin historial de traslados.</p>';
+            }
+        } catch (e) {
+            console.error("Error loading history:", e);
+        }
+
         // Standard Active/Inactive View
         const html = `
             <table style="width:100%; text-align:left; border-collapse: collapse;">
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Nombre:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.fullName}</td></tr>
-                <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Código:</strong></td><td style="padding:8px; border-bottom:1px solid #eee; font-weight:bold;">${data.employeeCode || data.nit || 'N/A'}</td></tr>
+                <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>CÃ³digo:</strong></td><td style="padding:8px; border-bottom:1px solid #eee; font-weight:bold;">${data.employeeCode || data.nit || 'N/A'}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>DPI:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.dpi}</td></tr>
-                <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Sucursal:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.sucursalName}</td></tr>
+                <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Sucursal:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">
+                    ${data.sucursalName}
+                    ${data.isTempTransfer ? `<div style="font-size: 0.8rem; color: #d97706; background: #fef3c7; border: 1px solid #fcd34d; padding: 2px 4px; border-radius: 4px; margin-top: 4px; display: inline-block;">Prestado a: ${data.tempSucursalName}</div>` : ''}
+                </td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Empresa:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.subEmpresa || 'Propia'}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Puesto:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.positionName}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Fecha Inicio:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.startDate}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Estado:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.status === 'active' ? 'Activo' : 'Inactivo'}</td></tr>
                 ${terminationInfo}
             </table>
+            ${historyHtml}
         `;
 
         Swal.fire({
@@ -353,7 +438,7 @@ async function viewEmployeeDetails(id) {
         }).then((result) => {
             if (result.isDenied && letterHtml) {
                 const printWindow = window.open('', '', 'width=900,height=700');
-                printWindow.document.write('<html><head><title>Liquidación</title></head><body>');
+                printWindow.document.write('<html><head><title>LiquidaciÃ³n</title></head><body>');
                 printWindow.document.write(letterHtml);
                 printWindow.document.write('</body></html>');
                 printWindow.document.close();
@@ -386,7 +471,7 @@ async function openEmpleadoModal(id = null) {
         Swal.fire({
             icon: 'error',
             title: 'Error de Carga',
-            text: 'No se pudieron cargar sucursales o puestos. Intente recargar la página.'
+            text: 'No se pudieron cargar sucursales o puestos. Intente recargar la pÃ¡gina.'
         });
         return;
     }
@@ -572,7 +657,7 @@ document.getElementById('empleadoForm').addEventListener('submit', async (e) => 
             data.status = 'active';
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             await db.collection('employees').add(data);
-            Swal.fire('Registrado', `Empleado registrado. Código: ${empCode}`, 'success');
+            Swal.fire('Registrado', `Empleado registrado. CÃ³digo: ${empCode}`, 'success');
         }
 
         closeEmpleadoModal();
@@ -622,7 +707,7 @@ async function inactivateEmpleado(id, name) {
 
     // 2. Ask for Date and Reason with Enhanced Form
     const { value: formValues } = await Swal.fire({
-        title: 'Procesar Baja y Liquidación',
+        title: 'Procesar Baja y LiquidaciÃ³n',
         html: `
             <div style="text-align:left; font-size: 0.9rem;">
                 <div style="background:#f3f4f6; padding:8px; border-radius:8px; margin-bottom:12px;">
@@ -635,13 +720,13 @@ async function inactivateEmpleado(id, name) {
                         <input id="swal-end-date" class="swal2-input" type="date" style="width:100%; box-sizing:border-box;" value="${new Date().toISOString().split('T')[0]}">
                     </div>
                     <div>
-                        <label>Días Trab. (Mes Actual):</label>
+                        <label>DÃ­as Trab. (Mes Actual):</label>
                         <input id="swal-days-worked" class="swal2-input" type="number" style="width:100%; box-sizing:border-box;" value="0">
                     </div>
                 </div>
                 
                 <div style="margin-top:10px;">
-                    <label>Días Vacaciones Pendientes:</label>
+                    <label>DÃ­as Vacaciones Pendientes:</label>
                     <input id="swal-vacations" class="swal2-input" type="number" style="width:100%; box-sizing:border-box;" value="${estimVacations}">
                 </div>
 
@@ -653,7 +738,7 @@ async function inactivateEmpleado(id, name) {
                 </select>
                 
                 <div id="swal-justification-container" style="display:none; margin-top:10px;">
-                    <label>Calificación (Solo Despidos):</label>
+                    <label>CalificaciÃ³n (Solo Despidos):</label>
                     <select id="swal-justification" class="swal2-select" style="display:block; width:100%; margin-top:5px;">
                         <option value="Justificado">Justificado</option>
                         <option value="Injustificado">Injustificado</option>
@@ -707,7 +792,7 @@ async function inactivateEmpleado(id, name) {
 
     // 4. Show Confirmation with Breakdown
     const { isConfirmed } = await Swal.fire({
-        title: 'Confirmar Liquidación',
+        title: 'Confirmar LiquidaciÃ³n',
         html: `
             <div style="text-align:left; font-size:0.95rem;">
                 <p><strong>Total a Pagar:</strong> <span style="color:green; font-size:1.2rem;">Q${calc.total.toFixed(2)}</span></p>
@@ -715,12 +800,12 @@ async function inactivateEmpleado(id, name) {
                 <table style="width:100%; border-collapse:collapse;">
                     <tr><td>Aguinaldo (Dic-Baja):</td><td style="text-align:right;">Q${calc.aguinaldo.toFixed(2)}</td></tr>
                     <tr><td>Bono 14 (Jul-Baja):</td><td style="text-align:right;">Q${calc.bono14.toFixed(2)}</td></tr>
-                    <tr><td>Vacaciones (${formValues.vacationDays} días):</td><td style="text-align:right;">Q${calc.vacations.toFixed(2)}</td></tr>
-                    <tr><td>Salario Pendiente (${formValues.daysWorked} días):</td><td style="text-align:right;">Q${calc.pendingSalary.toFixed(2)}</td></tr>
-                    <tr style="color:${calc.indemnization > 0 ? 'red' : 'inherit'};"><td>Indemnización:</td><td style="text-align:right;">Q${calc.indemnization.toFixed(2)}</td></tr>
+                    <tr><td>Vacaciones (${formValues.vacationDays} dÃ­as):</td><td style="text-align:right;">Q${calc.vacations.toFixed(2)}</td></tr>
+                    <tr><td>Salario Pendiente (${formValues.daysWorked} dÃ­as):</td><td style="text-align:right;">Q${calc.pendingSalary.toFixed(2)}</td></tr>
+                    <tr style="color:${calc.indemnization > 0 ? 'red' : 'inherit'};"><td>IndemnizaciÃ³n:</td><td style="text-align:right;">Q${calc.indemnization.toFixed(2)}</td></tr>
                 </table>
                 <br>
-                <p style="font-size:0.8rem; color:var(--text-muted); text-align:center;">¿Proceder con la baja y guardar registro?</p>
+                <p style="font-size:0.8rem; color:var(--text-muted); text-align:center;">Â¿Proceder con la baja y guardar registro?</p>
             </div>
         `,
         icon: 'info',
@@ -801,7 +886,7 @@ async function proceedToInactivate(id, values, calcData) {
             settlementData: calcData, // Store the calculation snapshot
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        Swal.fire('Inactivado', 'Baja procesada y liquidación calculada.', 'success');
+        Swal.fire('Inactivado', 'Baja procesada y liquidaciÃ³n calculada.', 'success');
         loadEmployees();
         if (typeof initDashboard === 'function') initDashboard();
     } catch (error) {
@@ -816,11 +901,11 @@ function editEmpleado(id) {
 
 async function deleteEmpleado(id, name) {
     const result = await Swal.fire({
-        title: '¿Eliminar Empleado?',
-        text: `Se eliminará permanentemente a "${name}". Esta acción NO se puede deshacer.`,
+        title: 'Â¿Eliminar Empleado?',
+        text: `Se eliminarÃ¡ permanentemente a "${name}". Esta acciÃ³n NO se puede deshacer.`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Sí, eliminar',
+        confirmButtonText: 'SÃ­, eliminar',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#d33'
     });
@@ -905,15 +990,15 @@ async function processImport() {
 
     // 1. Validate Inputs
     if (!sucursalSelect.value) {
-        Swal.fire('Atención', 'Seleccione una sucursal destino.', 'warning');
+        Swal.fire('AtenciÃ³n', 'Seleccione una sucursal destino.', 'warning');
         return;
     }
     if (!puestoSelect.value) {
-        Swal.fire('Atención', 'Seleccione un puesto para los empleados.', 'warning');
+        Swal.fire('AtenciÃ³n', 'Seleccione un puesto para los empleados.', 'warning');
         return;
     }
     if (!rawData) {
-        Swal.fire('Atención', 'Ingrese la lista de empleados.', 'warning');
+        Swal.fire('AtenciÃ³n', 'Ingrese la lista de empleados.', 'warning');
         return;
     }
 
@@ -947,7 +1032,7 @@ async function processImport() {
             const lineNum = index + 1;
 
             if (parts.length < 2) {
-                errors.push(`Línea ${lineNum}: Formato incorrecto. Mínimo Nombre y DPI.`);
+                errors.push(`LÃ­nea ${lineNum}: Formato incorrecto. MÃ­nimo Nombre y DPI.`);
                 return;
             }
 
@@ -959,11 +1044,11 @@ async function processImport() {
 
             // Validate DPI
             if (dpi.length !== 13) {
-                errors.push(`Línea ${lineNum}: DPI inválido (${dpi}). Debe tener 13 dígitos.`);
+                errors.push(`LÃ­nea ${lineNum}: DPI invÃ¡lido (${dpi}). Debe tener 13 dÃ­gitos.`);
                 return;
             }
             if (existingDPIs.has(dpi)) {
-                errors.push(`Línea ${lineNum}: El DPI ${dpi} ya existe en el sistema.`);
+                errors.push(`LÃ­nea ${lineNum}: El DPI ${dpi} ya existe en el sistema.`);
                 return;
             }
 
@@ -1027,3 +1112,196 @@ async function processImport() {
         Swal.fire('Error', 'Falló la importación: ' + error.message, 'error');
     }
 }
+
+// ------------------------------------------------------------------
+// LOGICA DE TRASLADOS (FIJOS Y TEMPORALES)
+// ------------------------------------------------------------------
+
+async function endTempTransfer(empId, empName, currentTempBranch, originBranch) {
+    const result = await Swal.fire({
+        title: '¿Finalizar Préstamo?',
+        html: `El empleado <strong>${empName}</strong> regresará oficialmente a <strong>${originBranch}</strong>.<br><br>Se eliminará su asignación temporal en ${currentTempBranch}.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, finalizar préstamo',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#10b981'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            Swal.showLoading();
+
+            const updateData = {
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                isTempTransfer: false,
+                tempSucursalId: firebase.firestore.FieldValue.delete(),
+                tempSucursalName: firebase.firestore.FieldValue.delete(),
+                tempStartDate: firebase.firestore.FieldValue.delete(),
+                tempEndDate: firebase.firestore.FieldValue.delete()
+            };
+
+            await db.collection('employees').doc(empId).update(updateData);
+
+            // Log History for End of Loan
+            // We need to fetch the employee doc first to get current branch IDs if we want to be precise, 
+            // but we can pass them as args or just log the event.
+            // Let's rely on args passed for names, but IDs might be needed for strict consistency if we queried.
+            // For simplicity and speed in this interaction, we'll log the event.
+
+            // To be safe, let's just log "Fin Prestamo"
+            const docSnap = await db.collection('employees').doc(empId).get();
+            const data = docSnap.data();
+
+            await db.collection('employees').doc(empId).collection('transferHistory').add({
+                type: 'end_temp',
+                fromSucursalId: data.sucursalId, // Origin is the 'home' branch
+                fromSucursalName: originBranch,
+                toSucursalId: data.sucursalId, // Destination is also 'home' branch (return)
+                toSucursalName: originBranch,
+                date: firebase.firestore.FieldValue.serverTimestamp(),
+                comments: `Fin de préstamo temporal en ${currentTempBranch}. Retorno a sucursal origen.`,
+                user: 'admin',
+                employeeName: empName,
+                employeeId: empId
+            });
+
+            await Swal.fire('Préstamo Finalizado', 'El empleado ha retornado a su sucursal de origen.', 'success');
+            loadEmployees(); // Reload list
+
+        } catch (e) {
+            console.error("Error ending temp transfer:", e);
+            Swal.fire('Error', 'No se pudo finalizar el préstamo.', 'error');
+        }
+    }
+}
+
+async function openTransferModal(employeeId) {
+    try {
+        const doc = await db.collection('employees').doc(employeeId).get();
+        if (!doc.exists) return;
+        const data = doc.data();
+
+        document.getElementById('transfer_employeeId').value = employeeId;
+        document.getElementById('transfer_employeeName').value = data.fullName;
+        document.getElementById('transfer_currentSucursalId').value = data.sucursalId;
+        document.getElementById('transfer_currentSucursalName').value = data.sucursalName || 'N/A';
+
+        // Reset Form
+        document.getElementById('transferForm').reset();
+
+        // Load target branches (exclude current)
+        const select = document.getElementById('transfer_targetSucursal');
+        select.innerHTML = '<option value="">Seleccione Sucursal...</option>';
+
+        const snap = await db.collection('sucursales').get();
+        snap.forEach(sDoc => {
+            if (sDoc.id !== data.sucursalId) {
+                select.innerHTML += `<option value="${sDoc.id}">${sDoc.data().name}</option>`;
+            }
+        });
+
+        const modal = document.getElementById('transferModal');
+        modal.style.display = 'flex';
+        setTimeout(() => { modal.style.opacity = '1'; }, 10);
+
+        toggleTransferType(); // Update UI visibility
+
+    } catch (e) {
+        console.error("Error opening transfer modal:", e);
+    }
+}
+
+function closeTransferModal() {
+    const modal = document.getElementById('transferModal');
+    modal.style.opacity = '0';
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+function toggleTransferType() {
+    const type = document.querySelector('input[name="transferType"]:checked').value;
+    const tempFields = document.getElementById('transfer_temp_fields');
+    const startInput = document.getElementById('transfer_startDate');
+
+    if (type === 'temp') {
+        tempFields.style.display = 'block';
+        startInput.value = new Date().toISOString().split('T')[0];
+        startInput.required = true;
+    } else {
+        tempFields.style.display = 'none';
+        startInput.required = false;
+    }
+}
+
+document.getElementById('transferForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const empId = document.getElementById('transfer_employeeId').value;
+    const targetSucursalId = document.getElementById('transfer_targetSucursal').value;
+    const selectTarget = document.getElementById('transfer_targetSucursal');
+    const targetSucursalName = selectTarget.options[selectTarget.selectedIndex].text;
+    const type = document.querySelector('input[name="transferType"]:checked').value;
+    const comments = document.getElementById('transfer_comments').value;
+
+    if (!targetSucursalId) {
+        Swal.fire('Error', 'Seleccione una sucursal destino', 'warning');
+        return;
+    }
+
+    try {
+        Swal.fire({ title: 'Procesando Traslado...', didOpen: () => Swal.showLoading() });
+
+        const updateData = {
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastTransferDate: firebase.firestore.FieldValue.serverTimestamp(),
+            lastTransferComments: comments
+        };
+
+        if (type === 'fixed') {
+            // Traslado Fijo: Cambia la sucursal dueña
+            updateData.sucursalId = targetSucursalId;
+            updateData.sucursalName = targetSucursalName;
+
+            // Limpiar datos temporales si existían
+            updateData.isTempTransfer = false;
+            updateData.tempSucursalId = firebase.firestore.FieldValue.delete();
+            updateData.tempSucursalName = firebase.firestore.FieldValue.delete();
+            updateData.tempStartDate = firebase.firestore.FieldValue.delete();
+            updateData.tempEndDate = firebase.firestore.FieldValue.delete();
+
+        } else {
+            // Traslado Temporal
+            updateData.isTempTransfer = true;
+            updateData.tempSucursalId = targetSucursalId;
+            updateData.tempSucursalName = targetSucursalName;
+            updateData.tempStartDate = document.getElementById('transfer_startDate').value;
+
+            const endDate = document.getElementById('transfer_endDate').value;
+            updateData.tempEndDate = endDate ? endDate : null; // Null if indefinite
+        }
+
+        await db.collection('employees').doc(empId).update(updateData);
+
+        // Log History (Optional)
+        await db.collection('employees').doc(empId).collection('transferHistory').add({
+            type: type,
+            fromSucursalId: document.getElementById('transfer_currentSucursalId').value,
+            fromSucursalName: document.getElementById('transfer_currentSucursalName').value,
+            toSucursalId: targetSucursalId,
+            toSucursalName: targetSucursalName,
+            date: firebase.firestore.FieldValue.serverTimestamp(),
+            comments: comments,
+            user: 'admin',
+            employeeName: document.getElementById('transfer_employeeName').value,
+            employeeId: empId // Redundant but useful for indexing/querying directly
+        });
+
+        await Swal.fire('Éxito', 'Traslado realizado correctamente.', 'success');
+        closeTransferModal();
+        loadEmployees();
+
+    } catch (e) {
+        console.error("Error processing transfer:", e);
+        Swal.fire('Error', 'No se pudo realizar el traslado.', 'error');
+    }
+});

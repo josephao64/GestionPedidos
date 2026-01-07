@@ -55,6 +55,15 @@ async function loadPlanillaTable() {
             positions[doc.id] = doc.data();
         });
 
+        // 2.1 Fetch Active Loans
+        const loanSnap = await db.collection('loans').where('status', '==', 'active').get();
+        const loansByEmp = {};
+        loanSnap.forEach(doc => {
+            const data = doc.data();
+            if (!loansByEmp[data.employeeId]) loansByEmp[data.employeeId] = [];
+            loansByEmp[data.employeeId].push({ id: doc.id, ...data });
+        });
+
         // 3. Process Data
         const daysWorkedDefault = 15;
         const selectedSucursal = sucursalSelect ? sucursalSelect.value : 'all';
@@ -87,6 +96,64 @@ async function loadPlanillaTable() {
 
             const totalSalary = periodSalary + periodBonus;
             // Dynamic IGSS from Config
+            // NEW: Calculate Loan Deductions
+            // NEW: Calculate Loan Deductions
+            let loanDeduction = 0;
+            let wageAdvance = 0;
+            const appliedLoans = [];
+
+            // Check Period logic for "Mensual" loans (Usually only 2nd quincena)
+            const pStart = document.getElementById('planillaStart').value;
+            const startDay = pStart ? new Date(pStart).getDate() : 1;
+            const isSecondQuincena = startDay > 15;
+
+            if (loansByEmp[doc.id]) {
+                const empLoans = loansByEmp[doc.id];
+                empLoans.forEach(loan => {
+                    // Skip if not approved (Lifecycle check)
+                    // Note: prestamos.js sets approvalStatus: 'approved'.
+                    // If property missing (old loans), assume approved or check 'active'.
+                    if (loan.approvalStatus && loan.approvalStatus !== 'approved') return;
+
+                    const amountToDeduct = loan.installmentAmount;
+                    let deducted = 0;
+
+                    if (loan.type === 'adelanto') {
+                        // Logic: If frequency is set, respect it. If not, deduct full.
+                        // Usually advances are immediate, but user asked for installments.
+                        let apply = true;
+                        if (loan.frequency === 'mensual' && !isSecondQuincena) apply = false;
+
+                        if (apply) {
+                            deducted = amountToDeduct;
+                            // Cap at balance
+                            if (deducted > loan.balance) deducted = loan.balance;
+                            wageAdvance += deducted;
+                        }
+
+                    } else if (loan.type === 'prestamo') {
+                        if (loan.frequency === 'quincenal') {
+                            deducted = amountToDeduct;
+                        } else if (loan.frequency === 'mensual' && isSecondQuincena) {
+                            deducted = amountToDeduct;
+                        }
+
+                        // Cap at balance
+                        if (deducted > loan.balance) deducted = loan.balance;
+
+                        if (deducted > 0) loanDeduction += deducted;
+                    }
+
+                    if (deducted > 0) {
+                        appliedLoans.push({
+                            loanId: loan.id,
+                            amount: deducted,
+                            type: loan.type
+                        });
+                    }
+                });
+            }
+
             const igssPct = (window.rrhhConfig && window.rrhhConfig.get().iggsPercentage ? window.rrhhConfig.get().iggsPercentage : 4.83) / 100;
             const igss = periodSalary * igssPct;
             const isr = 0;
@@ -95,16 +162,17 @@ async function loadPlanillaTable() {
                 id: doc.id,
                 name: emp.fullName,
                 days: daysWorkedDefault,
-                monthlyBase: monthlySalary, // Store base for recalculation
-                monthlyBonusBase: monthlyBonus, // Store base bonus
+                monthlyBase: monthlySalary,
+                monthlyBonusBase: monthlyBonus,
                 salary: periodSalary,
                 bonus: periodBonus,
                 totalSalary: totalSalary,
                 igss: igss,
                 isr: isr,
                 judicial: 0,
-                discount: 0,
-                advance: 0,
+                discount: loanDeduction,
+                advance: wageAdvance,
+                appliedLoans: appliedLoans,
                 isNew: true
             });
         });
@@ -344,7 +412,11 @@ async function savePlanilla() {
 
     try {
         await db.collection('payrolls').doc(payrollId).set(payload);
-        alert("Planilla guardada exitosamente.");
+
+        // NEW: Process Loan Deductions
+        await processLoanPayments(currentPayrollData, payrollId, `${p}/${m}/${y}`);
+
+        alert("Planilla guardada exitosamente y préstamos actualizados.");
         currentLoadedId = payrollId; // Set as current context
     } catch (e) {
         console.error("Error saving payroll:", e);

@@ -350,6 +350,14 @@
                 <i class="fas fa-user-friends"></i>
                 <span>Empleados</span>
             </li>
+            <li class="nav-item" onclick="switchSection('traslados', this)">
+                <i class="fas fa-exchange-alt"></i>
+                <span>Traslados</span>
+            </li>
+            <li class="nav-item" onclick="switchSection('prestamos', this)">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Préstamos</span>
+            </li>
             <li class="nav-item" onclick="switchSection('planillas', this)">
                 <i class="fas fa-file-invoice-dollar"></i>
                 <span>Planillas</span>
@@ -1380,6 +1388,9 @@
                 </div>
         </div>
 
+        <!-- Traslados Section -->
+
+
         <!-- Termination Section (Hidden by default, shown for Inactive) -->
         <div id="terminationSection"
             style="display: none; background-color: #fee2e2; padding: 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #fecaca;">
@@ -1550,6 +1561,267 @@
         </div>
     </div>
 
+    <!-- MODAL DE TRASLADOS -->
+    <div id="transferModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.3s;">
+        <div
+            style="background: white; padding: 30px; border-radius: 12px; width: 500px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.3s;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 1.5rem; margin: 0;">Traslado de Personal</h2>
+                <button onclick="closeTransferModal()"
+                    style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+
+            <form id="transferForm">
+                <input type="hidden" id="transfer_employeeId">
+                <input type="hidden" id="transfer_currentSucursalId">
+                <input type="hidden" id="transfer_currentSucursalName">
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Empleado</label>
+                    <input type="text" id="transfer_employeeName" readonly
+                        style="width: 100%; padding: 10px; background: #f3f4f6; border: 1px solid var(--border); border-radius: 8px;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Tipo de Traslado</label>
+                    <div style="display: flex; gap: 20px;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="transferType" value="fixed" checked
+                                onchange="toggleTransferType()">
+                            Definitivo (Cambio de Sucursal)
+                        </label>
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="transferType" value="temp" onchange="toggleTransferType()">
+                            Temporal (Préstamo)
+                        </label>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Sucursal Destino</label>
+                    <select id="transfer_targetSucursal" required
+                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                        <option value="">Seleccione Sucursal...</option>
+                    </select>
+                </div>
+
+                <div id="transfer_temp_fields"
+                    style="display: none; margin-bottom: 20px; background: #fef3c7; padding: 15px; border-radius: 8px; border: 1px solid #fcd34d;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Fecha Inicio</label>
+                            <input type="date" id="transfer_startDate"
+                                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 4px; font-size: 0.9em;">Fecha Fin (Opcional /
+                                Indefinido)</label>
+                            <input type="date" id="transfer_endDate"
+                                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+                        </div>
+                    </div>
+                    <p style="font-size: 0.8em; color: #92400e; margin-top: 10px; margin-bottom: 0;">* El empleado
+                        seguirá perteneciendo a la sucursal original para fines de planilla, pero operará en la destino.
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Justificación /
+                        Comentarios</label>
+                    <textarea id="transfer_comments" rows="3"
+                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; resize: none;"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeTransferModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Proceder Traslado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Traslados Section (Moved out of Modal) -->
+    <div id="traslados-section" class="hr-section">
+        <div class="card" style="overflow-x: auto; margin-bottom: 30px; border-left: 4px solid #f59e0b;">
+            <h3 style="margin-bottom: 15px; color: #d97706; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-history"></i> Préstamos Temporales Activos
+            </h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background: #fffbeb;">
+                    <tr style="text-align: left; border-bottom: 2px solid #fcd34d;">
+                        <th style="padding: 12px; color: #92400e;">Empleado</th>
+                        <th style="padding: 12px; color: #92400e;">Origen</th>
+                        <th style="padding: 12px; color: #92400e;">Destino Actual</th>
+                        <th style="padding: 12px; color: #92400e;">Desde</th>
+                        <th style="padding: 12px; color: #92400e;">Hasta</th>
+                        <th style="padding: 12px; color: #92400e;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="activeLoansBody">
+                    <tr>
+                        <td colspan="6" style="padding:20px; text-align:center;">Cargando préstamos activos...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="header">
+            <div class="page-title">
+                <h1>Historial Global de Traslados</h1>
+                <p>Registro completo de movimientos de personal entre sucursales.</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="transferSearchInput" placeholder="Buscar empleado..."
+                    oninput="filterTrasladoTable()"
+                    style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); width: 250px;">
+            </div>
+        </div>
+
+        <div class="card" style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead style="background: #f3f4f6;">
+                    <tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                        <th style="padding: 12px;">Fecha</th>
+                        <th style="padding: 12px;">Empleado</th>
+                        <th style="padding: 12px;">Tipo</th>
+                        <th style="padding: 12px;">Origen</th>
+                        <th style="padding: 12px;">Destino</th>
+                        <th style="padding: 12px;">Comentarios</th>
+                        <th style="padding: 12px;">Usuario</th>
+                    </tr>
+                </thead>
+                <tbody id="globalTransfersBody_v2">
+                    <tr>
+                        <td colspan="7" style="padding:20px; text-align:center;">Cargando historial...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PRESTAMOS SECTION -->
+    <div id="prestamos-section" class="hr-section" style="width: 90%; max-width: 1100px; margin: 0 auto;">
+        <div class="header">
+            <div class="page-title">
+                <h1>Préstamos y Anticipos</h1>
+                <p>Gestión de adelantos de salario y préstamos a empleados</p>
+            </div>
+            <button class="btn btn-primary" onclick="openLoanModal()">
+                <i class="fas fa-plus"></i> Nuevo Préstamo/Anticipo
+            </button>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                <div style="display:flex; gap:10px;">
+                    <select id="loanFilterBranch" class="form-select" onchange="loadLoans()"
+                        style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+                        <option value="all">Todas las Sucursales</option>
+                    </select>
+                    <select id="loanFilterType" class="form-select" onchange="loadLoans()"
+                        style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+                        <option value="all">Todos los Tipos</option>
+                        <option value="adelanto">Adelantos</option>
+                        <option value="prestamo">Préstamos</option>
+                    </select>
+                </div>
+                <input type="text" id="loanSearch" placeholder="Buscar empleado..." onkeyup="loadLoans()"
+                    style="padding: 8px; border-radius: 8px; border: 1px solid var(--border); width: 250px;">
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                            <th style="padding: 12px; white-space: nowrap;">Empleado</th>
+                            <th style="padding: 12px; white-space: nowrap;">Sucursal</th>
+                            <th style="padding: 12px; white-space: nowrap;">Tipo</th>
+                            <th style="padding: 12px; white-space: nowrap;">Monto</th>
+                            <th style="padding: 12px; white-space: nowrap;">Saldo</th>
+                            <th style="padding: 12px; white-space: nowrap;">Cuotas</th>
+                            <th style="padding: 12px; white-space: nowrap;">Estado</th>
+                            <th style="padding: 12px; white-space: nowrap;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="loansTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align:center; padding:20px;">Cargando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            </table>
+        </div>
+    </div>
+
+    <!-- LOAN MODAL -->
+    <div id="loanModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; z-index: 1000;">
+        <div class="card" style="width: 500px; max-width: 90%; margin: 0; max-height: 90vh; overflow-y: auto;">
+            <h2 style="margin-bottom: 20px; color: var(--primary);">Registrar Préstamo/Anticipo</h2>
+            <form id="loanForm" style="display: flex; flex-direction: column; gap: 15px;">
+                <input type="hidden" id="loan_id">
+
+                <div>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Empleado</label>
+                    <select id="loan_employee" required
+                        style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                        <option value="">Cargando empleados...</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Tipo</label>
+                        <select id="loan_type" required
+                            style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;"
+                            onchange="toggleLoanFields()">
+                            <option value="adelanto">Adelanto Salarial</option>
+                            <option value="prestamo">Préstamo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Monto (Q)</label>
+                        <input type="number" id="loan_amount" required min="1" step="0.01"
+                            style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                    </div>
+                </div>
+
+                <!-- Fields for LOANS only -->
+                <div id="loan_details"
+                    style="display:none; border: 1px solid var(--border); padding: 10px; border-radius: 8px; background: #f8fafc;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Cuotas</label>
+                            <input type="number" id="loan_installments" value="1" min="1"
+                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                        </div>
+                        <div>
+                            <label style="display:block; margin-bottom:5px; font-weight:600;">Frecuencia</label>
+                            <select id="loan_frequency"
+                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                                <option value="quincenal">Quincenal (Cada pago)</option>
+                                <option value="mensual">Mensual (Fin de Mes)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Comentarios / Motivo</label>
+                    <textarea id="loan_comments" rows="3"
+                        style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeLoanModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
@@ -1570,8 +1842,10 @@
             if (sectionId === 'empleados') loadEmployees();
             if (sectionId === 'dashboard') initDashboard();
             if (sectionId === 'sucursales') loadSucursales();
+            if (sectionId === 'traslados') loadTraslados();
             if (sectionId === 'config') window.rrhhConfig.load();
             if (sectionId === 'vacaciones') initVacaciones();
+            if (sectionId === 'prestamos') loadLoans();
             // planillas does not need auto-load, user clicks 'Generar'
         }
 
@@ -1602,8 +1876,10 @@
     <script src="liquidaciones.js"></script>
     <script src="puestos.js"></script>
     <script src="empleados.js"></script>
+    <script src="traslados.js"></script>
     <script src="sucursales.js"></script>
-    <script src="dashboard.js"></script>
+    <script src="prestamos.js"></script>
+    <script src="dashboard.js?v=20240107_debug"></script>
 </body>
 
 </html>

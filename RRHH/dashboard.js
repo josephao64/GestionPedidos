@@ -57,8 +57,29 @@ function updateDashboardUI(employees, sucursales, positions, sucursalesSnap, pos
     // Filter employees by branch if selected
     // STRICT FILTER: Exclude employees without a name (ghost records)
     let activeEmployees = employees.filter(e => e.status !== 'inactive' && e.fullName && e.fullName.trim() !== '');
+
+    // PRE-PROCESSING: Determine Effective Branch (Physical/Quota Location)
+    activeEmployees = activeEmployees.map(e => {
+        const isTemp = e.isTempTransfer === true || e.isTempTransfer === 'true';
+        const tempId = e.tempSucursalId ? String(e.tempSucursalId) : null;
+        let effective = e.sucursalId;
+
+        if (isTemp && tempId) {
+            effective = tempId;
+        }
+
+        if (e.fullName.includes('Carlos')) {
+            console.log(`[Dashboard Debug] ${e.fullName}: Temp=${isTemp}, TempID=${tempId}, Effective=${effective}`);
+        }
+
+        return {
+            ...e,
+            effectiveBranchId: effective
+        };
+    });
+
     if (selectedBranchId !== 'all') {
-        activeEmployees = activeEmployees.filter(e => e.sucursalId === selectedBranchId);
+        activeEmployees = activeEmployees.filter(e => e.effectiveBranchId === selectedBranchId);
     }
 
     // Filter sucursales if branch selected
@@ -70,7 +91,7 @@ function updateDashboardUI(employees, sucursales, positions, sucursalesSnap, pos
 
     filteredSucursales.forEach(sucursal => {
         const quotas = sucursal.quotas || {};
-        const branchEmployees = activeEmployees.filter(e => e.sucursalId === sucursal.id);
+        const branchEmployees = activeEmployees.filter(e => e.effectiveBranchId === sucursal.id);
 
         Object.values(quotas).forEach(quota => {
             totalQuotas += quota;
@@ -234,7 +255,7 @@ function renderDetailedTables(activeEmployees, sucursales, positions, selectedBr
     `;
 
     sucursales.sort((a, b) => a.name.localeCompare(b.name)).forEach(s => {
-        const branchEmployees = activeEmployees.filter(e => e.sucursalId === s.id);
+        const branchEmployees = activeEmployees.filter(e => e.effectiveBranchId === s.id);
         const employeeCount = branchEmployees.length;
 
         // Calculate quotas for this branch
@@ -288,10 +309,10 @@ function renderCharts(activeEmployees, sucursalDocs, positionDocs, selectedBranc
 
     if (selectedBranchId === 'all') {
         chartLabels = sucursales.map(s => s.name);
-        chartData = sucursales.map(s => activeEmployees.filter(e => e.sucursalId === s.id).length);
+        chartData = sucursales.map(s => activeEmployees.filter(e => e.effectiveBranchId === s.id).length);
     } else {
         // Show position breakdown for this branch
-        const branchEmployees = activeEmployees.filter(e => e.sucursalId === selectedBranchId);
+        const branchEmployees = activeEmployees.filter(e => e.effectiveBranchId === selectedBranchId);
         const branchPositions = new Set(branchEmployees.map(e => e.positionId).filter(Boolean));
 
         branchPositions.forEach(pId => {
@@ -336,7 +357,7 @@ function renderCharts(activeEmployees, sucursalDocs, positionDocs, selectedBranc
 
     const datasets = positions.map((p, idx) => {
         const data = chartSucursales.map(s => {
-            return activeEmployees.filter(e => e.sucursalId === s.id && e.positionId === p.id).length;
+            return activeEmployees.filter(e => e.effectiveBranchId === s.id && e.positionId === p.id).length;
         });
 
         return {

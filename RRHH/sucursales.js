@@ -96,8 +96,9 @@ function renderOrgChart() {
     orgData.branches.forEach(b => counts[b.id] = 0);
 
     orgData.employees.forEach(e => {
-        if (e.sucursalId && counts[e.sucursalId] !== undefined) {
-            counts[e.sucursalId]++;
+        const effectiveBranchId = (e.isTempTransfer && e.tempSucursalId) ? e.tempSucursalId : e.sucursalId;
+        if (effectiveBranchId && counts[effectiveBranchId] !== undefined) {
+            counts[effectiveBranchId]++;
         }
     });
 
@@ -138,7 +139,8 @@ function renderOrgGrid() {
     const counts = {};
     orgData.branches.forEach(b => counts[b.id] = 0);
     orgData.employees.forEach(e => {
-        if (e.sucursalId) counts[e.sucursalId] = (counts[e.sucursalId] || 0) + 1;
+        const effectiveBranchId = (e.isTempTransfer && e.tempSucursalId) ? e.tempSucursalId : e.sucursalId;
+        if (effectiveBranchId) counts[effectiveBranchId] = (counts[effectiveBranchId] || 0) + 1;
     });
 
     orgData.branches.forEach(b => {
@@ -213,7 +215,8 @@ async function loadSucursales() {
     // Emp counts for table
     const counts = {};
     orgData.employees.forEach(e => {
-        if (e.sucursalId) counts[e.sucursalId] = (counts[e.sucursalId] || 0) + 1;
+        const effectiveBranchId = (e.isTempTransfer && e.tempSucursalId) ? e.tempSucursalId : e.sucursalId;
+        if (effectiveBranchId) counts[effectiveBranchId] = (counts[effectiveBranchId] || 0) + 1;
     });
 
     orgData.branches.forEach(s => {
