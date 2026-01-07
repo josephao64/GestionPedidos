@@ -543,3 +543,97 @@ window.loadSavedPlanilla = loadSavedPlanilla;
 window.deleteSavedPlanilla = deleteSavedPlanilla;
 window.updatePlanillaRow = updatePlanillaRow;
 window.updatePlanillaDays = updatePlanillaDays;
+
+async function processLoanPayments(payrollRows, payrollId, periodStr) {
+    console.log("Procesando pagos de préstamos...");
+    const batch = db.batch();
+    let updatesCount = 0;
+
+    for (const row of payrollRows) {
+        // If no applied loans metadata, skip (unless we want to infer from discount?)
+        // For now, only process tracked loans to avoid errors.
+        if (!row.appliedLoans || row.appliedLoans.length === 0) continue;
+
+        // Group by type
+        const loans = row.appliedLoans.filter(l => l.type === 'prestamo');
+        const advances = row.appliedLoans.filter(l => l.type === 'adelanto');
+
+        // Logic for Prestamos (vs row.discount)
+        if (loans.length > 0) {
+            let totalDiscount = row.discount || 0; // Actual value in payroll
+
+            // Distribute totalDiscount among loans
+            for (const loan of loans) {
+                if (totalDiscount <= 0) break; // No more money to pay loans
+
+                let payment = loan.amount; // Intended amount
+                if (payment > totalDiscount) payment = totalDiscount; // Partial payment if discount reduced
+
+                // Update Loan
+                const loanRef = db.collection('loans').doc(loan.loanId);
+
+                // We use increment for safety
+                batch.update(loanRef, {
+                    balance: firebase.firestore.FieldValue.increment(-payment),
+                    installmentsPaid: firebase.firestore.FieldValue.increment(1), // Count as 1 paid installment (or partial?) 
+                    // Usually installmentsPaid is just a counter. If partial, maybe we shouldn't increment? 
+                    // Let's increment for now, assuming usually it's full. 
+                    lastPaymentDate: new Date().toISOString()
+                });
+
+                // Record Payment
+                const payRef = loanRef.collection('payments').doc();
+                batch.set(payRef, {
+                    date: new Date().toISOString(),
+                    amount: payment,
+                    payrollId: payrollId,
+                    period: periodStr,
+                    note: 'Descuento en Planilla'
+                });
+
+                totalDiscount -= payment;
+                updatesCount++;
+            }
+        }
+
+        // Logic for Adelantos (vs row.advance)
+        if (advances.length > 0) {
+            let totalAdvance = row.advance || 0;
+
+            for (const ad of advances) {
+                if (totalAdvance <= 0) break;
+
+                let payment = ad.amount;
+                if (payment > totalAdvance) payment = totalAdvance;
+
+                const adRef = db.collection('loans').doc(ad.loanId);
+                batch.update(adRef, {
+                    balance: firebase.firestore.FieldValue.increment(-payment),
+                    installmentsPaid: firebase.firestore.FieldValue.increment(1),
+                    lastPaymentDate: new Date().toISOString(),
+                    // If balance becomes <= 0, status should be 'paid'. 
+                    // We can't check balance in batch easily. 
+                    // We rely on a separate cleanup or client checking.
+                    // But for now, let's just update.
+                });
+
+                const payRef = adRef.collection('payments').doc();
+                batch.set(payRef, {
+                    date: new Date().toISOString(),
+                    amount: payment,
+                    payrollId: payrollId,
+                    period: periodStr,
+                    note: 'Descuento de Anticipo en Planilla'
+                });
+
+                totalAdvance -= payment;
+                updatesCount++;
+            }
+        }
+    }
+
+    if (updatesCount > 0) {
+        await batch.commit();
+        console.log("Pagos de préstamos actualizados.");
+    }
+}

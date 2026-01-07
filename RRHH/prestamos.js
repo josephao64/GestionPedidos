@@ -61,7 +61,13 @@ function renderLoansTable() {
     let filtered = allLoans.filter(l => {
         if (filterBranch !== 'all' && l.sucursalId !== filterBranch) return false;
         if (filterType !== 'all' && l.type !== filterType) return false;
-        if (search && !l.employeeName.toLowerCase().includes(search)) return false;
+        if (filterBranch !== 'all' && l.sucursalId !== filterBranch) return false;
+        if (filterType !== 'all' && l.type !== filterType) return false;
+
+        if (search) {
+            const searchSource = `${l.employeeName} ${l.sucursalName || ''} ${l.employeeCode || ''}`.toLowerCase();
+            if (!searchSource.includes(search)) return false;
+        }
         return true;
     });
 
@@ -86,17 +92,21 @@ function renderLoansTable() {
         // Action Buttons
         let actions = '';
 
+        // Print Request (Always Available)
+        actions += `<button class="btn btn-sm btn-info" onclick="printRequestForm('${loan.id}')" title="Exportar Solicitud"><i class="fas fa-file-alt"></i></button>`;
+
         if (loan.approvalStatus === 'pending') {
-            // Approve/Reject + Print Request
+            // Approve/Reject
             actions += `
                 <button class="btn btn-sm btn-success" onclick="approveLoan('${loan.id}', true)" title="Aprobar"><i class="fas fa-check"></i></button>
                 <button class="btn btn-sm btn-warning" onclick="approveLoan('${loan.id}', false)" title="Rechazar"><i class="fas fa-times"></i></button>
-                <button class="btn btn-sm btn-info" onclick="printRequestForm('${loan.id}')" title="Imprimir Solicitud"><i class="fas fa-file-alt"></i></button>
             `;
-        } else if (loan.approvalStatus === 'approved') {
-            // Print Authorization
+        }
+
+        // Print Authorization/Voucher (If Approved or Paid or Active)
+        if (loan.approvalStatus === 'approved' || loan.status === 'active' || loan.status === 'paid') {
             actions += `
-                <button class="btn btn-sm btn-primary" onclick="printAuthLetter('${loan.id}')" title="Carta Autorización"><i class="fas fa-file-contract"></i></button>
+                <button class="btn btn-sm btn-primary" onclick="printAuthLetter('${loan.id}')" title="Exportar Comprobante"><i class="fas fa-file-contract"></i></button>
             `;
         }
 
@@ -153,6 +163,7 @@ async function openLoanModal() {
             const option = document.createElement('option');
             option.value = e.id;
             option.dataset.name = e.fullName;
+            option.dataset.code = e.employeeCode || '';
             option.dataset.sucursalId = (e.isTempTransfer && e.tempSucursalId) ? e.tempSucursalId : e.sucursalId;
             option.dataset.sucursalName = branch;
             option.textContent = `${e.fullName} (${branch})`;
@@ -191,6 +202,7 @@ document.getElementById('loanForm').addEventListener('submit', async (e) => {
     const empSelect = document.getElementById('loan_employee');
     const empId = empSelect.value;
     const empName = empSelect.options[empSelect.selectedIndex].dataset.name;
+    const empCode = empSelect.options[empSelect.selectedIndex].dataset.code || '';
     const sucursalId = empSelect.options[empSelect.selectedIndex].dataset.sucursalId;
     const sucursalName = empSelect.options[empSelect.selectedIndex].dataset.sucursalName;
 
@@ -216,6 +228,7 @@ document.getElementById('loanForm').addEventListener('submit', async (e) => {
         const payload = {
             employeeId: empId,
             employeeName: empName,
+            employeeCode: empCode,
             sucursalId: sucursalId,
             sucursalName: sucursalName,
             type: type,
