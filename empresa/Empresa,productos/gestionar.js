@@ -1,420 +1,422 @@
-// Inicializa Firebase
-var firebaseConfig = {
-    apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
-    authDomain: "logisticdb-2e63c.firebaseapp.com",
-    projectId: "logisticdb-2e63c",
-    storageBucket: "logisticdb-2e63c.appspot.com",
-    messagingSenderId: "917523682093",
-    appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
-  };
-  
-  firebase.initializeApp(firebaseConfig);
-  var db = firebase.firestore();
-  
-  function showProviders() {
-    document.getElementById('providersContainer').style.display = 'block';
-    document.getElementById('productsContainer').style.display = 'none';
-    loadProviders();
-  }
-  
-  function showProducts() {
-    document.getElementById('providersContainer').style.display = 'none';
-    document.getElementById('productsContainer').style.display = 'block';
-    loadProviderOptions(); // Cargar proveedores para filtro en productos
-    loadProducts(); // Cargar productos
-  }
-  
-  function showAddProviderForm() {
-    document.getElementById('addProviderModal').style.display = 'block';
-  }
-  
-  function showAddProductForm() {
-    document.getElementById('addProductModal').style.display = 'block';
-    loadProviderOptions(); // Cargar proveedores en el dropdown
-  }
-  
-  function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-  }
-  
-  async function addProvider() {
+// gestionar.js - SIA Rediseño Corporativo
+// db is already initialized in connection.js
+
+// Global State
+let providersData = [];
+let productsData = [];
+
+// DOM Elements
+const providersGrid = document.getElementById('providersGrid');
+const productsGrid = document.getElementById('productsGrid');
+const providerSearchInput = document.getElementById('providerSearchInput');
+const productSearchInput = document.getElementById('productSearchInput');
+const productProviderFilter = document.getElementById('productProviderFilter');
+const providerSelect = document.getElementById('providerSelect');
+
+// -- Initialization --
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+});
+
+async function init() {
+    await loadInitialData();
+    renderDashboard();
+}
+
+async function loadInitialData() {
     try {
-        var providerName = document.getElementById('providerName').value;
-        var providerAddress = document.getElementById('providerAddress').value;
-        var providerPhone = document.getElementById('providerPhone').value;
-        var providerEmail = document.getElementById('providerEmail').value;
-        var providerPaymentTerms = document.getElementById('providerPaymentTerms').value;
-        var sellerName = document.getElementById('sellerName').value;
-        var sellerPhone = document.getElementById('sellerPhone').value;
-        var chiefSellerName = document.getElementById('chiefSellerName').value;
-        var chiefSellerPhone = document.getElementById('chiefSellerPhone').value;
-        var creditPersonName = document.getElementById('creditPersonName').value;
-        var creditPersonPhone = document.getElementById('creditPersonPhone').value;
-        var providerType = document.getElementById('providerType').value;
-        var preferredPaymentMethod = document.getElementById('preferredPaymentMethod').value;
-        var additionalNotes = document.getElementById('additionalNotes').value;
-  
-        if (!providerName) throw new Error('El nombre del proveedor no puede estar vacío');
-  
-        await db.collection('providers').add({
-            name: providerName,
-            address: providerAddress,
-            phone: providerPhone,
-            email: providerEmail,
-            paymentTerms: providerPaymentTerms,
-            sellerName: sellerName,
-            sellerPhone: sellerPhone,
-            chiefSellerName: chiefSellerName,
-            chiefSellerPhone: chiefSellerPhone,
-            creditPersonName: creditPersonName,
-            creditPersonPhone: creditPersonPhone,
-            type: providerType,
-            preferredPaymentMethod: preferredPaymentMethod,
-            additionalNotes: additionalNotes
-        });
-  
+        const [provSnap, prodSnap] = await Promise.all([
+            db.collection('providers').get(),
+            db.collection('products').get()
+        ]);
+
+        providersData = provSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        productsData = prodSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Sort data
+        providersData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        productsData.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        populateProviderDropdowns();
+    } catch (error) {
+        console.error("Initialization error:", error);
+    }
+}
+
+// -- Tab Management --
+function switchTab(tab) {
+    // Buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+
+    // Views
+    document.querySelectorAll('.tab-view').forEach(view => view.style.display = 'none');
+    document.getElementById(`view-${tab}`).style.display = 'block';
+
+    // Load content
+    if (tab === 'resumen') renderDashboard();
+    if (tab === 'proveedores') renderProviders();
+    if (tab === 'productos') renderProducts();
+}
+
+// -- Dashboard --
+function renderDashboard() {
+    document.getElementById('count-providers').textContent = providersData.length;
+    document.getElementById('count-products').textContent = productsData.length;
+
+    renderChart();
+}
+
+function renderChart() {
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+
+    // Count products per provider
+    const counts = {};
+    productsData.forEach(p => {
+        const provider = providersData.find(prov => prov.id === p.providerId);
+        const name = provider ? provider.name : 'Unknown';
+        counts[name] = (counts[name] || 0) + 1;
+    });
+
+    const labels = Object.keys(counts);
+    const data = Object.values(counts);
+
+    // Destroy existing chart if any
+    if (window.dashChart) window.dashChart.destroy();
+
+    window.dashChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Productos por Proveedor',
+                data: data,
+                backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                borderColor: 'rgba(79, 70, 229, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+
+// -- Provider Management --
+function renderProviders() {
+    providersGrid.innerHTML = '';
+    const filter = providerSearchInput.value.toLowerCase();
+
+    const filtered = providersData.filter(p =>
+        (p.name || '').toLowerCase().includes(filter) ||
+        (p.sellerName || '').toLowerCase().includes(filter)
+    );
+
+    if (filtered.length === 0) {
+        providersGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No se encontraron proveedores.</div>`;
+        return;
+    }
+
+    filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+            <div class="item-header">
+                <h3 class="item-title">${p.name}</h3>
+                <span class="item-badge">${(p.type || 'General')}</span>
+            </div>
+            <div class="item-details">
+                <div class="detail-row"><i class="fas fa-map-marker-alt"></i> ${p.address || 'N/A'}</div>
+                <div class="detail-row"><i class="fas fa-phone"></i> ${p.phone || 'N/A'}</div>
+                <div class="detail-row"><i class="fas fa-user-tie"></i> ${p.sellerName || 'N/A'} (${p.sellerPhone || ''})</div>
+                <div class="detail-row"><i class="fas fa-credit-card"></i> ${p.preferredPaymentMethod || 'N/A'} - ${p.paymentTerms || ''}</div>
+            </div>
+            <div class="item-actions">
+                <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="viewProviderDetails('${p.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="showEditProviderForm('${p.id}')">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" style="padding: 8px 12px;" onclick="deleteProvider('${p.id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        providersGrid.appendChild(card);
+    });
+}
+
+function filterProviders() {
+    renderProviders();
+}
+
+async function addProvider() {
+    // Handled by form submission in redesigned version
+}
+
+// Fixed logic for modals
+function showModal(id) {
+    const modal = document.getElementById(id);
+    modal.style.display = 'flex';
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    modal.style.display = 'none';
+    if (id === 'addProviderModal') document.getElementById('addProviderForm').reset();
+    if (id === 'addProductModal') {
+        document.getElementById('productForm').reset();
+        document.getElementById('productModalTitle').textContent = 'Nuevo Producto';
+        document.getElementById('editProductId').value = '';
+    }
+}
+
+// -- Form Listeners --
+document.getElementById('addProviderForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        name: document.getElementById('providerName').value,
+        phone: document.getElementById('providerPhone').value,
+        email: document.getElementById('providerEmail').value,
+        address: document.getElementById('providerAddress').value,
+        sellerName: document.getElementById('sellerName').value,
+        sellerPhone: document.getElementById('sellerPhone').value,
+        preferredPaymentMethod: document.getElementById('preferredPaymentMethod').value,
+        paymentTerms: document.getElementById('providerPaymentTerms').value,
+        additionalNotes: document.getElementById('additionalNotes').value
+    };
+
+    try {
+        Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        await db.collection('providers').add(data);
+        await loadInitialData();
         closeModal('addProviderModal');
-        loadProviders();
+        Swal.fire('Éxito', 'Proveedor guardado correctamente', 'success');
+        if (document.getElementById(`tab-proveedores`).classList.contains('active')) renderProviders();
     } catch (error) {
-        console.error('Error al agregar proveedor:', error);
-        alert('Error al agregar proveedor: ' + error.message);
+        Swal.fire('Error', error.message, 'error');
     }
-  }
-  
-  async function loadProviders() {
-    try {
-        var providersSnapshot = await db.collection('providers').get();
-        var providersTableBody = document.getElementById('providersTable').getElementsByTagName('tbody')[0];
-  
-        providersTableBody.innerHTML = '';
-  
-        providersSnapshot.forEach(function(doc) {
-            var provider = doc.data();
-            var row = providersTableBody.insertRow();
-            var cell1 = row.insertCell(0);
-            var cell2 = row.insertCell(1);
-            cell1.textContent = provider.name;
-            cell2.innerHTML = `
-                <button onclick="viewProviderDetails('${doc.id}')">Ver Detalles</button>
-                <button onclick="showEditProviderForm('${doc.id}')">Editar</button>
-                <button onclick="deleteProvider('${doc.id}')">Eliminar</button>`;
-        });
-    } catch (error) {
-        console.error('Error al cargar proveedores:', error);
-        alert('Error al cargar proveedores: ' + error.message);
+});
+
+// -- Product Management --
+function renderProducts() {
+    productsGrid.innerHTML = '';
+    const search = productSearchInput.value.toLowerCase();
+    const provFilter = productProviderFilter.value;
+
+    const filtered = productsData.filter(p => {
+        const matchesSearch = (p.name || '').toLowerCase().includes(search) || (p.presentation || '').toLowerCase().includes(search);
+        const matchesProv = !provFilter || p.providerId === provFilter;
+        return matchesSearch && matchesProv;
+    });
+
+    if (filtered.length === 0) {
+        productsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">No se encontraron productos.</div>`;
+        return;
     }
-  }
-  
-  async function viewProviderDetails(id) {
+
+    filtered.forEach(p => {
+        const provider = providersData.find(prov => prov.id === p.providerId);
+        const providerName = provider ? provider.name : 'Desconocido';
+
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+            <div class="item-header">
+                <div>
+                    <h3 class="item-title">${p.name}</h3>
+                    <div style="font-size: 0.8rem; color: var(--primary); font-weight: 600; margin-top: 4px;">
+                        ${providerName}
+                    </div>
+                </div>
+                <i class="fas fa-box" style="color: #cbd5e1; font-size: 1.25rem;"></i>
+            </div>
+            <div class="item-details">
+                <div class="detail-row"><i class="fas fa-layer-group"></i> ${p.presentation || 'Sin presentación'}</div>
+            </div>
+            <div class="item-actions">
+                <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="showEditProductForm('${p.id}')">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+                <button class="btn btn-danger btn-sm" style="padding: 8px 12px;" onclick="deleteProduct('${p.id}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        productsGrid.appendChild(card);
+    });
+}
+
+function filterProducts() {
+    renderProducts();
+}
+
+function populateProviderDropdowns() {
+    providerSelect.innerHTML = '<option value="">Seleccione un proveedor</option>';
+    productProviderFilter.innerHTML = '<option value="">Todos los Proveedores</option>';
+
+    providersData.forEach(p => {
+        const opt = `<option value="${p.id}">${p.name}</option>`;
+        providerSelect.innerHTML += opt;
+        productProviderFilter.innerHTML += opt;
+    });
+}
+
+document.getElementById('productForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editProductId').value;
+    const data = {
+        name: document.getElementById('productName').value,
+        presentation: document.getElementById('productPresentation').value,
+        providerId: document.getElementById('providerSelect').value
+    };
+
     try {
-        var doc = await db.collection('providers').doc(id).get();
-        if (doc.exists) {
-            var provider = doc.data();
-            var details = `
-                Nombre: ${provider.name}<br>
-                Dirección: ${provider.address}<br>
-                Teléfono: ${provider.phone}<br>
-                Correo Electrónico: ${provider.email}<br>
-                Términos de Pago: ${provider.paymentTerms}<br>
-                Nombre del Vendedor: ${provider.sellerName}<br>
-                Teléfono del Vendedor: ${provider.sellerPhone}<br>
-                Nombre del Jefe del Vendedor: ${provider.chiefSellerName}<br>
-                Teléfono del Jefe del Vendedor: ${provider.chiefSellerPhone}<br>
-                Nombre de la Persona de Créditos: ${provider.creditPersonName}<br>
-                Teléfono de la Persona de Créditos: ${provider.creditPersonPhone}<br>
-                Tipo de Proveedor: ${provider.type}<br>
-                Método de Pago Preferido: ${provider.preferredPaymentMethod}<br>
-                Notas Adicionales: ${provider.additionalNotes}<br>
-            `;
-            document.getElementById('providerDetails').innerHTML = details;
-            document.getElementById('providerDetailsModal').style.display = 'block';
+        Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        if (id) {
+            await db.collection('products').doc(id).update(data);
         } else {
-            alert('No se encontraron detalles del proveedor.');
+            await db.collection('products').add(data);
         }
+
+        await loadInitialData();
+        closeModal('addProductModal');
+        Swal.fire('Éxito', 'Producto guardado correctamente', 'success');
+        if (document.getElementById(`tab-productos`).classList.contains('active')) renderProducts();
     } catch (error) {
-        console.error('Error al obtener detalles del proveedor:', error);
-        alert('Error al obtener detalles del proveedor: ' + error.message);
+        Swal.fire('Error', error.message, 'error');
     }
-  }
-  
-  async function showEditProviderForm(id) {
-    try {
-        var doc = await db.collection('providers').doc(id).get();
-        if (doc.exists) {
-            var provider = doc.data();
-            document.getElementById('editProviderId').value = id;
-            document.getElementById('editProviderName').value = provider.name;
-            document.getElementById('editProviderAddress').value = provider.address;
-            document.getElementById('editProviderPhone').value = provider.phone;
-            document.getElementById('editProviderEmail').value = provider.email;
-            document.getElementById('editProviderPaymentTerms').value = provider.paymentTerms;
-            document.getElementById('editSellerName').value = provider.sellerName;
-            document.getElementById('editSellerPhone').value = provider.sellerPhone;
-            document.getElementById('editChiefSellerName').value = provider.chiefSellerName;
-            document.getElementById('editChiefSellerPhone').value = provider.chiefSellerPhone;
-            document.getElementById('editCreditPersonName').value = provider.creditPersonName;
-            document.getElementById('editCreditPersonPhone').value = provider.creditPersonPhone;
-            document.getElementById('editProviderType').value = provider.type;
-            document.getElementById('editPreferredPaymentMethod').value = provider.preferredPaymentMethod;
-            document.getElementById('editAdditionalNotes').value = provider.additionalNotes;
-            document.getElementById('editProviderModal').style.display = 'block';
-        } else {
-            alert('Proveedor no encontrado.');
-        }
-    } catch (error) {
-        console.error('Error al cargar datos del proveedor:', error);
-        alert('Error al cargar datos del proveedor: ' + error.message);
-    }
-  }
-  
-  async function updateProvider() {
-    try {
-        var id = document.getElementById('editProviderId').value;
-        var updatedProvider = {
-            name: document.getElementById('editProviderName').value,
-            address: document.getElementById('editProviderAddress').value,
-            phone: document.getElementById('editProviderPhone').value,
-            email: document.getElementById('editProviderEmail').value,
-            paymentTerms: document.getElementById('editProviderPaymentTerms').value,
-            sellerName: document.getElementById('editSellerName').value,
-            sellerPhone: document.getElementById('editSellerPhone').value,
-            chiefSellerName: document.getElementById('editChiefSellerName').value,
-            chiefSellerPhone: document.getElementById('editChiefSellerPhone').value,
-            creditPersonName: document.getElementById('editCreditPersonName').value,
-            creditPersonPhone: document.getElementById('editCreditPersonPhone').value,
-            type: document.getElementById('editProviderType').value,
-            preferredPaymentMethod: document.getElementById('editPreferredPaymentMethod').value,
-            additionalNotes: document.getElementById('editAdditionalNotes').value
+});
+
+// -- Edit/Delete/View Helpers --
+async function showEditProviderForm(id) {
+    const p = providersData.find(item => item.id === id);
+    if (!p) return;
+
+    // We reuse addProviderModal for editing in this simplified redesign, but for consistency with original fields:
+    // Actually, let's just use Swal for quick edit or implement a dedicated modal.
+    // Given the variety of fields, Swal.fire with custom HTML is better for "Quick Edit"
+    // or just populate the existing modal.
+
+    document.getElementById('providerName').value = p.name || '';
+    document.getElementById('providerPhone').value = p.phone || '';
+    document.getElementById('providerEmail').value = p.email || '';
+    document.getElementById('providerAddress').value = p.address || '';
+    document.getElementById('sellerName').value = p.sellerName || '';
+    document.getElementById('sellerPhone').value = p.sellerPhone || '';
+    document.getElementById('preferredPaymentMethod').value = p.preferredPaymentMethod || '';
+    document.getElementById('providerPaymentTerms').value = p.paymentTerms || '';
+    document.getElementById('additionalNotes').value = p.additionalNotes || '';
+
+    // Change title and button for submt
+    document.querySelector('#addProviderModal h2').textContent = 'Editar Proveedor';
+    const form = document.getElementById('addProviderForm');
+
+    // Create a one-time submit handler to update instead of add
+    const originalHandler = form.onsubmit;
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const updatedData = {
+            name: document.getElementById('providerName').value,
+            phone: document.getElementById('providerPhone').value,
+            email: document.getElementById('providerEmail').value,
+            address: document.getElementById('providerAddress').value,
+            sellerName: document.getElementById('sellerName').value,
+            sellerPhone: document.getElementById('sellerPhone').value,
+            preferredPaymentMethod: document.getElementById('preferredPaymentMethod').value,
+            paymentTerms: document.getElementById('providerPaymentTerms').value,
+            additionalNotes: document.getElementById('additionalNotes').value
         };
-  
-        await db.collection('providers').doc(id).update(updatedProvider);
-  
-        closeModal('editProviderModal');
-        loadProviders();
-    } catch (error) {
-        console.error('Error al actualizar proveedor:', error);
-        alert('Error al actualizar proveedor: ' + error.message);
+        try {
+            await db.collection('providers').doc(id).update(updatedData);
+            await loadInitialData();
+            closeModal('addProviderModal');
+            Swal.fire('Actualizado', 'Datos actualizados', 'success');
+            renderProviders();
+            form.onsubmit = null; // Reset
+        } catch (e) { Swal.fire('Error', e.message, 'error'); }
     }
-  }
-  
-  async function deleteProvider(id) {
-    if (confirm('¿Estás seguro de que deseas eliminar este proveedor?')) {
+
+    showModal('addProviderModal');
+}
+
+async function deleteProvider(id) {
+    const result = await Swal.fire({
+        title: '¿Eliminar proveedor?',
+        text: "Esto no se puede deshacer",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--danger)',
+        confirmButtonText: 'Sí, eliminar'
+    });
+
+    if (result.isConfirmed) {
         try {
             await db.collection('providers').doc(id).delete();
-            loadProviders();
-        } catch (error) {
-            console.error('Error al eliminar proveedor:', error);
-            alert('Error al eliminar proveedor: ' + error.message);
-        }
+            await loadInitialData();
+            renderProviders();
+            Swal.fire('Eliminado', 'El proveedor ha sido quitado', 'success');
+        } catch (e) { Swal.fire('Error', e.message, 'error'); }
     }
-  }
-  
-  async function loadProviderOptions() {
-    try {
-        var providerSelect = document.getElementById('providerSelect');
-        var providerFilterSelect = document.getElementById('productProviderFilter');
-        providerSelect.innerHTML = ''; // Limpiar el dropdown antes de cargar los proveedores
-        providerFilterSelect.innerHTML = '<option value="">Todos los Proveedores</option>'; // Limpiar y resetear el filtro de proveedor
-  
-        var providersSnapshot = await db.collection('providers').get();
-        providersSnapshot.forEach(function(doc) {
-            var provider = doc.data();
-            var option = document.createElement('option');
-            option.value = doc.id;
-            option.textContent = provider.name;
-            providerSelect.appendChild(option);
-            providerFilterSelect.appendChild(option.cloneNode(true));
-        });
-    } catch (error) {
-        console.error('Error al cargar proveedores en el dropdown:', error);
-        alert('Error al cargar proveedores en el dropdown: ' + error.message);
-    }
-  }
-  
-  async function addProduct() {
-    try {
-        var productName = document.getElementById('productName').value;
-        var productPresentation = document.getElementById('productPresentation').value;
-        var providerSelect = document.getElementById('providerSelect');
-        var providerId = providerSelect.value;
-  
-        if (!productName) throw new Error('El nombre del producto no puede estar vacío');
-        if (!productPresentation) throw new Error('La presentación del producto no puede estar vacía');
-        if (!providerId) throw new Error('Debes seleccionar un proveedor');
-  
-        await db.collection('products').add({
-            name: productName,
-            presentation: productPresentation,
-            providerId: providerId
-        });
-  
-        closeModal('addProductModal');
-        loadProducts(); // Cargar la lista de productos inmediatamente después de agregar uno nuevo
-    } catch (error) {
-        console.error('Error al agregar producto:', error);
-        alert('Error al agregar producto: ' + error.message);
-    }
-  }
-  
-  async function loadProducts() {
-    try {
-        var productsSnapshot = await db.collection('products').get();
-        var productsTableBody = document.getElementById('productsTable').getElementsByTagName('tbody')[0];
-  
-        productsTableBody.innerHTML = '';
-  
-        for (let doc of productsSnapshot.docs) {
-            let product = doc.data();
-            let providerDoc = await db.collection('providers').doc(product.providerId).get();
-            let providerName = providerDoc.exists ? providerDoc.data().name : 'Proveedor no encontrado';
-  
-            let row = productsTableBody.insertRow();
-            row.setAttribute('data-provider-id', product.providerId); // Añadir el ID del proveedor como atributo de la fila
-            let cell1 = row.insertCell(0);
-            let cell2 = row.insertCell(1);
-            let cell3 = row.insertCell(2);
-            let cell4 = row.insertCell(3);
-  
-            cell1.textContent = product.name;
-            cell2.textContent = product.presentation;
-            cell3.textContent = providerName;
-            cell4.innerHTML = `
-                <button onclick="viewProductDetails('${doc.id}')">Ver Detalles</button>
-                <button onclick="showEditProductForm('${doc.id}')">Editar</button>
-                <button onclick="deleteProduct('${doc.id}')">Eliminar</button>`;
-        }
-    } catch (error) {
-        console.error('Error al cargar productos:', error);
-        alert('Error al cargar productos: ' + error.message);
-    }
-  }
-  
-  async function viewProductDetails(id) {
-    try {
-        var doc = await db.collection('products').doc(id).get();
-        if (doc.exists) {
-            var product = doc.data();
-            var providerDoc = await db.collection('providers').doc(product.providerId).get();
-            var providerName = providerDoc.exists ? providerDoc.data().name : 'Proveedor no encontrado';
-  
-            var details = `
-                Nombre: ${product.name}<br>
-                Presentación: ${product.presentation}<br>
-                Proveedor: ${providerName}<br>
-            `;
-            document.getElementById('productDetails').innerHTML = details;
-            document.getElementById('productDetailsModal').style.display = 'block';
-        } else {
-            alert('No se encontraron detalles del producto.');
-        }
-    } catch (error) {
-        console.error('Error al obtener detalles del producto:', error);
-        alert('Error al obtener detalles del producto: ' + error.message);
-    }
-  }
-  
-  async function showEditProductForm(id) {
-    try {
-        var doc = await db.collection('products').doc(id).get();
-        if (doc.exists) {
-            var product = doc.data();
-            document.getElementById('editProductId').value = id;
-            document.getElementById('editProductName').value = product.name;
-            document.getElementById('editProductPresentation').value = product.presentation;
-            document.getElementById('editProductModal').style.display = 'block';
-        } else {
-            alert('Producto no encontrado.');
-        }
-    } catch (error) {
-        console.error('Error al cargar datos del producto:', error);
-        alert('Error al cargar datos del producto: ' + error.message);
-    }
-  }
-  
-  async function updateProduct() {
-    try {
-        var id = document.getElementById('editProductId').value;
-        var updatedProduct = {
-            name: document.getElementById('editProductName').value,
-            presentation: document.getElementById('editProductPresentation').value
-        };
-  
-        await db.collection('products').doc(id).update(updatedProduct);
-  
-        closeModal('editProductModal');
-        loadProducts();
-    } catch (error) {
-        console.error('Error al actualizar producto:', error);
-        alert('Error al actualizar producto: ' + error.message);
-    }
-  }
-  
-  async function deleteProduct(id) {
-    if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+}
+
+function showEditProductForm(id) {
+    const p = productsData.find(item => item.id === id);
+    if (!p) return;
+
+    document.getElementById('editProductId').value = id;
+    document.getElementById('productName').value = p.name;
+    document.getElementById('productPresentation').value = p.presentation;
+    document.getElementById('providerSelect').value = p.providerId;
+    document.getElementById('productModalTitle').textContent = 'Editar Producto';
+
+    showModal('addProductModal');
+}
+
+async function deleteProduct(id) {
+    const result = await Swal.fire({
+        title: '¿Eliminar producto?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--danger)',
+        confirmButtonText: 'Sí, eliminar'
+    });
+
+    if (result.isConfirmed) {
         try {
             await db.collection('products').doc(id).delete();
-            loadProducts();
-        } catch (error) {
-            console.error('Error al eliminar producto:', error);
-            alert('Error al eliminar producto: ' + error.message);
-        }
+            await loadInitialData();
+            renderProducts();
+            Swal.fire('Eliminado', 'Producto eliminado', 'success');
+        } catch (e) { Swal.fire('Error', e.message, 'error'); }
     }
-  }
-  
-  function filterProviders() {
-    var input, filter, table, tr, td, i, txtValue;
-    input = document.getElementById('providerSearchInput');
-    filter = input.value.toUpperCase();
-    table = document.getElementById('providersTable');
-    tr = table.getElementsByTagName('tr');
-  
-    for (i = 1; i < tr.length; i++) { // Empieza en 1 para omitir el encabezado
-        td = tr[i].getElementsByTagName('td')[0];
-        if (td) {
-            txtValue = td.textContent || td.innerText;
-            if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                tr[i].style.display = '';
-            } else {
-                tr[i].style.display = 'none';
-            }
-        }       
-    }
-  }
-  
-  function filterProductsByName() {
-    var input, filter, table, tr, td, i, txtValue;
-    input = document.getElementById('productSearchInput');
-    filter = input.value.toUpperCase();
-    table = document.getElementById('productsTable');
-    tr = table.getElementsByTagName('tr');
-  
-    for (i = 1; i < tr.length; i++) { // Empieza en 1 para omitir el encabezado
-        td = tr[i].getElementsByTagName('td')[0];
-        if (td) {
-            txtValue = td.textContent || td.innerText;
-            if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                tr[i].style.display = '';
-            } else {
-                tr[i].style.display = 'none';
-            }
-        }       
-    }
-  }
-  
-  function filterProductsByProvider() {
-    var select, filter, table, tr, i, txtValue;
-    select = document.getElementById('productProviderFilter');
-    filter = select.value;
-    table = document.getElementById('productsTable');
-    tr = table.getElementsByTagName('tr');
-  
-    for (i = 1; i < tr.length; i++) { // Empieza en 1 para omitir el encabezado
-        txtValue = tr[i].getAttribute('data-provider-id');
-        if (filter === '' || txtValue === filter) {
-            tr[i].style.display = '';
-        } else {
-            tr[i].style.display = 'none';
-        }
-    }
-  }
-  
+}
+
+function viewProviderDetails(id) {
+    const p = providersData.find(item => item.id === id);
+    if (!p) return;
+
+    Swal.fire({
+        title: `<strong>${p.name}</strong>`,
+        html: `
+            <div style="text-align: left; font-size: 0.9rem;">
+                <p><b>Dirección:</b> ${p.address || 'N/A'}</p>
+                <p><b>Teléfono:</b> ${p.phone || 'N/A'}</p>
+                <p><b>Email:</b> ${p.email || 'N/A'}</p>
+                <hr>
+                <p><b>Vendedor:</b> ${p.sellerName || 'N/A'}</p>
+                <p><b>Tel Vendedor:</b> ${p.sellerPhone || 'N/A'}</p>
+                <p><b>Pago:</b> ${p.preferredPaymentMethod || 'N/A'}</p>
+                <p><b>Términos:</b> ${p.paymentTerms || 'N/A'}</p>
+                <hr>
+                <p><b>Notas:</b> ${p.additionalNotes || 'Ninguna'}</p>
+            </div>
+        `,
+        confirmButtonText: 'Cerrar'
+    });
+}

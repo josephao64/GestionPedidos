@@ -65,6 +65,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Suscripciones iniciales
   attachInProcessListener();
   attachCompletedListener();
+
+  // Inicializar controles de promedios
+  await initUsageAverageModalControls();
+
+  // Dashboard Stats
+  initDashboardStats();
 });
 
 /**********************************************************
@@ -77,11 +83,11 @@ async function initUserAndSucursal() {
       icon: "warning",
       title: "No hay usuario logueado",
       text: "Redirigiendo a login...",
-    }).then(() => (window.location.href = "login.html"));
+    }).then(() => (window.location.href = "../login.html"));
     return;
   }
-  const loggedInUserDiv = $("#loggedInUser");
-  if (loggedInUserDiv) loggedInUserDiv.textContent = "Usuario: " + loggedInUsername;
+  const loggedInUserDiv = $("#loggedInEmail");
+  if (loggedInUserDiv) loggedInUserDiv.textContent = loggedInUsername;
 
   try {
     const snap = await db
@@ -95,7 +101,7 @@ async function initUserAndSucursal() {
         icon: "error",
         title: "Usuario no encontrado",
         text: "Inicia sesión nuevamente.",
-      }).then(() => (window.location.href = "login.html"));
+      }).then(() => (window.location.href = "../login.html"));
       return;
     }
     const userData = snap.docs[0].data();
@@ -111,23 +117,25 @@ async function initUserAndSucursal() {
  * UTILS UI / WIRING
  **********************************************************/
 function wireTabs() {
-  document.getElementById("tabContainer").addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-tab-target]");
-    if (!btn) return;
-    const targetId = btn.getAttribute("data-tab-target");
-    $$(".tab-button").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    $$(".container").forEach((c) => (c.style.display = "none"));
-    document.getElementById(targetId).style.display = "block";
+  $$(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-tab-target");
+      $$(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      $$(".tab-view").forEach(v => v.style.display = "none");
+      $("#" + targetId).style.display = "block";
+    });
   });
 }
 
 function wireStaticButtons() {
   // Header
   $("#btnMainMenu")?.addEventListener("click", goToMainMenu);
+  $("#btnConfigAverages")?.addEventListener("click", showUsageAverageModal);
 
   // Modales - cierres
   $("#btnCloseOrderDetails")?.addEventListener("click", closeOrderDetailsModal);
+  $("#btnCloseUsageAverage")?.addEventListener("click", closeUsageAverageModal);
   $("#btnCloseExportModal")?.addEventListener("click", closeExportModal);
   $("#btnCloseEditOrder")?.addEventListener("click", closeEditOrderModal);
   $("#btnCloseConfirmOrder")?.addEventListener("click", closeConfirmOrderModal);
@@ -158,13 +166,13 @@ function wireStaticButtons() {
   $("#btnAddInvoice")?.addEventListener("click", addNewInvoiceEntry);
 
   // Manejo de cálculos de facturas
-  $("#confirmOrderProducts").addEventListener("input", (e) => {
+  $("#confirmOrderProducts")?.addEventListener("input", (e) => {
     if (e.target.matches('input[type="number"]')) {
       updateInvoiceTotals();
     }
   });
 
-  $("#invoicesList").addEventListener("input", (e) => {
+  $("#invoicesList")?.addEventListener("input", (e) => {
     if (e.target.matches('input[type="text"]')) {
       updateInvoiceNumbers();
     }
@@ -182,6 +190,11 @@ function wireStaticButtons() {
     const id = ev.detail;
     if (id) exportReception(id);
   });
+
+  // Configurar Promedios
+  $("#btnSaveUsageAverages")?.addEventListener("click", saveUsageAverages);
+  $("#avgProviderSelect")?.addEventListener("change", (e) => loadProductsForAverage(e.target.value));
+  $("#avgProductSearch")?.addEventListener("keyup", filterAvgProducts);
 }
 
 function wireFilters() {
@@ -391,83 +404,106 @@ function attachCompletedListener() {
 function renderOrderCard(orderDocId, order) {
   const card = document.createElement("div");
   card.className = "order-card";
+  card.dataset.action = "show";
+  card.dataset.id = orderDocId;
+
+  const statusConfig = getStatusConfig(order.status);
+  const progress = generateProgressBar(order);
+
   const actions = [];
 
-  actions.push(
-    `<button data-action="show" data-id="${orderDocId}">Mostrar Pedido</button>`
-  );
-
-  if (
-    userRole !== "administrador" &&
-    userRole !== "view" &&
-    (order.status === "pending" || userPermissions.canEditOrder)
-  ) {
-    actions.push(
-      `<button data-action="edit" data-id="${orderDocId}">Editar Pedido</button>`
-    );
+  if (userRole !== "administrador" && userRole !== "view" && (order.status === "pending" || userPermissions.canEditOrder)) {
+    actions.push(`<button class="btn btn-secondary btn-sm" style="flex:1;" data-action="edit" data-id="${orderDocId}"><i class="fas fa-edit"></i></button>`);
   }
+
   if (order.status === "pending" && userRole === "administrador") {
-    actions.push(
-      `<button data-action="markTaken" data-id="${orderDocId}">Pedido Tomado por Proveedor</button>`
-    );
-    actions.push(
-      `<button data-action="delete" data-id="${orderDocId}">Eliminar Pedido</button>`
-    );
-  }
-  if (userRole === "administrador") {
-    actions.push(
-      `<button data-action="exportOrder" data-id="${orderDocId}">Exportar Pedido</button>`
-    );
-    actions.push(
-      `<button class="change-status-button" data-action="openChange" data-id="${orderDocId}">Cambiar Estado</button>`
-    );
-  } else if (userRole === "view") {
-    // For view role, only show export button
-    actions.push(
-      `<button data-action="exportOrder" data-id="${orderDocId}">Exportar Pedido</button>`
-    );
-  }
-  if ((userRole === "administrador" || userPermissions.canDeleteOrder) && userRole !== "view") {
-    actions.push(
-      `<button data-action="delete" data-id="${orderDocId}">Eliminar Pedido</button>`
-    );
+    actions.push(`<button class="btn btn-warning btn-sm" style="flex:1;" data-action="markTaken" data-id="${orderDocId}"><i class="fas fa-check"></i></button>`);
   }
 
-  const toConfirm =
-    (order.destination === "Bodega" && order.status === "bodegaEnvioPedido") ||
+  if (userRole === "administrador") {
+    actions.push(`<button class="btn btn-secondary btn-sm" style="flex:1;" data-action="openChange" data-id="${orderDocId}"><i class="fas fa-exchange-alt"></i></button>`);
+  }
+
+  if ((userRole === "administrador" || userPermissions.canDeleteOrder) && userRole !== "view") {
+    actions.push(`<button class="btn btn-danger btn-sm" style="padding: 10px;" data-action="delete" data-id="${orderDocId}"><i class="fas fa-trash"></i></button>`);
+  }
+
+  const toConfirm = (order.destination === "Bodega" && order.status === "bodegaEnvioPedido") ||
     (order.destination === "Tienda" && order.status === "caminoATienda") ||
-    (userRole === "administrador" &&
-      (order.status === "bodegaEnvioPedido" || order.status === "caminoATienda"));
-  if (toConfirm && userRole !== "view")
-    actions.push(
-      `<button data-action="confirm" data-id="${orderDocId}">Ingresar Cantidades</button>`
-    );
+    (userRole === "administrador" && (order.status === "bodegaEnvioPedido" || order.status === "caminoATienda"));
+
+  let receiveBtn = "";
+  if (toConfirm && userRole !== "view") {
+    receiveBtn = `
+      <div style="display:flex; gap:8px; margin-top:12px; width:100%;">
+        <button class="btn btn-success btn-sm" style="flex:1;" data-action="confirm" data-id="${orderDocId}">Recibir</button>
+        <button class="btn btn-primary btn-sm" style="flex:1;" data-action="directReceive" data-id="${orderDocId}">Recibir Directo</button>
+      </div>
+    `;
+  }
 
   if (order.receivedProducts?.length) {
-    actions.push(
-      `<button data-action="showReceived" data-id="${orderDocId}">Exportar Pedido Recibido</button>`
-    );
+    actions.push(`<button class="btn btn-success btn-sm" style="flex:1;" data-action="showReceived" data-id="${orderDocId}"><i class="fas fa-receipt"></i></button>`);
   }
-  if (
-    userRole === "administrador" &&
-    userRole !== "view" &&
-    (order.pendingInvoice || order.mismatchedQuantities)
-  ) {
-    actions.push(
-      `<button data-action="forceComplete" data-id="${orderDocId}">Forzar a Completar (Excepción)</button>`
-    );
+
+  if (userRole === "administrador" && userRole !== "view" && (order.pendingInvoice || order.mismatchedQuantities)) {
+    actions.push(`<button class="btn btn-danger btn-sm" style="flex:1;" data-action="forceComplete" data-id="${orderDocId}"><i class="fas fa-exclamation-triangle"></i></button>`);
   }
 
   card.innerHTML = `
-    <h3>Pedido ID: ${order.orderId}</h3>
-    <p>Proveedor: ${order.providerName}</p>
-    <p>Sucursal: ${order.sucursalName}</p>
-    <p>Fecha: ${order.orderDate}</p>
-    <p><strong>Destino:</strong> ${order.destination || "No definido"}</p>
-    <div class="order-status">${generateProgressBar(order)}</div>
-    <div class="order-actions">${actions.join("")}</div>
+    <div class="card-header">
+        <span class="card-id">#${order.orderId}</span>
+        <span class="card-date">${order.orderDate}</span>
+    </div>
+    <div class="card-body">
+        <div class="card-sucursal">${order.sucursalName}</div>
+        <h3>${order.providerName}</h3>
+        <div class="info-col">
+            <div class="info-row"><i class="fas fa-map-marker-alt"></i> <span><b>Destino:</b> ${order.destination || "Buscando..."}</span></div>
+        </div>
+        <div class="status-progress-col">
+            <span class="status-badge" style="background: ${statusConfig.color}20; color: ${statusConfig.color};">
+                <i class="fas fa-info-circle"></i> ${statusConfig.label}
+            </span>
+            <div class="progress-track">
+                <div class="progress-fill" style="width: ${statusConfig.percent}%; background: ${statusConfig.color};"></div>
+            </div>
+        </div>
+    </div>
+    ${receiveBtn}
+    <div class="card-actions">
+        ${actions.join("")}
+    </div>
   `;
+
+  // Quick Receive for Admin
+  if (userRole === "administrador" && order.status !== "sucursalRecibioPedido") {
+    const qBtn = document.createElement("button");
+    qBtn.className = "btn btn-primary btn-sm";
+    qBtn.style.position = "absolute";
+    qBtn.style.top = "10px";
+    qBtn.style.right = "10px";
+    qBtn.style.zIndex = "10";
+    qBtn.innerHTML = "<i class='fas fa-bolt'></i>";
+    qBtn.title = "Recibir Rápido (Admin)";
+    qBtn.dataset.action = "quickReceive";
+    qBtn.dataset.id = orderDocId;
+    card.appendChild(qBtn);
+  }
+
   return card;
+}
+
+function getStatusConfig(status) {
+  const map = {
+    pending: { label: "Pendiente", color: "#6366f1", percent: 10 },
+    pedidoTomado: { label: "Tomado", color: "#f59e0b", percent: 30 },
+    pedidoEnBodega: { label: "En Bodega", color: "#8b5cf6", percent: 50 },
+    bodegaEnvioPedido: { label: "Enviado", color: "#ec4899", percent: 70 },
+    caminoATienda: { label: "En Camino", color: "#0ea5e9", percent: 80 },
+    sucursalRecibioPedido: { label: "Completado", color: "#10b981", percent: 100 }
+  };
+  return map[status] || map.pending;
 }
 
 function wireGlobalActions() {
@@ -489,6 +525,8 @@ function wireGlobalActions() {
       confirm: confirmOrder,
       showReceived: showReceivedOrder,
       forceComplete: forceCompleteOrder,
+      directReceive: markOrderAsReceivedDirectly,
+      quickReceive: quickReceiveOrder, // Nueva acción rápida
     };
     const fn = map[action];
     if (fn) fn(id);
@@ -584,7 +622,45 @@ function forceCompleteOrder(orderDocId) {
 }
 function openChangeStatusModal(orderDocId) {
   currentOrderForStatusChange = orderDocId;
-  $("#changeStatusModal").style.display = "block";
+  const container = $("#changeStatusButtons");
+  const flow = FLOWS.Bodega; // Default to full flow for admin
+
+  container.innerHTML = flow.map(st => `
+        <button class="btn btn-secondary" data-action="changeManualStatus" data-status="${st.key}">
+            ${st.label}
+        </button>
+    `).join("");
+
+  $("#changeStatusModal").style.display = "flex"; // Note: flex for backdrop-filter center
+}
+
+function initDashboardStats() {
+  let q = db.collection("orders");
+  if (userRole !== "administrador" && userRole !== "view") {
+    q = q.where("sucursalId", "==", userSucursalId);
+  }
+
+  q.onSnapshot(snap => {
+    const orders = snap.docs.map(d => d.data());
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const pending = orders.filter(o => o.status === "pending").length;
+    const transit = orders.filter(o => ["pedidoTomado", "pedidoEnBodega", "bodegaEnvioPedido", "caminoATienda"].includes(o.status)).length;
+
+    const completedToday = orders.filter(o => {
+      if (o.status !== "sucursalRecibioPedido") return false;
+      const t = o.timestamp?.toMillis ? new Date(o.timestamp.toMillis()) : null;
+      return t && t >= startOfDay;
+    }).length;
+
+    const totalMonth = orders.length; // Simplified for demo, usually filtered by month
+
+    $("#stat-pending").textContent = pending;
+    $("#stat-transit").textContent = transit;
+    $("#stat-completed-today").textContent = completedToday;
+    $("#stat-total-month").textContent = totalMonth;
+  });
 }
 function closeChangeStatusModal() {
   $("#changeStatusModal").style.display = "none";
@@ -600,6 +676,59 @@ function changeOrderStatusManually(newStatus) {
     return;
   }
   updateStatus(currentOrderForStatusChange, newStatus);
+}
+
+/**********************************************************
+ * ACCIÓN DIRECTA RECIBIR
+ **********************************************************/
+async function markOrderAsReceivedDirectly(orderId) {
+  try {
+    await db.collection("orders").doc(orderId).update({
+      status: "sucursalRecibioPedido",
+      receivedDirectly: true,
+      directReceiveTimestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    Swal.fire({
+      icon: "success",
+      title: "Pedido Recibido",
+      text: "El estado ha sido actualizado a 'Sucursal Recibió Pedido' correctamente.",
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (err) {
+    Swal.fire({ icon: "error", title: "Error", text: err.message });
+  }
+}
+
+/**********************************************************
+ * ACCIÓN RÁPIDA (ADMIN)
+ **********************************************************/
+async function quickReceiveOrder(orderId) {
+  // Sin confirmación (sweetalert), ejecución directa a firestore
+  try {
+    await db.collection("orders").doc(orderId).update({
+      status: "sucursalRecibioPedido",
+      quickReceivedByAdmin: true,
+      statusChangeTimestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Pequeña notificación toast para que sepa que se hizo
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    });
+    Toast.fire({
+      icon: 'success',
+      title: 'Pedido marcado como RECIBIDO (Rápido)'
+    });
+
+  } catch (err) {
+    console.error(err);
+    Swal.fire({ icon: "error", title: "Error Rápido", text: err.message });
+  }
 }
 
 /**********************************************************
@@ -941,13 +1070,16 @@ function closeEditOrderModal() {
 /**********************************************************
  * EXPORTACIONES
  **********************************************************/
+// Export modal removed - now only direct image export in order details
 function exportOrder(orderId) {
-  $("#exportModal").style.display = "block";
-  $("#exportModal").dataset.orderId = orderId;
+  // Redirect to show order details which has the export button
+  showOrderDetails(orderId);
 }
+
 function closeExportModal() {
-  $("#exportModal").style.display = "none";
+  // Modal removed - function kept for compatibility
 }
+
 async function exportAs(format) {
   const modal = $("#exportModal");
   const orderId = modal.dataset.orderId;
@@ -1038,7 +1170,11 @@ function exportAsImageTicket(order, fileName) {
   if (order.products) {
     order.products.forEach((prod) => {
       const row = document.createElement("tr");
-      row.innerHTML = `<td>${prod.name}</td><td>${prod.presentation}</td><td>${prod.quantity}</td>`;
+      row.innerHTML = `
+        <td style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; color: #334155;">${prod.name}</td>
+        <td style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; color: #475569;">${prod.presentation}</td>
+        <td style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; text-align: center; color: #1e293b; font-weight: 700;">${prod.quantity}</td>
+      `;
       tBody.appendChild(row);
     });
   }
@@ -1048,11 +1184,14 @@ function exportAsImageTicket(order, fileName) {
   ticket.style.top = "50%";
   ticket.style.transform = "translate(-50%, -50%)";
 
+  // Sanitize fileName to avoid issues with slashes in dates
+  const safeFileName = fileName.replace(/\//g, "-");
+
   html2canvas(ticket, { scale: 3 })
     .then((canvas) => {
       const link = document.createElement("a");
       link.href = canvas.toDataURL("image/png");
-      link.download = `${fileName}.png`;
+      link.download = `${safeFileName}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1143,6 +1282,14 @@ async function confirmOrder(orderId) {
     // Inicializar totales
     $("#invoiceTotalsList").innerHTML = "";
     $("#grandTotal").textContent = "0.00";
+
+    // Attach listener to initial invoice input
+    const initialInput = document.querySelector(".invoice-entry .invoice-total-input");
+    if (initialInput) {
+      initialInput.addEventListener("input", updateInvoiceTotals);
+      initialInput.dataset.listenerAdded = "true";
+    }
+
     updateInvoiceTotals();
 
     $("#confirmOrderModal").style.display = "block";
@@ -1180,6 +1327,10 @@ function addNewInvoiceEntry() {
         <label><strong>Fecha de Factura:</strong></label>
         <input type="date" class="invoice-date" />
       </div>
+      <div>
+        <label><strong>Total Factura:</strong></label>
+        <input type="number" class="invoice-total-input" placeholder="0.00" step="0.01" />
+      </div>
       <button type="button" class="remove-invoice" style="height: 2rem;">×</button>
     </div>
   `;
@@ -1202,32 +1353,47 @@ function updateInvoiceNumbers() {
 }
 
 function updateInvoiceTotals() {
-  let grandTotal = 0;
+  let grandTotalInvoices = 0;
+  let grandTotalProducts = 0;
+
+  // Calcular total de productos
   const rows = $$("#confirmOrderProducts tr");
+  rows.forEach((_, idx) => {
+    const val = parseFloat(document.getElementById(`totalPerProduct${idx}`).textContent) || 0;
+    grandTotalProducts += val;
+  });
+
   const invoiceTotalsList = $("#invoiceTotalsList");
   invoiceTotalsList.innerHTML = "";
 
   const invoiceEntries = document.querySelectorAll(".invoice-entry");
 
   invoiceEntries.forEach((entry, index) => {
-    let invoiceTotal = 0;
-    rows.forEach((_, idx) => {
-      const val = parseFloat(
-        document.getElementById(`totalPerProduct${idx}`).textContent
-      ) || 0;
-      invoiceTotal += val / invoiceEntries.length; // Distribuir el total entre las facturas
-    });
-    grandTotal += invoiceTotal;
+    const val = parseFloat(entry.querySelector(".invoice-total-input")?.value) || 0;
+    grandTotalInvoices += val;
+
+    // Add listener to update totals on input change (if not already added)
+    const input = entry.querySelector(".invoice-total-input");
+    if (input && !input.dataset.listenerAdded) {
+      input.addEventListener("input", updateInvoiceTotals);
+      input.dataset.listenerAdded = "true";
+    }
 
     const invoiceNumber = entry.querySelector(".invoice-number").value || `Factura ${index + 1}`;
     invoiceTotalsList.innerHTML += `
       <div style="margin-bottom: 0.5rem;">
-        <strong>${invoiceNumber}:</strong> Q<span class="invoice-total">${invoiceTotal.toFixed(2)}</span>
+        <strong>${invoiceNumber}:</strong> Q<span class="invoice-total">${val.toFixed(2)}</span>
       </div>
     `;
   });
 
-  $("#grandTotal").textContent = grandTotal.toFixed(2);
+  $("#grandTotal").innerHTML = `
+    Productos: Q${grandTotalProducts.toFixed(2)} <br>
+    Facturas: Q${grandTotalInvoices.toFixed(2)} <br>
+    <span style="color: ${Math.abs(grandTotalProducts - grandTotalInvoices) < 0.01 ? 'green' : 'red'}">
+      Diferencia: Q${(grandTotalProducts - grandTotalInvoices).toFixed(2)}
+    </span>
+  `;
 }
 function closeConfirmOrderModal() {
   $("#confirmOrderId").value = "";
@@ -1246,6 +1412,10 @@ function closeConfirmOrderModal() {
         <div>
           <label for="invoiceDate"><strong>Fecha de Factura:</strong></label>
           <input type="date" class="invoice-date" value="${new Date().toISOString().split('T')[0]}" />
+        </div>
+        <div>
+          <label><strong>Total Factura:</strong></label>
+          <input type="number" class="invoice-total-input" placeholder="0.00" step="0.01" />
         </div>
       </div>
     </div>
@@ -1282,11 +1452,35 @@ async function saveConfirmedOrder() {
 
     // Recolectar información de facturas
     const invoiceEntries = document.querySelectorAll(".invoice-entry");
-    const invoices = Array.from(invoiceEntries).map(entry => ({
-      invoiceNumber: entry.querySelector(".invoice-number").value,
-      invoiceDate: entry.querySelector(".invoice-date").value || new Date().toISOString().split('T')[0],
-      total: parseFloat(entry.closest(".invoice-entry").querySelector(".invoice-total")?.textContent || "0")
-    })).filter(invoice => invoice.invoiceNumber);
+    let sumInvoiceTotals = 0;
+    const invoices = Array.from(invoiceEntries).map(entry => {
+      const val = parseFloat(entry.querySelector(".invoice-total-input")?.value) || 0;
+      sumInvoiceTotals += val;
+      return {
+        invoiceNumber: entry.querySelector(".invoice-number").value,
+        invoiceDate: entry.querySelector(".invoice-date").value || new Date().toISOString().split('T')[0],
+        total: val
+      };
+    }).filter(invoice => invoice.invoiceNumber);
+
+    // Validar totales
+    const validationRows = $$("#confirmOrderProducts tr");
+    let totalProductos = 0;
+    validationRows.forEach((_, i) => {
+      totalProductos += parseFloat(document.getElementById(`totalPerProduct${i}`).textContent) || 0;
+    });
+
+    if (Math.abs(sumInvoiceTotals - totalProductos) > 0.05) {
+      const { isConfirmed } = await Swal.fire({
+        title: "Totales no coinciden",
+        text: `Total Facturas (Q${sumInvoiceTotals.toFixed(2)}) difiere del Total Productos (Q${totalProductos.toFixed(2)}). ¿Desea continuar de todos modos?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sí, continuar",
+        cancelButtonText: "Corregir"
+      });
+      if (!isConfirmed) return;
+    }
 
     const rows = $$("#confirmOrderProducts tr");
     let mismatchedQuantities = false;
@@ -1476,6 +1670,21 @@ function showReceivedOrder(orderId) {
       $("#receivedOrderDetails").innerHTML = html;
       $("#receivedOrderModal").style.display = "block";
 
+      // Agregar botón de generar constancia si no existe
+      let btnReceipt = document.getElementById("btnGenerateReceipt");
+      if (!btnReceipt) {
+        btnReceipt = document.createElement("button");
+        btnReceipt.id = "btnGenerateReceipt";
+        btnReceipt.textContent = "Generar Constancia";
+        btnReceipt.style.marginTop = "1rem";
+        btnReceipt.style.marginLeft = "1rem";
+        $("#receivedOrderDetails").parentNode.appendChild(btnReceipt);
+      }
+      // Actualizar el listener (clonar para limpiar anteriores)
+      const newBtn = btnReceipt.cloneNode(true);
+      btnReceipt.parentNode.replaceChild(newBtn, btnReceipt);
+      newBtn.addEventListener("click", () => generateReceiptImage(order));
+
       const fileName = `Recepcion_Pedido_${order.providerName}_${order.orderId}_${order.orderDate}`;
       exportAsReceptionImageNoPreview(order, fileName);
     })
@@ -1616,6 +1825,71 @@ function exportAsReceptionImageNoPreview(order, fileName) {
     });
 }
 
+function generateReceiptImage(order) {
+  const container = document.getElementById("receiptExportContainer");
+  if (!container) {
+    Swal.fire({ icon: "error", title: "Error", text: "Plantilla de constancia no encontrada." });
+    return;
+  }
+
+  // Populate Header
+  document.getElementById("receiptDate").textContent = new Date().toLocaleDateString();
+
+  // Populate Info
+  document.getElementById("receiptProvider").textContent = order.providerName || "N/A";
+  document.getElementById("receiptOrderId").textContent = order.orderId || "N/A";
+  document.getElementById("receiptSucursal").textContent = order.sucursalName || "N/A";
+
+  let invoiceNums = "No ingresado";
+  if (order.invoices && order.invoices.length > 0) {
+    invoiceNums = order.invoices.map(i => i.invoiceNumber).join(", ");
+  } else if (order.invoiceNumber) {
+    invoiceNums = order.invoiceNumber;
+  }
+  document.getElementById("receiptInvoiceNumbers").textContent = invoiceNums;
+
+  // Populate Table
+  const tbody = document.getElementById("receiptTableBody");
+  tbody.innerHTML = "";
+
+  if (order.receivedProducts) {
+    order.receivedProducts.forEach(prod => {
+      const tr = document.createElement("tr");
+      tr.style.borderBottom = "1px solid #eee";
+      tr.innerHTML = `
+        <td style="padding: 10px 15px; color: #555;">${prod.name}</td>
+        <td style="padding: 10px 15px; color: #555;">${prod.presentation}</td>
+        <td style="padding: 10px 15px; text-align: center; color: #555;">${prod.receivedQuantity}</td>
+        <td style="padding: 10px 15px; text-align: right; color: #555;">Q${Number(prod.unitPrice).toFixed(2)}</td>
+        <td style="padding: 10px 15px; text-align: right; color: #555;">Q${Number(prod.totalPerProduct).toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Populate Total
+  const total = order.invoiceTotal ? Number(order.invoiceTotal).toFixed(2) : "0.00";
+  document.getElementById("receiptGrandTotal").textContent = total;
+
+  // Show and Export
+  container.style.display = "block";
+
+  html2canvas(container, { scale: 2 }).then(canvas => {
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `Constancia_Recepcion_${order.orderId}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    container.style.display = "none";
+  }).catch(err => {
+    console.error(err);
+    Swal.fire({ icon: "error", title: "Error", text: "No se pudo generar la constancia." });
+    container.style.display = "none";
+  });
+}
+
 /**********************************************************
  * UTIL
  **********************************************************/
@@ -1642,4 +1916,151 @@ async function markOrderAsTaken(orderId) {
       }
     }
   });
+}
+
+/**********************************************************
+ * CONFIGURACIÓN PROMEDIOS
+ **********************************************************/
+async function initUsageAverageModalControls() {
+  try {
+    // Sucursales
+    const sucSel = document.getElementById('avgSucursalSelect');
+    if (!sucSel) return;
+    sucSel.innerHTML = '';
+    if (userRole === 'administrador') {
+      const snapSuc = await db.collection('sucursales').get();
+      const defOpt = document.createElement('option');
+      defOpt.value = '';
+      defOpt.textContent = '-- Selecciona una Sucursal --';
+      defOpt.disabled = true; defOpt.selected = true;
+      sucSel.appendChild(defOpt);
+      snapSuc.forEach(doc => {
+        const d = doc.data();
+        const o = document.createElement('option');
+        o.value = doc.id; o.textContent = d.name;
+        sucSel.appendChild(o);
+      });
+    } else {
+      const o = document.createElement('option');
+      o.value = userSucursalId; o.textContent = "Mi Sucursal";
+      sucSel.appendChild(o);
+      sucSel.disabled = true;
+    }
+
+    // Proveedores
+    const provSel = document.getElementById('avgProviderSelect');
+    provSel.innerHTML = '';
+    const snapProv = await db.collection('providers').get();
+    const defP = document.createElement('option');
+    defP.value = '';
+    defP.textContent = '-- Selecciona un Proveedor --';
+    defP.disabled = true; defP.selected = true;
+    provSel.appendChild(defP);
+    snapProv.forEach(doc => {
+      const d = doc.data();
+      const o = document.createElement('option');
+      o.value = doc.id; o.textContent = d.name;
+      provSel.appendChild(o);
+    });
+  } catch (e) {
+    console.error("Error initUsageAverageModalControls", e);
+  }
+}
+
+function showUsageAverageModal() {
+  const m = document.getElementById('usageAverageModal');
+  if (!m) return;
+  m.style.display = 'block';
+  // Preseleccionar sucursal si no admin
+  const sucSel = document.getElementById('avgSucursalSelect');
+  if (sucSel && userRole !== 'administrador') {
+    sucSel.value = userSucursalId;
+  }
+}
+
+function closeUsageAverageModal() {
+  const m = document.getElementById('usageAverageModal');
+  if (!m) return;
+  m.style.display = 'none';
+}
+
+async function loadProductsForAverage(providerId) {
+  if (!providerId) return;
+  try {
+    const sucSel = document.getElementById('avgSucursalSelect');
+    const sucursalIdSel = sucSel?.value || userSucursalId;
+    const tbody = document.getElementById('usageAverageTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    const snap = await db.collection('products').where('providerId', '==', providerId).get();
+    for (const doc of snap.docs) {
+      const prod = doc.data();
+      const tr = tbody.insertRow();
+      tr.setAttribute('data-id', doc.id);
+      tr.innerHTML = `
+        <td>${escapeHtml(prod.name || '')}</td>
+        <td>${escapeHtml(prod.presentation || '')}</td>
+        <td><input type="number" min="0" step="1" class="avg-input" placeholder="0" /></td>
+      `;
+      // Cargar valor existente
+      const avg = await fetchUsageAverageValueForPedidos(sucursalIdSel, providerId, doc.id);
+      const input = tr.querySelector('.avg-input');
+      if (avg != null) input.value = Number(avg);
+    }
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al cargar productos: ' + e.message });
+  }
+}
+
+function filterAvgProducts() {
+  const v = (document.getElementById('avgProductSearch')?.value || '').toLowerCase();
+  const tbody = document.getElementById('usageAverageTable').querySelector('tbody');
+  const rows = tbody.getElementsByTagName('tr');
+  for (let i = 0; i < rows.length; i++) {
+    const nameTd = rows[i].getElementsByTagName('td')[0];
+    const txt = (nameTd?.textContent || '').toLowerCase();
+    rows[i].style.display = txt.indexOf(v) > -1 ? '' : 'none';
+  }
+}
+
+async function saveUsageAverages() {
+  const sucursalIdSel = document.getElementById('avgSucursalSelect')?.value || userSucursalId;
+  const providerIdSel = document.getElementById('avgProviderSelect')?.value || '';
+  if (!sucursalIdSel) {
+    Swal.fire({ icon: 'warning', title: 'Sucursal requerida', text: 'Seleccione una sucursal.' });
+    return;
+  }
+  if (!providerIdSel) {
+    Swal.fire({ icon: 'warning', title: 'Proveedor requerido', text: 'Seleccione un proveedor.' });
+    return;
+  }
+  const tbody = document.getElementById('usageAverageTable').querySelector('tbody');
+  const rows = tbody.getElementsByTagName('tr');
+  const batch = db.batch();
+  let count = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const productId = rows[i].getAttribute('data-id');
+    const input = rows[i].querySelector('.avg-input');
+    const val = Number(input?.value || 0);
+    const docId = `${sucursalIdSel}__${providerIdSel}__${productId}`;
+    const ref = db.collection('usageAverages').doc(docId);
+    if (val > 0) {
+      batch.set(ref, {
+        sucursalId: sucursalIdSel,
+        providerId: providerIdSel,
+        productId,
+        weeklyAverage: Math.round(val),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      count++;
+    } else {
+      // Si es 0, eliminamos el doc para limpiar
+      batch.delete(ref);
+    }
+  }
+  try {
+    await batch.commit();
+    Swal.fire({ icon: 'success', title: 'Guardado', text: `Promedios guardados (${count}).` });
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: 'Error al guardar promedios: ' + e.message });
+  }
 }

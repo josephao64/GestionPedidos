@@ -1,0 +1,10 @@
+Juan Perez, 1234567890101, 2025-01-01, 55551234
+Maria Lopez, 2345678901234, 2025-02-15, 44445678
+Carlos Ruiz, 3456789012345, 2024-12-01, 33339012
+Ana Gomez, 4567890123456, 2025-03-10, 22223456
+
+REGLAS:
+1. Seleccione la Sucursal y el Puesto en la pantalla antes de pegar.
+2. Formato por línea: Nombre, DPI, Fecha Inicio (AAAA-MM-DD), Teléfono.
+3. Separar los campos con una coma (,).
+4. El DPI debe tener 13 dígitos y ser único.

@@ -4,7 +4,7 @@
    Estilos Generales
    ===================================== */
 
-   body {
+body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
     margin: 0;
@@ -16,7 +16,8 @@
 
 h1 {
     text-align: center;
-    font-size: 36px; /* Tamaño de fuente más grande para el título */
+    font-size: 36px;
+    /* Tamaño de fuente más grande para el título */
     margin: 20px 0;
 }
 
@@ -30,7 +31,8 @@ h1 {
     align-items: flex-start;
     justify-content: flex-start;
     flex: 1;
-    padding-left: 20px; /* Añadir espacio a la izquierda para los botones */
+    padding-left: 20px;
+    /* Añadir espacio a la izquierda para los botones */
     position: relative;
 }
 
@@ -46,8 +48,10 @@ h1 {
     flex-direction: column;
     align-items: flex-start;
     position: fixed;
-    top: 50%; /* Centra verticalmente el menú */
-    left: 20px; /* Posición fija en el lado izquierdo */
+    top: 50%;
+    /* Centra verticalmente el menú */
+    left: 20px;
+    /* Posición fija en el lado izquierdo */
     transform: translateY(-50%);
 }
 
@@ -56,11 +60,13 @@ h1 {
 }
 
 /* Estilos para enlaces y botones del menú */
-.oe_menu a, .menu-button {
+.oe_menu a,
+.menu-button {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 150px; /* Tamaño fijo del botón */
+    width: 150px;
+    /* Tamaño fijo del botón */
     height: 150px;
     font-size: 18px;
     text-align: center;
@@ -73,7 +79,8 @@ h1 {
     transition: background-color 0.3s ease;
 }
 
-.oe_menu a:hover, .menu-button:hover {
+.oe_menu a:hover,
+.menu-button:hover {
     background-color: #0056b3;
 }
 
@@ -97,7 +104,8 @@ h1 {
 
 /* Estilos específicos para el botón "Cerrar Sesión" */
 .menu-button#logout-button {
-    background-color: #f44336; /* Rojo para destacar */
+    background-color: #f44336;
+    /* Rojo para destacar */
 }
 
 .menu-button#logout-button:hover {
@@ -129,12 +137,15 @@ h1 {
 @media (max-width: 768px) {
     .oe_menu {
         top: 50%;
-        left: 10px; /* Ajuste en dispositivos más pequeños */
+        left: 10px;
+        /* Ajuste en dispositivos más pequeños */
         transform: translateY(-50%);
     }
 
-    .oe_menu a, .menu-button {
-        width: 120px; /* Tamaño ajustado para dispositivos más pequeños */
+    .oe_menu a,
+    .menu-button {
+        width: 120px;
+        /* Tamaño ajustado para dispositivos más pequeños */
         height: 120px;
         font-size: 16px;
     }

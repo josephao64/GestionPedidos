@@ -5,21 +5,14 @@
 if (typeof firebase !== 'undefined') {
     // Configurar Firebase para permitir conexiones locales
     firebase.auth().useDeviceLanguage();
-    
-    // Configurar Firestore para desarrollo
-    const settings = {
-        cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
-    };
-    
-    if (typeof db !== 'undefined') {
-        db.settings(settings);
-    }
+
+    // Firestore settings removed here as they are handled in connection.js
 }
 
 // Configurar CORS para desarrollo local
 if (typeof window !== 'undefined') {
     // Permitir conexiones a Firebase desde localhost
-    window.addEventListener('beforeunload', function() {
+    window.addEventListener('beforeunload', function () {
         // Limpiar recursos antes de cerrar
         if (typeof firebase !== 'undefined' && firebase.auth) {
             firebase.auth().signOut();

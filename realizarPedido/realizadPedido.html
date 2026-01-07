@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -30,16 +31,19 @@
   <!-- JS Principal -->
   <script defer src="realizarpedido.js"></script>
 </head>
+
 <body>
   <div class="buttons">
     <button onclick="showNewOrderForm()">Realizar Nuevo Pedido</button>
+    <button onclick="showBulkOrderForm()">Pedido por formulario</button>
     <button onclick="showUsageAverageModal()">Configurar Promedios</button>
     <button class="right" onclick="window.location.href='../index.html'">Volver a Principal</button>
   </div>
 
   <!-- Contenedor principal de creación de pedidos -->
   <div id="orderCreationContainer" class="container" style="display: none;">
-    <div class="order-form" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+    <div class="order-form"
+      style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
       <!-- Parte Izquierda: Proveedor, Fecha, ID -->
       <div style="flex: 1; min-width: 250px;">
         <div class="form-group">
@@ -123,7 +127,8 @@
               <th>Promedio Semanal</th>
             </tr>
             <tr>
-              <th><input type="text" id="avgProductSearch" onkeyup="filterAvgProducts()" placeholder="Buscar Producto..." /></th>
+              <th><input type="text" id="avgProductSearch" onkeyup="filterAvgProducts()"
+                  placeholder="Buscar Producto..." /></th>
               <th></th>
               <th></th>
             </tr>
@@ -135,6 +140,69 @@
       <div style="margin-top: 10px; text-align: right;">
         <button onclick="saveUsageAverages()">Guardar Promedios</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Contenedor Pedido por Formulario -->
+  <div id="bulkOrderContainer" class="container" style="display: none;">
+    <div class="order-form"
+      style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+      <!-- Parte Izquierda -->
+      <div style="flex: 1; min-width: 250px;">
+        <!-- Botón de Configuración (Solo Admin) -->
+        <div style="text-align: right; margin-bottom: 10px;">
+          <button type="button" id="btnConfigBulk" class="btn-secondary" style="display: none;"
+            onclick="openBulkConfigModal()">
+            <i class="fas fa-cog"></i> Configurar Proveedores
+          </button>
+        </div>
+
+        <!-- Proveedor eliminado: se cargan todos en la tabla -->
+
+        <div class="form-group">
+          <label for="bulkOrderDate">Fecha de Pedido</label>
+          <input type="date" id="bulkOrderDate" style="display: none;" />
+          <span id="bulkOrderDateText" style="display: none;"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="bulkOrderId">ID Pedido</label>
+          <input type="text" id="bulkOrderId" placeholder="ID Pedido" readonly style="display: none;" />
+          <span id="bulkOrderIdText" style="display: none;"></span>
+        </div>
+
+        <!-- Sucursal oculta (solo para lógica interna si es admin) -->
+        <select id="bulkOrderSucursalSelect" class="form-input" style="display:none;"
+          onchange="loadAllProvidersAndProducts()">
+          <option value="" disabled selected>-- Selecciona una Sucursal --</option>
+        </select>
+        <span id="bulkOrderSucursalText" style="display:none;"></span>
+      </div>
+
+      <!-- Parte Derecha: Logo -->
+      <img src="../resources/images/logo.png" alt="Logo" />
+    </div>
+
+    <!-- Tabla de productos bulk -->
+    <div class="product-form-and-table">
+      <div class="table-wrapper">
+        <table id="bulkOrderTable">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Presentación</th>
+              <th>Inventario</th>
+              <th>Cantidad Pedido</th>
+              <th>Advertencia</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="save-order-container">
+      <button class="save-order-button" onclick="saveBulkOrder()">Guardar Pedido</button>
     </div>
   </div>
 
@@ -189,5 +257,28 @@
       <p>Gracias por su pedido.</p>
     </div>
   </div>
+  <!-- Modal Configuración Bulk -->
+  <div id="bulkConfigModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="close" onclick="document.getElementById('bulkConfigModal').style.display='none'">&times;</span>
+        <h2>Configurar Proveedores en Formulario</h2>
+      </div>
+      <div class="modal-body">
+        <p>Seleccione los proveedores que desea mostrar en el formulario de pedido masivo:</p>
+        <div id="bulkConfigProviderList" style="max-height: 300px; overflow-y: auto; text-align: left;">
+          <!-- Checkboxes generated dynamically -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary"
+          onclick="document.getElementById('bulkConfigModal').style.display='none'">Cancelar</button>
+        <button class="btn-primary" onclick="saveBulkConfig()">Guardar Configuración</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="realizarpedido.js"></script>
 </body>
+
 </html>

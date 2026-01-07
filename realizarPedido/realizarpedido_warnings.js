@@ -928,16 +928,19 @@ async function showBulkOrderForm() {
   document.getElementById('orderCreationContainer').style.display = 'none';
   document.getElementById('bulkOrderContainer').style.display = 'block';
 
-  // Logic for Admin vs User
+  // Load all providers and products
+  await loadAllProvidersAndProducts();
+
+  // Logic for Admin vs User (Date / ID / Sucursal) copies standard logic
   if (userRole === 'administrador') {
     document.getElementById('bulkOrderSucursalSelect').style.display = 'inline-block';
     document.getElementById('bulkOrderSucursalText').style.display = 'none';
     document.getElementById('bulkOrderDate').style.display = 'inline-block';
     document.getElementById('bulkOrderDateText').style.display = 'none';
-    document.getElementById('bulkOrderId').style.display = 'inline-block';
+    document.getElementById('bulkOrderId').style.display = 'inline-block'; // Shows first order ID
     document.getElementById('bulkOrderIdText').style.display = 'none';
 
-    await cargarSucursalesSelectParaBulk();
+    cargarSucursalesSelectParaBulk();
     document.getElementById('bulkOrderDate').value = new Date().toISOString().split('T')[0];
 
     // Show Config Button for Admin
@@ -953,11 +956,6 @@ async function showBulkOrderForm() {
 
     document.getElementById('bulkOrderDateText').textContent = new Date().toISOString().split('T')[0];
   }
-
-  // Load all providers and products NOW (after sucursales loaded for admin)
-  // Note: For admin, sucursal might still be unselected ("-- Selecciona --"). 
-  // loadAllProvidersAndProducts handles empty sucursalId by defaulting averages to 0 or null.
-  await loadAllProvidersAndProducts();
 
   if (generatedOrderId === null) {
     await generateOrderIdOnce();
@@ -991,19 +989,10 @@ async function loadAllProvidersAndProducts() {
   const tbody = document.getElementById('bulkOrderTable').querySelector('tbody');
   tbody.innerHTML = ''; // Clear table
 
-  const sucursalId = (userRole === 'administrador')
-    ? document.getElementById('bulkOrderSucursalSelect').value
-    : userSucursalId;
-
-  if (!sucursalId && userRole === 'administrador') {
-    // Admin hasn't selected a sucursal yet, maybe wait or just return?
-    // Assuming 'init' logic handles re-load on change. Use select value.
-  }
-
   try {
     const providersSnap = await db.collection('providers').get();
     if (providersSnap.empty) {
-      tbody.innerHTML = '<tr><td colspan="5">No hay proveedores registrados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4">No hay proveedores registrados.</td></tr>';
       return;
     }
 
@@ -1019,49 +1008,33 @@ async function loadAllProvidersAndProducts() {
       const productsSnap = await db.collection('products').where('providerId', '==', providerId).get();
 
       if (!productsSnap.empty) {
-        // Render Provider Header (Colspan 5 for new warning column)
+        // Render Provider Header
         const headerRow = tbody.insertRow();
         headerRow.classList.add('provider-header-row');
         headerRow.style.backgroundColor = '#f0f0f0';
         headerRow.style.fontWeight = 'bold';
         headerRow.innerHTML = `
-                    <td colspan="5" style="text-align: center; text-transform: uppercase; padding: 10px;">
+                    <td colspan="4" style="text-align: center; text-transform: uppercase; padding: 10px;">
                         ${escapeHtml(providerName)}
                     </td>
                 `;
 
-        // Process products 
-        // We'll fetch averages. Ideally parallel, but let's loop cleanly first.
-        const productPromises = productsSnap.docs.map(async (prodDoc) => {
+        // Render Products
+        productsSnap.forEach(prodDoc => {
           const prod = prodDoc.data();
-          if (prod.visibleInBulk === false) return null;
 
-          const avg = await fetchUsageAverageValue(sucursalId, providerId, prodDoc.id);
-          return { doc: prodDoc, data: prod, avg: avg };
-        });
-
-        const productsData = await Promise.all(productPromises);
-
-        productsData.forEach(item => {
-          if (!item) return; // filtered out
-          const prod = item.data;
-          const avgVal = item.avg !== null ? item.avg : 0;
+          if (prod.visibleInBulk === false) return; // Product Filter
 
           const row = tbody.insertRow();
-          row.setAttribute('data-id', item.doc.id);
-          row.setAttribute('data-provider-id', providerId);
+          row.setAttribute('data-id', prodDoc.id);
+          row.setAttribute('data-provider-id', providerId); // Track provider
           row.setAttribute('data-provider-name', providerName);
-          row.setAttribute('data-avg', avgVal); // Store average
 
           row.innerHTML = `
                       <td>${escapeHtml(prod.name)}</td>
                       <td>${escapeHtml(prod.presentation)}</td>
-                      <td><input type="number" min="0" step="1" class="bulk-inventory-input" placeholder="Inv" oninput="onBulkInventoryChange(this)" /></td>
-                      <td>
-                          <input type="number" min="1" step="1" class="bulk-qty-input" placeholder="Cant" oninput="onBulkQuantityChange(this)" />
-                          <div class="bulk-suggestion-text" style="font-size: 0.85em; color: #666; margin-top: 2px; font-style: italic;"></div>
-                      </td>
-                      <td class="bulk-warning-cell" style="font-size: 0.9em; font-weight: bold;"></td>
+                      <td><input type="number" min="0" step="1" class="bulk-inventory-input" placeholder="Inventario" /></td>
+                      <td><input type="number" min="1" step="1" class="bulk-qty-input" placeholder="Cantidad Pedido" /></td>
                     `;
         });
       }
@@ -1074,74 +1047,6 @@ async function loadAllProvidersAndProducts() {
       title: 'Error',
       text: 'Error al cargar los datos: ' + error.message
     });
-  }
-}
-
-function onBulkInventoryChange(input) {
-  const row = input.closest('tr');
-  const avg = Number(row.getAttribute('data-avg')) || 0;
-  const invVal = input.value;
-  const qtyInput = row.querySelector('.bulk-qty-input');
-  const suggDiv = row.querySelector('.bulk-suggestion-text');
-
-  if (invVal === '') {
-    // Clear suggestion if inventory cleared
-    suggDiv.textContent = '';
-    updateWarning(row);
-    return;
-  }
-
-  const inv = Number(invVal);
-  // Suggested = Average - Inventory (Max 0)
-  let suggested = Math.max(Math.round(avg) - inv, 0);
-
-  // Update Reference Text (No Auto-fill)
-  suggDiv.textContent = `Sugerido: ${suggested}`;
-
-  // Update Warning (compares current Empty input vs Suggested)
-  updateWarning(row);
-}
-
-function onBulkQuantityChange(input) {
-  const row = input.closest('tr');
-  updateWarning(row);
-}
-
-function updateWarning(row) {
-  const invInput = row.querySelector('.bulk-inventory-input');
-  const qtyInput = row.querySelector('.bulk-qty-input');
-  const warnCell = row.querySelector('.bulk-warning-cell');
-
-  const avg = Number(row.getAttribute('data-avg')) || 0;
-  const invVal = invInput.value;
-  const qtyVal = qtyInput.value;
-
-  warnCell.textContent = '';
-  warnCell.style.color = '';
-
-  if (invVal === '') return; // No warning if no inventory entered logic? Or "Necesario llenar"?
-
-  const inv = Number(invVal);
-  const qty = Number(qtyVal);
-  const suggested = Math.max(Math.round(avg) - inv, 0);
-
-  // Logic requested: Show recommendation explicitly
-
-  if (suggested > 0 && qty === 0) {
-    warnCell.textContent = `No realiza pedido y necesita producto (Sug: ${suggested})`;
-    warnCell.style.color = 'red';
-    return;
-  }
-
-  if (qty < suggested) {
-    warnCell.textContent = `Pide menos de lo recomendado (${suggested})`;
-    warnCell.style.color = '#e67300'; // Dark Orange
-  } else if (qty > suggested) {
-    warnCell.textContent = `Pide más de lo recomendado (${suggested})`;
-    warnCell.style.color = '#e6b800'; // Dark Yellow
-  } else {
-    warnCell.textContent = `Igual a lo recomendado (${suggested})`;
-    warnCell.style.color = 'green';
   }
 }
 
@@ -1209,34 +1114,17 @@ async function saveBulkOrder() {
     const invVal = invInput.value.trim();
     const qtyVal = qtyInput.value.trim();
 
-    // LOGIC: If Inventory entered => Quantity is MANDATORY (can be 0 if intentional, but must be filled)
-    // User message: "es necesisario llenar todas las cantidades"
-
-    if (invVal !== '') {
-      if (qtyVal === '') {
-        isSaving = false;
-        Swal.fire({
-          icon: 'warning',
-          title: 'Falta Cantidad',
-          text: `Si ingresas inventario para "${name}", debes confirmar la cantidad (aunque sea 0).`
-        });
-        qtyInput.focus();
-        return;
-      }
-    }
-
     if (qtyVal && Number(qtyVal) > 0) {
       const qty = Number(qtyVal);
       const inv = (invVal === '') ? 0 : Number(invVal);
 
-      if (invVal !== '' && (!Number.isInteger(inv) || inv < 0)) {
+      if (!Number.isInteger(inv) || inv < 0) {
         isSaving = false;
         Swal.fire({ icon: 'warning', title: 'Inventario invÃ¡lido', text: `Inventario invÃ¡lido para ${name}` });
         invInput.focus();
         return;
       }
       if (!Number.isInteger(qty) || qty <= 0) {
-        // Technically > 0 check above covers this, but double check integer
         isSaving = false;
         Swal.fire({ icon: 'warning', title: 'Cantidad invÃ¡lida', text: `Cantidad invÃ¡lida para ${name}` });
         qtyInput.focus();
@@ -1258,11 +1146,6 @@ async function saveBulkOrder() {
         inventory: inv,
         quantity: qty
       });
-    } else if (invVal !== '' && Number(qtyVal) === 0) {
-      // Valid case: Inventory entered, Qty 0. Do not order, but don't error.
-      // Logic check: "si no realiza pedido y necesita producto" -> Advertencia was shown. Allow save?
-      // Yes, user decides.
-      continue;
     }
   }
 

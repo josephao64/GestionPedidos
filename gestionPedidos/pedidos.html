@@ -2,287 +2,295 @@
 <html lang="es">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gestión de Pedidos</title>
-  <link rel="stylesheet" href="pedidos.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Pedidos - SIA</title>
+
+  <!-- Dependencies -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="../database/connection.js"></script>
+  <script src="../security-config.js"></script>
   <script defer src="pedidos.js"></script>
+
+  <link rel="stylesheet" href="pedidos.css">
 </head>
 
 <body>
-  <div class="header">
-    <h1>Gestión de Pedidos</h1>
-    <div id="loggedInUser" style="font-weight: bold; color: #333;"></div>
-    <div>
-      <button id="btnMainMenu" class="main-menu-button">Volver al Menú Principal</button>
-      <a class="export-orders-button main-menu-button" href="exportPedidos.html">Exportar Pedidos</a>
+  <header class="header">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <i class="fas fa-clipboard-list" style="font-size: 1.5rem; color: var(--primary);"></i>
+      <h1>Gestión de Pedidos</h1>
     </div>
-  </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <span id="loggedInEmail" style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">...</span>
+      <button class="btn btn-secondary" id="btnMainMenu">
+        <i class="fas fa-home"></i> Inicio
+      </button>
+    </div>
+  </header>
 
-  <div id="adminFilterContainer" style="display: none; margin: 1rem 0;">
-    <label for="sucursalFilter" style="font-weight: bold;">Filtrar por Sucursal:</label>
-    <select id="sucursalFilter"></select>
+  <main class="main-content">
+    <!-- Dashboard Stats -->
+    <div class="stats-grid" id="ordersDashboard">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #eef2ff; color: #4f46e5;"><i class="fas fa-hourglass-start"></i></div>
+        <div class="stat-info">
+          <h3>Pendientes</h3>
+          <p id="stat-pending">0</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fff7ed; color: #ea580c;"><i class="fas fa-truck-fast"></i></div>
+        <div class="stat-info">
+          <h3>En Tránsito</h3>
+          <p id="stat-transit">0</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #ecfdf5; color: #10b981;"><i class="fas fa-check-circle"></i></div>
+        <div class="stat-info">
+          <h3>Completados Hoy</h3>
+          <p id="stat-completed-today">0</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fdf2f8; color: #be185d;"><i class="fas fa-receipt"></i></div>
+        <div class="stat-info">
+          <h3>Total (Mes)</h3>
+          <p id="stat-total-month">0</p>
+        </div>
+      </div>
+    </div>
 
-    <label for="providerFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Proveedor:</label>
-    <select id="providerFilter"></select>
+    <!-- Filter Panel -->
+    <div class="filter-panel" id="adminFilterContainer">
+      <label><i class="fas fa-store"></i> Sucursal:</label>
+      <select id="sucursalFilter">
+        <option value="all">Todas</option>
+      </select>
 
-    <label for="estadoFilter" style="font-weight: bold; margin-left: 1rem;">Filtrar por Estado:</label>
-    <select id="estadoFilter">
-      <option value="all" selected>Todos</option>
-      <option value="pending">Pendiente</option>
-      <option value="delivery">Entrega en Bodega/Tienda</option>
-    </select>
+      <label><i class="fas fa-truck"></i> Proveedor:</label>
+      <select id="providerFilter">
+        <option value="all">Todos</option>
+      </select>
 
-    <label for="deliveryTypeFilter" style="font-weight: bold; margin-left: 1rem;">Tipo de Entrega:</label>
-    <select id="deliveryTypeFilter">
-      <option value="all" selected>Todos</option>
-      <option value="Tienda">Entrega en Tienda</option>
-      <option value="Bodega">Entrega en Bodega</option>
-    </select>
+      <label><i class="fas fa-tag"></i> Estado:</label>
+      <select id="estadoFilter">
+        <option value="all">Todos</option>
+        <option value="pending">Pendientes</option>
+        <option value="delivery">Recibidos</option>
+      </select>
 
-    <label for="sortOrder" style="font-weight: bold; margin-left: 1rem;">Ordenar por:</label>
-    <select id="sortOrder">
-      <option value="masReciente" selected>Más Reciente</option>
-      <option value="masAntiguo">Más Antiguo</option>
-    </select>
+      <label><i class="fas fa-calendar"></i> Fecha:</label>
+      <input type="date" id="dateSearchInput">
 
-    <label for="idSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por ID:</label>
-    <input type="text" id="idSearchInput" placeholder="Ej. 123" style="width: 100px;" />
+      <label><i class="fas fa-hashtag"></i> ID:</label>
+      <input type="text" id="idSearchInput" placeholder="ID..." style="width: 100px;">
 
-    <label for="dateSearchInput" style="font-weight: bold; margin-left: 1rem;">Buscar por Fecha:</label>
-    <input type="date" id="dateSearchInput" />
-  </div>
+      <button class="btn btn-secondary" id="btnConfigAverages" title="Configurar Promedios">
+        <i class="fas fa-cog"></i>
+      </button>
+      <a class="btn btn-primary" href="exportPedidos.html" title="Exportar">
+        <i class="fas fa-file-export"></i>
+      </a>
+    </div>
 
-  <div class="tab-container" id="tabContainer">
-    <button class="tab-button active" data-tab-target="inProcessOrdersContainer">Pedidos en Proceso</button>
-    <button class="tab-button" data-tab-target="completedOrdersContainer">Pedidos Completados</button>
-  </div>
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" data-tab-target="inProcessOrdersContainer">
+        <i class="fas fa-spinner fa-spin"></i> En Proceso
+      </button>
+      <button class="tab-btn" data-tab-target="completedOrdersContainer">
+        <i class="fas fa-check-double"></i> Completados
+      </button>
+    </div>
 
-  <div id="inProcessOrdersContainer" class="container" style="display:block;">
-    <h2>Pedidos en Proceso</h2>
-    <div id="inProcessOrdersAdminCards" class="order-cards-container"></div>
-  </div>
+    <!-- Orders Views -->
+    <div id="inProcessOrdersContainer" class="tab-view">
+      <div id="inProcessOrdersAdminCards" class="order-grid">
+        <!-- Data via JS -->
+      </div>
+    </div>
 
-  <div id="completedOrdersContainer" class="container" style="display: none;">
-    <h2>Pedidos Completados</h2>
-    <div id="completedOrdersAdminCards" class="order-cards-container"></div>
-  </div>
+    <div id="completedOrdersContainer" class="tab-view" style="display: none;">
+      <div id="completedOrdersAdminCards" class="order-grid">
+        <!-- Data via JS -->
+      </div>
+    </div>
+  </main>
 
-  <!-- Detalles de Pedido -->
-  <div id="orderDetailsModal" class="modal" role="dialog" aria-modal="true">
+  <!-- Modals -->
+  <!-- Detailed Order Modal -->
+  <div id="orderDetailsModal" class="modal">
     <div class="modal-content">
       <span id="btnCloseOrderDetails" class="close">&times;</span>
-      <h2>Detalles del Pedido</h2>
-      <div id="orderDetails"></div>
-      <button id="exportOrderImageButton" style="margin-top: 1rem;">Exportar Pedido como Imagen</button>
-      <button id="editOrderFromDetailsBtn">Editar Pedido</button>
-    </div>
-  </div>
-
-  <!-- Exportar Pedido -->
-  <div id="exportModal" class="modal" role="dialog" aria-modal="true">
-    <div class="modal-content">
-      <span id="btnCloseExportModal" class="close">&times;</span>
-      <h2>Exportar Pedido</h2>
-      <div id="exportModalButtons">
-        <button data-export-format="image">Descargar como Imagen</button>
-        <button data-export-format="pdf">Descargar como PDF</button>
-        <button data-export-format="excel">Descargar como Excel</button>
+      <h2 style="margin-top: 0; color: var(--primary);">
+        <i class="fas fa-file-alt"></i> Detalles del Pedido
+      </h2>
+      <div id="orderDetails">
+        <!-- Logic in JS -->
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
+        <button id="exportOrderImageButton" class="btn btn-secondary">
+          <i class="fas fa-file-image"></i> Exportar como IMG
+        </button>
+        <button id="editOrderFromDetailsBtn" class="btn btn-primary" style="display: none;">
+          <i class="fas fa-edit"></i> Editar
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Editar Pedido -->
-  <div id="editOrderModal" class="modal" role="dialog" aria-modal="true">
+  <!-- Edit Order Modal -->
+  <div id="editOrderModal" class="modal">
     <div class="modal-content">
       <span id="btnCloseEditOrder" class="close">&times;</span>
-      <h2>Editar Pedido</h2>
       <div id="editOrderDetails">
-        <form id="editOrderForm">
-          <input type="hidden" id="editOrderDocId" />
-          <p><strong>ID Pedido:</strong> <span id="editOrderIdDisplay"></span></p>
-          <p>
-            <strong>Destino:</strong>
-            <select id="editOrderDestination">
-              <option value="Bodega">Bodega</option>
-              <option value="Tienda">Tienda</option>
-            </select>
-          </p>
-          <table id="editOrderProductsTable">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Presentación</th>
-                <th>Cantidad</th>
-                <th>Inventario</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="editOrderProducts"></tbody>
-          </table>
-          <br />
-          <div>
-            <button type="button" id="btnAddProductRow">Agregar Producto</button>
-            <button type="button" id="btnSaveEditedOrder">Guardar Cambios</button>
-          </div>
-        </form>
+        <!-- Logic in JS -->
       </div>
     </div>
   </div>
 
-  <!-- Recepción (ACTUALIZADO) -->
-  <div id="confirmOrderModal" class="modal" role="dialog" aria-modal="true">
-    <div class="modal-content">
+  <!-- Reception Modal (Confirm) -->
+  <div id="confirmOrderModal" class="modal">
+    <div class="modal-content" style="max-width: 1100px;">
       <span id="btnCloseConfirmOrder" class="close">&times;</span>
-      <h2>Ingresar Cantidades Recibidas</h2>
-      <input type="hidden" id="confirmOrderId" value="" />
-
       <div id="invoiceDetails">
         <div id="invoicesList">
-          <div class="invoice-entry">
-            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-              <div>
-                <label><strong>Número de Factura:</strong></label>
-                <input type="text" class="invoice-number" placeholder="Ingrese número de factura" />
-              </div>
-              <div>
-                <label><strong>Fecha de Factura:</strong></label>
-                <input type="date" class="invoice-date" />
-              </div>
+          <div id="orderInfo" style="margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <p><strong>ID Pedido:</strong> <span id="orderIdDisplay"></span></p>
+            <p><strong>Proveedor:</strong> <span id="providerNameDisplay"></span></p>
+            <p><strong>Sucursal:</strong> <span id="sucursalNameDisplay"></span></p>
+            <p><strong>Fecha:</strong> <span id="orderDateDisplay"></span></p>
+          </div>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <thead>
+                <tr style="background: var(--background); text-align: left;">
+                  <th style="padding: 12px;">Producto</th>
+                  <th style="padding: 12px;">Presentación</th>
+                  <th style="padding: 12px;">Cant. Pedido</th>
+                  <th style="padding: 12px;">Cant. Recibida</th>
+                  <th style="padding: 12px;">Precio (Q)</th>
+                  <th style="padding: 12px;">Total (Q)</th>
+                  <th style="padding: 12px;">Comentarios</th>
+                </tr>
+              </thead>
+              <tbody id="confirmOrderProducts"></tbody>
+            </table>
+          </div>
+          <div id="invoiceTotalsContainer" style="background: var(--primary-light); padding: 16px; border-radius: 8px;">
+            <div id="invoiceTotalsList"></div>
+            <div style="margin-top: 12px; font-weight: 700; font-size: 1.1rem; text-align: right;">
+              Total General: Q<span id="grandTotal">0.00</span>
             </div>
           </div>
-        </div>
-        <button type="button" id="btnAddInvoice" style="margin-bottom: 1rem;">Agregar Otra Factura</button>
-      </div>
-
-      <div id="orderInfo">
-        <p><strong>ID Pedido:</strong> <span id="orderIdDisplay"></span></p>
-        <p><strong>Proveedor:</strong> <span id="providerNameDisplay"></span></p>
-        <p><strong>Sucursal:</strong> <span id="sucursalNameDisplay"></span></p>
-        <p><strong>Fecha de Pedido:</strong> <span id="orderDateDisplay"></span></p>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Presentación</th>
-            <th>Cantidad Pedido</th>
-            <th>Cantidad Recibida</th>
-            <th>Precio (Q)</th>
-            <th>Total (Q)</th>
-            <th>Comentarios</th>
-          </tr>
-        </thead>
-        <tbody id="confirmOrderProducts"></tbody>
-      </table>
-      <div id="invoiceTotalsContainer" style="margin-top: 1rem;">
-        <div id="invoiceTotalsList"></div>
-        <div style="margin-top: 0.5rem; font-weight: bold;">
-          <p>Total General: Q<span id="grandTotal">0.00</span></p>
+          <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+            <button class="btn btn-secondary" id="btnExportReceived" style="display: none;">Exportar Recibido</button>
+            <button class="btn btn-primary" id="btnSaveReception">Guardar Recepción</button>
+          </div>
         </div>
       </div>
-      <div id="exportReceptionButtonContainer" style="margin-top: 1rem; display: none;">
-        <button id="btnExportReceived">Exportar Cantidades Recibidas</button>
-      </div>
-      <button id="btnSaveReception">Guardar Recepción</button>
     </div>
   </div>
 
-  <!-- Detalles Recepción -->
-  <div id="receivedOrderModal" class="modal" role="dialog" aria-modal="true">
-    <div class="modal-content">
-      <span id="btnCloseReceivedOrder" class="close">&times;</span>
-      <h2>Detalles del Pedido Recibido</h2>
-      <div id="receivedOrderDetails"></div>
-    </div>
-  </div>
-
-  <!-- Cambiar Estado -->
-  <div id="changeStatusModal" class="modal" style="display: none;" role="dialog" aria-modal="true">
-    <div class="modal-content">
+  <!-- Change Status Modal -->
+  <div id="changeStatusModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
       <span id="btnCloseChangeStatus" class="close">&times;</span>
-      <h2>Cambiar Estado del Pedido</h2>
-      <p>Selecciona el nuevo estado para este pedido:</p>
-      <div id="changeStatusButtons">
-        <button data-action="changeManualStatus" data-status="pending">Pendiente</button>
-        <button data-action="changeManualStatus" data-status="pedidoTomado">Pedido Tomado</button>
-        <button data-action="changeManualStatus" data-status="pedidoEnBodega">Pedido en Bodega</button>
-        <button data-action="changeManualStatus" data-status="bodegaEnvioPedido">Bodega Envío Pedido</button>
-        <button data-action="changeManualStatus" data-status="caminoATienda">Camino a Tienda</button>
-        <button data-action="changeManualStatus" data-status="sucursalRecibioPedido">Sucursal Recibió Pedido</button>
+      <h2>Cambiar Estado</h2>
+      <div id="changeStatusButtons" style="display: grid; gap: 12px; margin-top: 20px;">
+        <!-- Via JS -->
       </div>
     </div>
   </div>
 
-  <!-- Plantilla exportación Recepción -->
-  <div id="exportReceptionHiddenContainer"
-    style="display: none; position: absolute; left: -9999px; top: -9999px; background: #ffffff; padding: 20px; width: 1200px;">
-    <img id="exportReceptionLogo" src="../resources/images/logo.png" alt="Logo"
-      style="width: 100px; height: auto; margin-bottom: 20px;">
-    <h2>Recepción de Pedido</h2>
-    <p><strong>ID Pedido:</strong> <span id="exportReceptionOrderIdHidden"></span></p>
-    <p><strong>Proveedor:</strong> <span id="exportReceptionProviderHidden"></span></p>
-    <p><strong>Sucursal:</strong> <span id="exportReceptionSucursalHidden"></span></p>
-    <p><strong>Fecha de Pedido:</strong> <span id="exportReceptionOrderDateHidden"></span></p>
-    <p><strong>Facturas:</strong> <span id="exportReceptionInvoiceNumberHidden"></span></p>
-    <p><strong>Información adicional:</strong> <span id="exportReceptionInvoiceDateHidden"></span></p>
-    <p><strong>Total de la Factura:</strong> Q<span id="exportReceptionInvoiceTotalHidden"></span></p>
-    <p><strong>Última Edición:</strong> <span id="exportReceptionLastEditHidden"></span></p>
-    <table border="1" style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+  <!-- Usage Average Modal -->
+  <div id="usageAverageModal" class="modal">
+    <div class="modal-content">
+      <span id="btnCloseUsageAverage" class="close">&times;</span>
+      <div id="usageAverageContent">
+        <!-- JS logic -->
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Hidden Export Helpers (Preserved IDs) -->
+  <div id="receiptExportContainer" style="display: none; position: absolute; left: -9999px;"></div>
+
+  <div id="orderDetailsForImage"
+    style="display: none; position: absolute; left: -9999px; background: white; padding: 40px; width: 600px; font-family: 'Outfit', sans-serif; color: #1e293b;">
+    <div
+      style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
+      <div>
+        <img src="../resources/images/logo.png" alt="Logo" style="height: 60px; margin-bottom: 10px;">
+        <h1 style="margin: 0; font-size: 24px; color: #4f46e5; font-weight: 800; letter-spacing: -0.5px;">DETALLE DE
+          PEDIDO</h1>
+      </div>
+      <div style="text-align: right;">
+        <div
+          style="background: #4f46e5; color: white; padding: 5px 15px; border-radius: 20px; font-weight: 700; font-size: 14px; display: inline-block; margin-bottom: 15px;">
+          Nº <span id="imgOrderId"></span>
+        </div>
+        <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: 500;"><span id="imgSaveDate"></span></p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+      <div>
+        <p
+          style="margin: 0 0 5px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700;">
+          Sucursal solicitante</p>
+        <p style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;"><span id="imgSucursalName"></span></p>
+      </div>
+      <div>
+        <p
+          style="margin: 0 0 5px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700;">
+          Proveedor</p>
+        <p style="margin: 0; font-size: 16px; font-weight: 700; color: #1e293b;"><span id="imgProviderName"></span></p>
+      </div>
+      <div>
+        <p
+          style="margin: 0 0 5px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700;">
+          Destino de entrega</p>
+        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;"><span id="imgDestination"></span></p>
+      </div>
+    </div>
+
+    <table
+      style="width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
       <thead>
-        <tr>
-          <th>Producto</th>
-          <th>Presentación</th>
-          <th>Cantidad Pedida</th>
-          <th>Cantidad Recibida</th>
-          <th>Advertencias</th>
-          <th>Comentarios</th>
+        <tr style="background: #f8fafc;">
+          <th
+            style="padding: 15px; border-bottom: 1px solid #e2e8f0; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">
+            Producto</th>
+          <th
+            style="padding: 15px; border-bottom: 1px solid #e2e8f0; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">
+            Presentación</th>
+          <th
+            style="padding: 15px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">
+            Cant.</th>
         </tr>
       </thead>
-      <tbody id="exportReceptionProductsTableBody"></tbody>
+      <tbody id="imgProductsTableBody" style="font-size: 14px; font-weight: 500;"></tbody>
     </table>
-    <div style="margin-top: 20px; font-weight: bold; text-align: center;">¡Gracias por su pedido!</div>
-  </div>
 
-  <!-- Plantilla exportación Ticket Pedido -->
-  <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
-    <div class="ticket-header">
-      <img src="../resources/images/logo.png" alt="Logo" />
-      <h1>Pedido</h1>
-      <h2>ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
-    </div>
-    <div class="ticket-body">
-      <p><strong>Proveedor:</strong> <span id="imgProviderName"></span></p>
-      <p><strong>Sucursal:</strong> <span id="imgSucursalName"></span></p>
-      <p><strong>Entrega en:</strong> <span id="imgDestination"></span></p>
-      <p><strong>Fecha de Registro:</strong> <span id="imgSaveDate"></span></p>
-      <h3>Productos:</h3>
-      <table class="products-table">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Presentación</th>
-            <th>Cantidad</th>
-          </tr>
-        </thead>
-        <tbody id="imgProductsTableBody"></tbody>
-      </table>
-    </div>
-    <div class="ticket-footer">
-      <p>Gracias por su pedido.</p>
+    <div style="margin-top: 40px; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 20px;">
+      <p style="margin: 0; font-size: 12px; color: #94a3b8; font-weight: 500;">Este es un comprobante oficial generado
+        por el Sistema de Gestión de Pedidos</p>
     </div>
   </div>
 
-  <script>
-    // Compatibilidad con llamadas externas existentes
-    window.downloadExportReceptionImage = function (id) { const elId = id || document.getElementById("confirmOrderId")?.value || ""; if (elId) document.dispatchEvent(new CustomEvent("exportReception", { detail: elId })); };
-  </script>
+  <div id="exportReceptionHiddenContainer" style="display: none; position: absolute; left: -9999px;"></div>
+
 </body>
 
 </html>
