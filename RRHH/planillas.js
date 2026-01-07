@@ -103,8 +103,19 @@ async function loadPlanillaTable() {
             const appliedLoans = [];
 
             // Check Period logic for "Mensual" loans (Usually only 2nd quincena)
-            const pStart = document.getElementById('planillaStart').value;
-            const startDay = pStart ? new Date(pStart).getDate() : 1;
+            const pStartEl = document.getElementById('planillaStart');
+            let startDay = 1;
+
+            if (pStartEl && pStartEl.value) {
+                startDay = new Date(pStartEl.value).getDate();
+            } else {
+                // Fallback to Period Selector if custom date not found
+                const pPeriod = document.getElementById('planillaPeriod');
+                if (pPeriod && pPeriod.value == '2') {
+                    startDay = 16;
+                }
+            }
+
             const isSecondQuincena = startDay > 15;
 
             if (loansByEmp[doc.id]) {
