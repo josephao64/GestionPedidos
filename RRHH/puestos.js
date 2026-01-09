@@ -51,7 +51,7 @@ async function loadPositions() {
                 </td>
                 </td>
                 <td>
-                    <button class="btn btn-primary" onclick="editPosition('${doc.id}', '${escapeHtml(data.name)}', '${data.department}', ${data.baseSalary}, '${data.salaryTypeId || ''}')" style="padding: 5px 10px; font-size: 12px;"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-primary" onclick="editPosition('${doc.id}', '${escapeHtml(data.name)}', '${data.department}', ${data.baseSalary}, '${data.salaryTypeId || ''}', '${data.parentId || ''}')" style="padding: 5px 10px; font-size: 12px;"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-danger btn-sm" onclick="deletePosition('${doc.id}', '${escapeHtml(data.name)}')" style="padding: 5px 10px; font-size: 12px;"><i class="fas fa-trash"></i></button>
                 </td>
             `;
@@ -98,11 +98,39 @@ async function loadSalaryTypesForModal(selectedId = null) {
     }
 }
 
+// Helper to load potential parent positions
+async function loadParentsForModal(selectedParentId = null, currentPositionId = null) {
+    const select = document.getElementById('puestoParentId');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Cargando...</option>';
+
+    try {
+        const snap = await db.collection('positions').orderBy('name').get();
+        let html = '<option value="">-- Ninguno (Puesto Superior) --</option>';
+
+        snap.forEach(doc => {
+            // Prevent selecting self as parent
+            if (currentPositionId && doc.id === currentPositionId) return;
+
+            const data = doc.data();
+            const selected = (selectedParentId === doc.id) ? 'selected' : '';
+            html += `<option value="${doc.id}" ${selected}>${data.name}</option>`;
+        });
+
+        select.innerHTML = html;
+    } catch (e) {
+        console.error("Error loading parents:", e);
+        select.innerHTML = '<option value="">Error al cargar</option>';
+    }
+}
+
 async function savePosition() {
     const name = document.getElementById('nombre').value.trim();
     const dept = document.getElementById('departamento').value;
     const salarySelect = document.getElementById('puestoSalaryTypeId');
     const salaryTypeId = salarySelect.value;
+    const parentId = document.getElementById('puestoParentId').value || null; // New Field
 
     if (!name || !dept || !salaryTypeId) {
         Swal.fire('Atención', 'Todos los campos son obligatorios', 'warning');
@@ -122,6 +150,7 @@ async function savePosition() {
             salaryTypeId: salaryTypeId,
             salaryTypeName: salaryTypeName,
             baseSalary: baseSalarySnapshot, // Snapshot for calculation
+            parentId: parentId, // Save Parent ID
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
@@ -174,13 +203,14 @@ function openModal() {
     document.getElementById('puestoId').value = '';
     document.getElementById('modalTitle').textContent = 'Nuevo Puesto';
 
-    // Load fresh types
+    // Load fresh types and parents
     loadSalaryTypesForModal();
+    loadParentsForModal(); // New call
 
     document.getElementById('puestoModal').style.display = 'flex';
 }
 
-function editPosition(id, name, dept, salary, salaryTypeId) {
+function editPosition(id, name, dept, salary, salaryTypeId, parentId = null) {
     currentId = id;
     document.getElementById('puestoId').value = id;
     document.getElementById('nombre').value = name;
@@ -188,8 +218,9 @@ function editPosition(id, name, dept, salary, salaryTypeId) {
 
     document.getElementById('modalTitle').textContent = 'Editar Puesto';
 
-    // Load types and select current
+    // Load types and parents, setting selected
     loadSalaryTypesForModal(salaryTypeId);
+    loadParentsForModal(parentId, id); // New call
 
     document.getElementById('puestoModal').style.display = 'flex';
 }

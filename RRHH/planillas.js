@@ -68,6 +68,44 @@ async function loadPlanillaTable() {
         const daysWorkedDefault = 15;
         const selectedSucursal = sucursalSelect ? sucursalSelect.value : 'all';
 
+        // HEADER UPDATE LOGIC
+        const logoImg = document.getElementById('headerCompanyLogo');
+        const titleH3 = document.getElementById('headerCompanyTitle');
+
+        // Reset defaults
+        titleH3.innerText = "AMERICAN PIZZA";
+        logoImg.src = "../Recibos/logo.png";
+
+        if (selectedSucursal !== 'all') {
+            try {
+                // Fetch Branch to get empresaId
+                const branchDoc = await db.collection('sucursales').doc(selectedSucursal).get();
+                if (branchDoc.exists) {
+                    const branchData = branchDoc.data();
+                    // If has empresaId, fetch Company from 'empresas' collection
+                    if (branchData.empresaId) {
+                        const compDoc = await db.collection('empresas').doc(branchData.empresaId).get();
+                        if (compDoc.exists) {
+                            const compData = compDoc.data();
+                            titleH3.innerText = (compData.name || "AMERICAN PIZZA").toUpperCase();
+                            // Try logo field or default
+                            if (compData.logo || compData.logoUrl) {
+                                logoImg.src = compData.logo || compData.logoUrl;
+                            }
+                        }
+                    } else if (branchData.companyName) {
+                        // Fallback if name is directly on branch
+                        titleH3.innerText = branchData.companyName.toUpperCase();
+                    }
+                }
+            } catch (err) {
+                console.error("Error updating header company info:", err);
+            }
+        } else {
+            titleH3.innerText = "CORPORACIÓN";
+        }
+
+
         currentPayrollData = [];
 
         empSnap.forEach(doc => {
@@ -184,6 +222,12 @@ async function loadPlanillaTable() {
                 discount: loanDeduction,
                 advance: wageAdvance,
                 appliedLoans: appliedLoans,
+                // New Fields for Additional Income
+                extraHours: 0,
+                extraAmount: 0,
+                otherBonus: 0,
+                holidayBonus: 0,
+                finalTotal: 0, // Will be calculated
                 isNew: true
             });
         });
@@ -209,10 +253,21 @@ async function populatePlanillaBranches() {
         const select = document.getElementById('planillaSucursal');
         if (!select) return;
 
+        // Fetch ALL to filter safely in memory (Case Insensitive)
         const snap = await db.collection('sucursales').orderBy('name').get();
         select.innerHTML = '<option value="all">Todas las Sucursales</option>';
-        snap.forEach(doc => {
-            select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
+
+        const rawBranches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const branches = rawBranches.filter(b => b.status && b.status.toLowerCase() === 'activo');
+
+        // Sort is handled by orderBy if names are consistent, but safe to sort again or skip.
+        // branches.sort... (firebase orderBy is usually enough for name)
+
+        branches.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.id;
+            opt.innerText = b.name;
+            select.appendChild(opt);
         });
     } catch (e) {
         console.error("Error loading branches for payroll:", e);
@@ -252,6 +307,13 @@ function renderPlanillaRows() {
         sumAdvance += row.advance;
         sumTotalDeductions += totalDeductions;
         sumLiquid += liquid;
+
+        // Sum Extra
+        const totalAdic = row.extraAmount + row.otherBonus + row.holidayBonus;
+        const finalPay = liquid + totalAdic;
+
+        row.finalTotal = finalPay; // Store for save
+
 
         const tr = document.createElement('tr');
         tr.style.background = '#fff';
@@ -295,6 +357,27 @@ function renderPlanillaRows() {
 
             <td style="${numStyle}">Q${totalDeductions.toFixed(2)}</td>
             <td style="${numStyle}">Q${liquid.toFixed(2)}</td>
+
+            <!-- Extra Income Inputs -->
+             <td style="${cellStyle} padding: 2px;">
+                <input type="number" step="0.5" value="${row.extraHours}" 
+                    onchange="updatePlanillaExtra(${index}, 'hours', this.value)"
+                    style="width: 40px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
+            </td>
+            <td style="${numStyle} background: #f0fdf4;">Q${row.extraAmount.toFixed(2)}</td>
+            <td style="${cellStyle} padding: 2px;">
+                <input type="number" step="0.01" value="${row.otherBonus.toFixed(2)}" 
+                    onchange="updatePlanillaExtra(${index}, 'other', this.value)"
+                    style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
+            </td>
+             <td style="${cellStyle} padding: 2px;">
+                <input type="number" step="0.01" value="${row.holidayBonus.toFixed(2)}" 
+                    onchange="updatePlanillaExtra(${index}, 'holiday', this.value)"
+                    style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
+            </td>
+            <td style="${numStyle} font-weight: bold; background: #f0fdf4;">Q${(row.extraAmount + row.otherBonus + row.holidayBonus).toFixed(2)}</td>
+            
+            <td style="${numStyle} font-weight: bold; background: #dcfce7;">Q${(liquid + row.extraAmount + row.otherBonus + row.holidayBonus).toFixed(2)}</td>
             <td style="${cellStyle} border-bottom: 2px solid #000;">____________</td>
         `;
 
@@ -317,7 +400,16 @@ function renderPlanillaRows() {
                 <td style="padding: 6px; border: 1px solid #000;">Q${sumDiscount.toFixed(2)}</td>
                 <td style="padding: 6px; border: 1px solid #000;">Q${sumAdvance.toFixed(2)}</td>
                 <td style="padding: 6px; border: 1px solid #000;">Q${sumTotalDeductions.toFixed(2)}</td>
-                <td style="padding: 6px; border: 1px solid #000; background: #eee;">Q${sumLiquid.toFixed(2)}</td>
+                <td style="padding: 6px; border: 1px solid #000;">Q${sumLiquid.toFixed(2)}</td>
+                
+                <!-- Extra Totals -->
+                <td style="padding: 6px; border: 1px solid #000;">-</td>
+                 <td style="padding: 6px; border: 1px solid #000;">Q${currentPayrollData.reduce((a, b) => a + b.extraAmount, 0).toFixed(2)}</td>
+                 <td style="padding: 6px; border: 1px solid #000;">Q${currentPayrollData.reduce((a, b) => a + b.otherBonus, 0).toFixed(2)}</td>
+                 <td style="padding: 6px; border: 1px solid #000;">Q${currentPayrollData.reduce((a, b) => a + b.holidayBonus, 0).toFixed(2)}</td>
+                 <td style="padding: 6px; border: 1px solid #000;">Q${currentPayrollData.reduce((a, b) => a + (b.extraAmount + b.otherBonus + b.holidayBonus), 0).toFixed(2)}</td>
+                 <td style="padding: 6px; border: 1px solid #000; background: #eee;">Q${currentPayrollData.reduce((a, b) => a + b.finalTotal, 0).toFixed(2)}</td>
+
                 <td style="border: 1px solid #000;"></td>
             </tr>
         `;
@@ -360,6 +452,24 @@ function updatePlanillaDays(index, value) {
 function updatePlanillaRow(index, field, value) {
     const val = parseFloat(value) || 0;
     currentPayrollData[index][field] = val;
+    renderPlanillaRows();
+}
+
+function updatePlanillaExtra(index, type, value) {
+    const val = parseFloat(value) || 0;
+    const row = currentPayrollData[index];
+
+    if (type === 'hours') {
+        row.extraHours = val;
+        // Calc Amount: Base Monthly Salary / 30 / 8 * 1.5 * Hours
+        const hourlyRate = (row.monthlyBase / 30) / 8;
+        row.extraAmount = hourlyRate * 1.5 * val;
+    } else if (type === 'other') {
+        row.otherBonus = val;
+    } else if (type === 'holiday') {
+        row.holidayBonus = val;
+    }
+
     renderPlanillaRows();
 }
 
@@ -554,6 +664,290 @@ window.loadSavedPlanilla = loadSavedPlanilla;
 window.deleteSavedPlanilla = deleteSavedPlanilla;
 window.updatePlanillaRow = updatePlanillaRow;
 window.updatePlanillaDays = updatePlanillaDays;
+window.populatePlanillaBranches = populatePlanillaBranches;
+window.printPaymentSlips = printPaymentSlips;
+window.processLoanPayments = processLoanPayments;
+
+function printPaymentSlips(type) {
+    if (currentPayrollData.length === 0) {
+        alert("No hay datos cargados para imprimir.");
+        return;
+    }
+
+    const m = document.getElementById('planillaMonth');
+    const p = document.getElementById('planillaPeriod');
+    const y = document.getElementById('planillaYear');
+    const s = document.getElementById('planillaSucursal');
+    // Get Company Title - Fallback to global or derive
+    let companyTitle = "AMERICAN PIZZA";
+    const headerTitleEl = document.getElementById('headerCompanyTitle');
+    if (headerTitleEl && headerTitleEl.innerText) companyTitle = headerTitleEl.innerText;
+
+    // Attempt to get Logo
+    let logoSrc = "../Recibos/logo.png";
+    const logoEl = document.getElementById('headerCompanyLogo');
+    if (logoEl && logoEl.src) logoSrc = logoEl.src;
+
+    const mText = m ? m.options[m.selectedIndex].text : '';
+    const yText = y ? y.value : '';
+    const pText = p ? (p.value == '1' ? 'Del 01 al 15' : 'Del 16 al ' + new Date(y.value, parseInt(m.value) + 1, 0).getDate()) : '';
+    const periodStr = `${pText} de ${mText} ${yText}`;
+    const emissionDate = new Date().toLocaleDateString("es-GT");
+
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><title>&nbsp;</title>`);
+    w.document.write('<style>');
+    w.document.write('body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 20px; }');
+    w.document.write('@page { margin: 0; }');
+
+    if (type === 'normal') {
+        // Table Styles for Normal View
+        w.document.write('@page { size: landscape; margin: 0; }');
+        w.document.write('body { padding: 10mm; }');
+        w.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #000; }');
+        w.document.write('th { border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold; font-size: 10px; }');
+        w.document.write('td { border: 1px solid #000; padding: 4px; font-size: 11px; }');
+        w.document.write('.amount { text-align: right; }');
+        w.document.write('.center { text-align: center; }');
+        w.document.write('.header-container { display: flex; align-items: center; margin-bottom: 20px; }');
+        w.document.write('.logo { height: 50px; margin-right: 20px; }');
+        w.document.write('.title-box { text-align: center; flex: 1; text-transform: uppercase; font-weight: bold; }');
+        w.document.write('tfoot { font-weight: bold; background: #f0f0f0; }');
+
+        w.document.write('</style></head><body>');
+
+        // Header
+        w.document.write(`
+            <div class="header-container">
+                <img src="${logoSrc}" class="logo" alt="Logo">
+                <div class="title-box">
+                    <div>${companyTitle}</div>
+                    <div>NÓMINA DE SUELDOS</div>
+                    <div>${periodStr}</div>
+                </div>
+                <div style="width: 70px;"></div>
+            </div>
+        `);
+
+        // Table Normal
+        w.document.write('<table><thead>');
+        // Main Headers
+        w.document.write(`
+            <tr>
+                <th rowspan="2" style="width: 200px;">NOMBRE EMPLEADO</th>
+                <th colspan="4">SALARIO DEVENGADO</th>
+                <th colspan="6">DEDUCCIONES LEGALES</th>
+                <th rowspan="2">SALARIO<br>LÍQUIDO</th>
+                <th rowspan="2" style="width: 120px;">FIRMA</th>
+            </tr>
+        `);
+        // Sub Headers
+        w.document.write(`
+            <tr>
+                <th>DÍAS<br>TRAB.</th>
+                <th>SALARIO</th>
+                <th>BONIF.<br>DECRETO</th>
+                <th>SALARIO<br>TOTAL</th>
+                
+                <th>IGSS</th>
+                <th>ISR</th>
+                <th>JUDICIAL</th>
+                <th>DESCUENTO</th>
+                <th>ANTICIPO<br>QUINCENA</th>
+                <th>TOTAL<br>DEDUCC.</th>
+            </tr>
+        `);
+        w.document.write('</thead><tbody>');
+
+        // Totals
+        let tSalary = 0, tBonus = 0, tTotalSal = 0;
+        let tIgss = 0, tIsr = 0, tJud = 0, tDisc = 0, tAdv = 0, tTotalDed = 0;
+        let tLiquid = 0;
+
+        currentPayrollData.forEach(row => {
+            const totalSal = row.salary + row.bonus;
+            const totalDed = row.igss + row.isr + row.judicial + row.discount + row.advance;
+            const liq = totalSal - totalDed;
+
+            tSalary += row.salary; tBonus += row.bonus; tTotalSal += totalSal;
+            tIgss += row.igss; tIsr += row.isr; tJud += row.judicial;
+            tDisc += row.discount; tAdv += row.advance; tTotalDed += totalDed;
+            tLiquid += liq;
+
+            w.document.write(`
+                <tr>
+                    <td>${row.name}</td>
+                    <td class="center">${row.days}</td>
+                    <td class="amount">Q${row.salary.toFixed(2)}</td>
+                    <td class="amount">Q${row.bonus.toFixed(2)}</td>
+                    <td class="amount">Q${totalSal.toFixed(2)}</td>
+                    
+                    <td class="amount">Q${row.igss.toFixed(2)}</td>
+                    <td class="amount">Q${row.isr.toFixed(2)}</td>
+                    <td class="amount">Q${row.judicial.toFixed(2)}</td>
+                    <td class="amount">Q${row.discount.toFixed(2)}</td>
+                    <td class="amount">Q${row.advance.toFixed(2)}</td>
+                    <td class="amount">Q${totalDed.toFixed(2)}</td>
+                    
+                    <td class="amount">Q${liq.toFixed(2)}</td>
+                    <td style="border-bottom: 1px solid #000;"></td>
+                </tr>
+            `);
+        });
+
+        // Footer Totals
+        w.document.write(`
+            </tbody><tfoot>
+                <tr>
+                    <td style="text-align:right;">TOTALES:</td>
+                    <td>-</td>
+                    <td class="amount">Q${tSalary.toFixed(2)}</td>
+                    <td class="amount">Q${tBonus.toFixed(2)}</td>
+                    <td class="amount">Q${tTotalSal.toFixed(2)}</td>
+                    
+                    <td class="amount">Q${tIgss.toFixed(2)}</td>
+                    <td class="amount">Q${tIsr.toFixed(2)}</td>
+                    <td class="amount">Q${tJud.toFixed(2)}</td>
+                    <td class="amount">Q${tDisc.toFixed(2)}</td>
+                    <td class="amount">Q${tAdv.toFixed(2)}</td>
+                    <td class="amount">Q${tTotalDed.toFixed(2)}</td>
+                    
+                    <td class="amount">Q${tLiquid.toFixed(2)}</td>
+                    <td></td>
+                </tr>
+            </tfoot></table>
+        `);
+
+        w.document.write(`<div style="margin-top:20px; font-weight:bold; font-size: 1.2em; text-align:right;">TOTAL PLANILLA: Q${tLiquid.toFixed(2)}</div>`);
+
+    } else {
+        // EXTRA SLIPS (Individual)
+        w.document.write('@page { size: portrait; margin: 0; }');
+        w.document.write('body { padding: 10mm; }');
+        w.document.write('.slip-container { border-bottom: 2px dashed #000; padding-bottom: 20px; margin-bottom: 20px; page-break-inside: avoid; }');
+        w.document.write('.header { display: flex; justify-content: space-between; margin-bottom: 10px; }');
+        w.document.write('.header h2 { margin: 0; font-size: 16px; text-transform: uppercase; }');
+        w.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #000; }');
+        w.document.write('th { border: 1px solid #000; padding: 4px; text-align: center; background: #eee; font-weight: bold; }');
+        w.document.write('td { border: 1px solid #000; padding: 4px; vertical-align: top; }'); // Align top specifically
+        w.document.write('.amount { text-align: right; }');
+        w.document.write('.total-box { border: 2px solid #000; padding: 5px 20px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 10px; }');
+        w.document.write('.footer { margin-top: 40px; display: flex; justify-content: space-between; }');
+        w.document.write('.signature { border-top: 2px solid #000; width: 40%; text-align: center; padding-top: 5px; }');
+        w.document.write('@media print { .slip-container { page-break-after: always; } .slip-container:last-child { page-break-after: auto; } }');
+        w.document.write('</style></head><body>');
+
+        currentPayrollData.forEach(row => {
+            const hasExtra = (row.extraAmount + row.otherBonus + row.holidayBonus) > 0;
+            if (!hasExtra) return;
+
+            // Pass logo logic too if you want logo on slips
+            w.document.write(generateSlipHtml(row, 'extra', companyTitle, periodStr, emissionDate));
+        });
+    }
+
+    w.document.write('</body></html>');
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 1000);
+}
+
+function generateSlipHtml(row, type, companyName, period, emission) {
+    let incomeHtml = '';
+    let deductHtml = '';
+    let totalIncome = 0;
+    let totalDeduct = 0;
+    let liquid = 0;
+
+    // NOTE: 'normal' is now handled by Table view above, but we keep this just in case logic is reused or reverted.
+    // Logic below handles 'extra' individual slip.
+
+    if (type === 'extra') {
+        // EXTRA SLIP
+        // Items: Asueto, Horas Extras, Otros
+
+        if (row.holidayBonus > 0) {
+            incomeHtml += `<tr><td>Asueto</td><td class="amount">Q${row.holidayBonus.toFixed(2)}</td></tr>`;
+            totalIncome += row.holidayBonus;
+        }
+        if (row.extraAmount > 0) {
+            incomeHtml += `<tr><td>Horas Extras (${row.extraHours})</td><td class="amount">Q${row.extraAmount.toFixed(2)}</td></tr>`;
+            totalIncome += row.extraAmount;
+        }
+        if (row.otherBonus > 0) {
+            incomeHtml += `<tr><td>Otros Ingresos</td><td class="amount">Q${row.otherBonus.toFixed(2)}</td></tr>`;
+            totalIncome += row.otherBonus;
+        }
+
+        // Deductions for Extra? Usually none unless configured. 
+        deductHtml = '<tr><td colspan="2" style="text-align:center;">-</td></tr>';
+        totalDeduct = 0;
+        liquid = totalIncome;
+    }
+
+    return `
+        <div class="slip-container">
+            <div class="header">
+                <div>
+                    <h2>${companyName}</h2>
+                    <div>BOLETA DE PAGO (EXTRAS)</div>
+                    <div>Periodo: ${period}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div>EMISIÓN: ${emission}</div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+                <strong>Código:</strong> ${row.id.substring(0, 6).toUpperCase()} <br>
+                <strong>Empleado:</strong> ${row.name}
+            </div>
+
+            <table style="border: 2px solid #000;">
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">DETALLE DEVENGADO</th>
+                        <th style="width: 50%;">DETALLE DE DESCUENTOS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 0; border: 0; border-right: 2px solid #000;">
+                           <table style="width: 100%; border: 0; margin: 0;">
+                                ${incomeHtml}
+                                <tr style="font-weight: bold; border-top: 1px solid #000;">
+                                    <td>Total Devengado</td>
+                                    <td class="amount">Q${totalIncome.toFixed(2)}</td>
+                                </tr>
+                           </table>
+                        </td>
+                         <td style="padding: 0; border: 0;">
+                           <table style="width: 100%; border: 0; margin: 0;">
+                                ${deductHtml}
+                                <tr style="font-weight: bold; border-top: 1px solid #000;">
+                                    <td>Total Descuentos</td>
+                                    <td class="amount">Q${totalDeduct.toFixed(2)}</td>
+                                </tr>
+                           </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <div class="total-box">
+                    Líquido Q${liquid.toFixed(2)}
+                </div>
+            </div>
+
+            <div class="footer">
+                <div class="signature">
+                    F. __________________________
+                </div>
+            </div>
+        </div>
+    `;
+}
 
 async function processLoanPayments(payrollRows, payrollId, periodStr) {
     console.log("Procesando pagos de préstamos...");

@@ -47,12 +47,15 @@ window.sucursales = {
 async function loadOrgData() {
     try {
         const [sucSnap, empSnap, posSnap] = await Promise.all([
-            db.collection('sucursales').get(),
+            db.collection('sucursales').orderBy('name').get(),
             db.collection('employees').where('status', '==', 'active').get(),
             db.collection('positions').get()
         ]);
 
-        orgData.branches = sucSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const rawBranches = sucSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Filter In-Memory to be Case-Insensitive safe
+        orgData.branches = rawBranches.filter(b => b.status && b.status.toLowerCase() === 'activo');
+
         orgData.employees = empSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         orgData.positions = posSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 

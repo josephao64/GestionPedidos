@@ -81,8 +81,11 @@ async function initFilters() {
         positionSelect.innerHTML = '<option value="all">Todos</option>';
 
         const branchesSnap = await db.collection('sucursales').orderBy('name').get();
-        branchesSnap.forEach(doc => {
-            branchSelect.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
+        const rawBranches = branchesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const branches = rawBranches.filter(b => b.status && b.status.toLowerCase() === 'activo');
+
+        branches.forEach(b => {
+            branchSelect.innerHTML += `<option value="${b.id}">${b.name}</option>`;
         });
 
         const positionsSnap = await db.collection('positions').orderBy('name').get();
