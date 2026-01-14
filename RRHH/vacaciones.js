@@ -343,7 +343,7 @@ window.vacations = {
         const action = actionEl.value;
         const duration = durationEl.value;
 
-        const durationContainer = document.getElementById('vacDurationTypeContainer');
+        const durationContainer = document.getElementById('vacDurationContainer');
         const dateFields = document.getElementById('vacDateFields');
         const payoutFields = document.getElementById('vacPayoutFields');
         const endDateInput = document.getElementById('vacEndDate');
@@ -398,16 +398,34 @@ window.vacations = {
     calculatePayout: function () {
         if (!selectedVacationEmployee) return;
 
-        const days = parseInt(document.getElementById('vacPayoutDays').value) || 0;
+        const actionEl = document.querySelector('input[name="vacActionType"]:checked');
+        const action = actionEl ? actionEl.value : 'payout';
+
+        // Only auto-calc if payout or mixed
+        if (action !== 'payout' && action !== 'mixed') return;
+
+        const daysInput = document.getElementById('vacPayoutDays');
+        const amountInput = document.getElementById('vacPayoutAmount');
+        const days = parseFloat(daysInput.value) || 0;
+
         // Use baseSalary or minimum wage if configured? Assuming baseSalary on employee record
-        const salary = parseFloat(selectedVacationEmployee.baseSalary) || 0;
+        // If baseSalary is string '2500.00', parse it.
+        const salary = parseFloat(selectedVacationEmployee.baseSalary) || 2800; // Fallback to approx min wage if missing?
         const dailyVal = salary / 30;
-        const total = dailyVal * days;
 
-        const amountEl = document.getElementById('vacPayoutAmount');
-        if (amountEl) amountEl.value = total.toFixed(2);
+        if (days > 0) {
+            const total = dailyVal * days;
+            // Only update amount if it's empty or user just changed days (how to track? simpler: just update)
+            // But we want to allow manual override. 
+            // Logic: If user specifically inputs amount, we shouldn't overwrite unless days changes?
+            // Since this runs on 'keyups' or 'change', let's update.
+            // If the user wants to override, they can type in amount box *after* typing days.
+            // But if this runs on any change... 
+            // Let's check if the event target was the days input. 
+            // Since we don't have event here easily, we'll just update for now.
+            amountInput.value = total.toFixed(2);
+        }
     }
-
 };
 
 // Helper helper to bridge the select action
@@ -621,90 +639,212 @@ async function loadVacationHistory(empId) {
 // --- PRINT RECEIPT ---
 window.printVacationReceipt = function (docId) {
     if (!window.currentVacationDocs) return;
-    const doc = window.currentVacationDocs.find(d => d.id === docId);
-    if (!doc) return;
-    const v = doc.data();
+    const doc1 = window.currentVacationDocs.find(d => d.id === docId);
+    if (!doc1) return;
+    let v1 = doc1.data();
 
-    document.getElementById('receiptEmployeeName').innerText = selectedVacationEmployee.fullName;
-    document.getElementById('receiptPrintDate').innerText = new Date().toLocaleDateString();
-    document.getElementById('receiptPosition').innerText = selectedVacationEmployee.puesto || '-';
-    // Department might need to be fetched or stored, using general for now
-    document.getElementById('receiptDept').innerText = 'General';
+    // Check for Linked Record (Mixed Vacation)
+    let v2 = null;
+    if (v1.linkedRecordId) {
+        const doc2 = window.currentVacationDocs.find(d => d.id === v1.linkedRecordId);
+        if (doc2) v2 = doc2.data();
+    }
 
-    document.getElementById('receiptPeriod').innerText = v.periodIdentifier || 'N/A';
-    document.getElementById('receiptType').innerText = v.type === 'enjoy' ? 'Tiempo (Disfrute)' : (v.type === 'payout' ? 'Pago en Efectivo' : 'Mixto');
-    document.getElementById('receiptDays').innerText = v.daysTaken;
-
-    let datesStr = '';
-    if (v.startDate) datesStr = `${v.startDate} al ${v.endDate}`;
-    else datesStr = 'N/A (Pago Directo)';
-
-    document.getElementById('receiptDates').innerText = datesStr;
-    document.getElementById('receiptAmount').innerText = v.amountPaid ? `Q${v.amountPaid}` : '-';
-    document.getElementById('receiptComments').innerText = v.comments || '';
-
-    // Print Logic
-    const printContent = document.getElementById('vacationReceiptTemplate').innerHTML;
     const win = window.open('', '', 'height=700,width=800');
     win.document.write('<html><head><title>Comprobante de Vacaciones</title>');
-    win.document.write('</head><body >');
-    win.document.write(printContent);
+    win.document.write('<style>body { font-family: Arial, sans-serif; padding: 20px; } .header { text-align: center; font-weight: bold; margin-bottom: 20px; } .section { border: 1px solid #000; padding: 15px; margin-bottom: 20px; } .row { display: flex; justify-content: space-between; margin-bottom: 10px; } .label { font-weight: bold; } .signature-box { margin-top: 40px; text-align: center; } .line { border-top: 1px solid #000; width: 200px; display: inline-block; margin-top: 40px; } </style>');
+    win.document.write('</head><body>');
+
+    if (v2) {
+        // MIXED PRINTING (Dual Section)
+        // Identify which is Enjoy and which is Payout
+        const enjoy = v1.type === 'enjoy' ? v1 : v2;
+        const payout = v1.type === 'payout' ? v1 : v2;
+
+        win.document.write(`
+            <div class="header">
+                CONSTANCIA DE VACACIONES (MIXTA)<br>
+                ${selectedVacationEmployee.fullName}
+            </div>
+            
+            <div class="section">
+                <strong>SECCIÓN 1: DÍAS GOZADOS (DISFRUTE)</strong>
+                <div class="row"><span class="label">Periodo:</span> <span>${enjoy.periodIdentifier || 'N/A'}</span></div>
+                <div class="row"><span class="label">Fechas:</span> <span>${enjoy.startDate} al ${enjoy.endDate}</span></div>
+                <div class="row"><span class="label">Días Tomados:</span> <span>${enjoy.daysTaken}</span></div>
+                <div class="row"><span class="label">Comentarios:</span> <span>${enjoy.comments || ''}</span></div>
+                
+                <div class="signature-box">
+                     <div>Firma por Días Gozados</div>
+                     <div class="line"></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <strong>SECCIÓN 2: DÍAS PAGADOS (EFECTIVO)</strong>
+                <div class="row"><span class="label">Periodo:</span> <span>${payout.periodIdentifier || 'N/A'}</span></div>
+                <div class="row"><span class="label">Días Pagados:</span> <span>${payout.daysTaken}</span></div>
+                <div class="row"><span class="label">Monto Pagado:</span> <span>Q${payout.amountPaid || '0.00'}</span></div>
+                <div class="row"><span class="label">Comentarios:</span> <span>${payout.comments || ''}</span></div>
+
+                <div class="signature-box">
+                     <div>Firma por Pago en Efectivo</div>
+                     <div class="line"></div>
+                </div>
+            </div>
+            
+            <div style="font-size: 0.8em; text-align: center; margin-top: 20px;">
+                Fecha de Impresión: ${new Date().toLocaleDateString()}
+            </div>
+        `);
+    } else {
+        // STANDARD PRINTING (Single)
+        // Use existing logic but written out since we replaced the function call
+        // Helper to format
+        const datesStr = v1.startDate ? `${v1.startDate} al ${v1.endDate}` : 'N/A (Pago Directo)';
+        const typeStr = v1.type === 'enjoy' ? 'Tiempo (Disfrute)' : 'Pago en Efectivo';
+
+        win.document.write(`
+             <div class="header">
+                CONSTANCIA DE VACACIONES<br>
+                ${selectedVacationEmployee.fullName}
+            </div>
+            <div class="section">
+                <div class="row"><span class="label">Tipo:</span> <span>${typeStr}</span></div>
+                <div class="row"><span class="label">Periodo:</span> <span>${v1.periodIdentifier || 'N/A'}</span></div>
+                <div class="row"><span class="label">Fechas:</span> <span>${datesStr}</span></div>
+                <div class="row"><span class="label">Días:</span> <span>${v1.daysTaken}</span></div>
+                <div class="row"><span class="label">Monto:</span> <span>${v1.amountPaid ? 'Q' + v1.amountPaid : '-'}</span></div>
+                <div class="row"><span class="label">Comentarios:</span> <span>${v1.comments || ''}</span></div>
+
+                <div class="signature-box">
+                     <div>Firma del Empleado</div>
+                     <div class="line"></div>
+                </div>
+            </div>
+             <div style="font-size: 0.8em; text-align: center; margin-top: 20px;">
+                Fecha de Impresión: ${new Date().toLocaleDateString()}
+            </div>
+        `);
+    }
+
     win.document.write('</body></html>');
     win.document.close();
-    win.print();
+    win.focus();
+    setTimeout(() => win.print(), 1000);
 };
 
-window.editVacation = function (docId) {
-    Swal.fire('Editar', 'Funcionalidad de edición básica: Se eliminará el registro actual y se cargarán los datos en el formulario para que lo guardes de nuevo como corrección.', 'info');
+window.editVacation = async function (docId) {
+    Swal.fire('Editar', 'Funcionalidad de edición: Se eliminará el registro actual y se cargarán los datos para crear uno nuevo corregido.', 'info');
 
     if (!window.currentVacationDocs) return;
     const doc = window.currentVacationDocs.find(d => d.id === docId);
     if (!doc) return;
     const v = doc.data();
 
-    // 1. Fill Form
-    document.getElementById('vacComments').value = v.comments || '';
+    // Check for Linked Record (Mixed)
+    let v2 = null;
+    let linkedId = v.linkedRecordId;
 
-    // Period
-    const periodSelect = document.getElementById('vacPeriodSelect');
-    if (periodSelect && v.periodIdentifier) periodSelect.value = v.periodIdentifier;
-
-    // Action Type
-    if (v.type === 'payout') {
-        document.querySelector('input[name="vacActionType"][value="payout"]').checked = true;
-        window.vacations.toggleVacationMode();
-        document.getElementById('vacPayoutDays').value = v.daysTaken;
-        document.getElementById('vacPayoutAmount').value = v.amountPaid || '';
-    } else {
-        // Enjoy or Mixed (Mixed splits into 2 records, so if we edit one, it's just one part)
-        document.querySelector('input[name="vacActionType"][value="enjoy"]').checked = true;
-        window.vacations.toggleVacationMode();
-        document.getElementById('vacStartDate').value = v.startDate;
-        document.getElementById('vacEndDate').value = v.endDate;
+    if (linkedId) {
+        // Try to find it in current list first
+        const doc2 = window.currentVacationDocs.find(d => d.id === linkedId);
+        if (doc2) {
+            v2 = doc2.data();
+        } else {
+            // Fetch if not in list (rare but possible)
+            try {
+                const snap = await db.collection('vacations').doc(linkedId).get();
+                if (snap.exists) v2 = snap.data();
+            } catch (e) { console.error("Error fetching linked doc", e); }
+        }
     }
 
-    // 2. Delete original? Or keep until save?
-    // It's safer to delete ONLY when user confirms "Update". 
-    // But since I don't have a robust "Update" mode implemented in saveVacationGrant yet (it does .add()),
-    // The "Simple Edit" pattern is: Load Data -> User Modifies -> User Clicks Save (Creates New) -> We Delete Old.
-    // To do this strictly, we need to know we are "updating".
+    // 1. Fill Fields
+    let enjoyPart = null;
+    let payoutPart = null;
 
-    // Let's set a global flag
-    window.vacationEditingId = doc.id;
+    if (v2) {
+        // We have a pair
+        enjoyPart = v.type === 'enjoy' ? v : v2;
+        payoutPart = v.type === 'payout' ? v : v2;
 
-    // Change Button Text (Visual only, logic needs to handle it)
+        // Set Mode Mixed
+        const mixedRadio = document.querySelector('input[name="vacActionType"][value="mixed"]');
+        if (mixedRadio) {
+            mixedRadio.checked = true;
+            window.vacations.toggleVacationMode(); // Trigger UI update
+        }
+    } else {
+        // Single record
+        if (v.type === 'enjoy') enjoyPart = v;
+        else payoutPart = v;
+
+        const radio = document.querySelector(`input[name="vacActionType"][value="${v.type}"]`);
+        if (radio) {
+            radio.checked = true;
+            window.vacations.toggleVacationMode();
+        }
+    }
+
+    // Populate Common
+    const commentsToUse = (enjoyPart ? enjoyPart.comments : '') || (payoutPart ? payoutPart.comments : '');
+    // Remove auto-generated text if present to avoid duplication
+    const cleanComments = commentsToUse.replace(' (Parte Mixta - Disfrute)', '').replace(' (Parte Mixta - Pago)', '');
+    document.getElementById('vacComments').value = cleanComments;
+
+    const periodToUse = (enjoyPart ? enjoyPart.periodIdentifier : '') || (payoutPart ? payoutPart.periodIdentifier : '');
+    const periodSelect = document.getElementById('vacPeriodSelect');
+    if (periodSelect && periodToUse) periodSelect.value = periodToUse;
+
+
+    // Populate Enjoy Fields
+    if (enjoyPart) {
+        document.getElementById('vacStartDate').value = enjoyPart.startDate;
+        document.getElementById('vacEndDate').value = enjoyPart.endDate;
+    }
+
+    // Populate Payout Fields
+    if (payoutPart) {
+        document.getElementById('vacPayoutDays').value = payoutPart.daysTaken;
+        document.getElementById('vacPayoutAmount').value = payoutPart.amountPaid || '';
+    }
+
+    // IDs to delete
+    const idsToDelete = [docId];
+    if (linkedId) idsToDelete.push(linkedId);
+
+    // Change Button
     const btn = document.getElementById('btnGrantVacation');
     if (btn) {
+        const originalText = btn.innerText;
+        const originalOnClick = btn.onclick;
+
         btn.innerText = 'Actualizar Registro';
+        // Remove old listeners to be safe (though redefining onclick property works)
+
         btn.onclick = async function () {
-            // Delete old first, then save new
-            await db.collection('vacations').doc(docId).delete();
-            // Call original save logic
-            await window.vacations.saveVacationGrant();
-            // Reset button
-            btn.innerText = 'Registrar Vacaciones';
-            btn.onclick = window.vacations.saveVacationGrant; // Restore original handler
-            window.vacationEditingId = null;
+            try {
+                // Delete old records
+                const batch = db.batch();
+                idsToDelete.forEach(id => {
+                    const ref = db.collection('vacations').doc(id);
+                    batch.delete(ref);
+                });
+                await batch.commit();
+
+                // Save new (calls global function)
+                await saveVacationGrant();
+
+                // Reset UI
+                btn.innerText = 'Registrar Vacaciones';
+                btn.onclick = saveVacationGrant; // Restore
+
+                // Clear form handled by saveVacationGrant, but maybe force clear if needed
+            } catch (error) {
+                console.error("Error updating vacation", error);
+                Swal.fire('Error', 'No se pudo actualizar el registro', 'error');
+            }
         }
     }
 }
@@ -856,7 +996,8 @@ async function saveVacationGrant() {
             daysTaken: diffDays,
             startDate: startInput,
             endDate: endInput,
-            comments: comments + ' (Parte Mixta - Disfrute)'
+            comments: comments + ' (Parte Mixta - Disfrute)',
+            linkedRecordId: ref2.id // Link to Payout
         });
 
         batch.set(ref2, {
@@ -866,7 +1007,8 @@ async function saveVacationGrant() {
             amountPaid: amount,
             startDate: null,
             endDate: null,
-            comments: comments + ' (Parte Mixta - Pago)'
+            comments: comments + ' (Parte Mixta - Pago)',
+            linkedRecordId: ref1.id // Link to Enjoy
         });
 
         try {

@@ -150,11 +150,45 @@
 
   <!-- Edit Order Modal -->
   <div id="editOrderModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 900px;">
       <span id="btnCloseEditOrder" class="close">&times;</span>
-      <div id="editOrderDetails">
-        <!-- Logic in JS -->
-      </div>
+      <h2 style="color: var(--primary);">Editar Pedido <span id="editOrderIdDisplay"></span></h2>
+      <form id="editOrderForm">
+        <input type="hidden" id="editOrderDocId">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+          <div>
+            <label style="font-weight: bold;">Destino:</label>
+            <select id="editOrderDestination" style="width: 100%; padding: 8px; margin-top: 5px;">
+              <option value="Bodega">Bodega</option>
+              <option value="Tienda">Tienda</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                <th style="padding: 10px; text-align: left;">Producto</th>
+                <th style="padding: 10px; text-align: left;">Presentación</th>
+                <th style="padding: 10px; text-align: left;">Cantidad</th>
+                <th style="padding: 10px; text-align: left;">Inventario</th>
+                <th style="padding: 10px; text-align: center;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="editOrderProducts"></tbody>
+          </table>
+          <button type="button" id="btnAddProductRow" class="btn btn-secondary" style="margin-top: 10px;">
+            <i class="fas fa-plus"></i> Agregar Producto
+          </button>
+        </div>
+
+        <div style="text-align: right; border-top: 1px solid #eee; padding-top: 20px;">
+          <button type="button" id="btnSaveEditedOrder" class="btn btn-primary">
+            <i class="fas fa-save"></i> Guardar Cambios
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

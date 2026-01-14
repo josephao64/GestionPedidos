@@ -969,7 +969,16 @@
                         style="padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
                         <option value="1">1ra Quincena (1-15)</option>
                         <option value="2">2da Quincena (16-Fin)</option>
+                        <option value="custom">Personalizado</option>
                     </select>
+
+                    <div id="customPeriodContainer" style="display: none; align-items: center; gap: 5px;">
+                        <input type="date" id="planillaStart" class="form-control"
+                            style="padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                        <span>al</span>
+                        <input type="date" id="planillaEnd" class="form-control"
+                            style="padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                    </div>
                     <select id="planillaYear"
                         style="padding: 10px; border-radius: 8px; border: 1px solid var(--border); width: 100px;">
                         <!-- JS will populate years, default to current -->
@@ -988,6 +997,10 @@
                     <button class="btn btn-secondary" onclick="printPaymentSlips('extra')"
                         style="background-color: #d97706; border-color: #b45309;">
                         <i class="fas fa-file-invoice-dollar"></i> Boletas Adicionales
+                    </button>
+                    <button class="btn btn-info" onclick="showPayrollTotals()"
+                        style="background-color: #0ea5e9; border-color: #0284c7; color: white;">
+                        <i class="fas fa-calculator"></i> Ver Totales
                     </button>
                     <button class="btn btn-success" onclick="savePlanilla()">
                         <i class="fas fa-save"></i> Guardar
@@ -2130,6 +2143,111 @@
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- SAVE PLANILLA MODAL -->
+    <div id="savePlanillaModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1005; align-items: center; justify-content: center;">
+        <div
+            style="background: white; width: 400px; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <h3 style="margin-bottom: 16px; color: var(--primary);">Guardar Planilla</h3>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Nombre Identificador
+                    (Opcional)</label>
+                <input type="text" id="planillaCustomName" placeholder="Ej: Planilla Enero Final"
+                    style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem;">
+                <p style="font-size: 0.8em; color: #666; margin-top: 5px;">Este nombre aparecerá en el historial.</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeSaveModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="confirmSavePlanilla()">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div id="deletePlanillaModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1006; align-items: center; justify-content: center;">
+        <div
+            style="background: white; width: 400px; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <h3 style="margin-bottom: 16px; color: #dc2626; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-exclamation-triangle"></i> Eliminar Planilla
+            </h3>
+
+            <p style="margin-bottom: 20px; color: #4b5563;">
+                ¿Está seguro de que desea eliminar esta planilla guardada? <br>
+                <strong style="color: #000;">Esta acción no se puede deshacer.</strong>
+            </p>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancelar</button>
+                <button class="btn btn-danger" onclick="confirmDeletePlanilla()"
+                    style="background-color: #dc2626; color: white; border: none;">
+                    <i class="fas fa-trash"></i> Eliminar Definitivamente
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAYROLL TOTALS MODAL -->
+    <div id="payrollTotalsModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1007; align-items: center; justify-content: center;">
+        <div
+            style="background: white; width: 600px; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: var(--primary);"><i class="fas fa-chart-bar"></i> Resumen de Planilla</h3>
+                <i class="fas fa-times" onclick="closePayrollTotalsModal()"
+                    style="cursor: pointer; font-size: 1.2rem;"></i>
+            </div>
+
+            <!-- General Totals -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                <div
+                    style="background: #eff6ff; padding: 15px; border-radius: 8px; border: 1px solid #bfdbfe; text-align: center;">
+                    <div style="font-size: 0.9em; color: #1e40af; font-weight: bold; margin-bottom: 5px;">TOTAL PLANILLA
+                        (A RECIBIR)</div>
+                    <div id="pt_totalPlanilla" style="font-size: 1.8em; font-weight: 800; color: #1e3a8a;">Q0.00</div>
+                </div>
+                <div
+                    style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; text-align: center;">
+                    <div style="font-size: 0.9em; color: #166534; font-weight: bold; margin-bottom: 5px;">EMPLEADOS
+                    </div>
+                    <div id="pt_totalEmployees" style="font-size: 1.8em; font-weight: 800; color: #14532d;">0</div>
+                </div>
+            </div>
+
+            <!-- Extras Breakdown -->
+            <h4 style="margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 8px;">Detalle de Extras y
+                Otros Ingresos</h4>
+            <div style="background: #fff; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                        <tr>
+                            <th style="padding: 10px; text-align: left; color: #374151;">Empleado</th>
+                            <th style="padding: 10px; text-align: left; color: #374151;">Descripción</th>
+                            <th style="padding: 10px; text-align: right; color: #374151;">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pt_extrasBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                    <tfoot style="background: #f9fafb; border-top: 2px solid #e5e7eb; font-weight: bold;">
+                        <tr>
+                            <td colspan="2" style="padding: 10px; text-align: right;">Total Extras:</td>
+                            <td id="pt_totalExtras" style="padding: 10px; text-align: right;">Q0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closePayrollTotalsModal()">Cerrar</button>
+            </div>
         </div>
     </div>
 

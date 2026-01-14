@@ -28,7 +28,7 @@ async function obtenerSucursalDelUsuario() {
     Swal.fire({
       icon: 'error',
       title: 'No Autenticado',
-      text: 'No has iniciado sesiÃ³n. Por favor, inicia sesiÃ³n para continuar.'
+      text: 'No has iniciado sesionPor favor, inicia sesionpara continuar.'
     }).then(() => {
       window.location.href = '../login.html';
     });

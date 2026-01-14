@@ -1180,35 +1180,52 @@ function exportAsImageTicket(order, fileName) {
   }
 
   ticket.style.display = "block";
+  ticket.style.left = "0"; // Move to visible area temporarily if needed, or keep off-screen but ensure rendered
+  // Some browsers struggle with off-screen rendering. Let's try keeping it offscreen but ensuring display block works.
+  // Actually, standard practice for clean shot is often to ensure it's "visible" to the DOM engine.
+  // Let's keep the user's logic but add useCORS.
   ticket.style.left = "50%";
   ticket.style.top = "50%";
   ticket.style.transform = "translate(-50%, -50%)";
+  ticket.style.zIndex = "-1000"; // Ensure it's behind if we don't want it seen, or zIndex 9999 if we want it on top (it blocks view).
+  // The original code centered it on screen?
+  // "ticket.style.left = "50%"; ticket.style.top = "50%";" implied it might overlay everything.
+  // Converting to image happens fast.
 
   // Sanitize fileName to avoid issues with slashes in dates
   const safeFileName = fileName.replace(/\//g, "-");
 
-  html2canvas(ticket, { scale: 3 })
-    .then((canvas) => {
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = `${safeFileName}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  // Allow a brief render cycle
+  setTimeout(() => {
+    html2canvas(ticket, {
+      scale: 3,
+      useCORS: true,
+      allowTaint: true,
+      logging: true
     })
-    .catch(() =>
-      Swal.fire({
-        icon: "error",
-        title: "Error al exportar",
-        text: "No se pudo exportar la imagen",
+      .then((canvas) => {
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `${safeFileName}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       })
-    )
-    .finally(() => {
-      ticket.style.display = "none";
-      ticket.style.left = "-9999px";
-      ticket.style.top = "-9999px";
-      ticket.style.transform = "none";
-    });
+      .catch((err) => {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: "Error al exportar",
+          text: "No se pudo exportar la imagen: " + (err.message || err)
+        });
+      })
+      .finally(() => {
+        ticket.style.display = "none";
+        ticket.style.left = "-9999px";
+        ticket.style.top = "-9999px";
+        ticket.style.transform = "none";
+      });
+  }, 100);
 }
 
 /**********************************************************
