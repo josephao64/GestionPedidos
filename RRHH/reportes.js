@@ -229,6 +229,122 @@ window.reports = {
         }
     },
 
+    switchReport: function () {
+        const reportType = document.getElementById('reportType').value;
+        const orgChartCard = document.getElementById('orgChartContainerCard');
+        const collabCard = document.getElementById('collaboratorsReportContainer');
+
+        if (reportType === 'org') {
+            if (orgChartCard) orgChartCard.style.display = 'flex';
+            if (collabCard) collabCard.style.display = 'none';
+            this.renderOrgChart();
+        } else if (reportType === 'collaborators') {
+            if (orgChartCard) orgChartCard.style.display = 'none';
+            if (collabCard) collabCard.style.display = 'block';
+            this.renderCollaboratorsReport();
+        }
+    },
+
+    renderCollaboratorsReport: async function () {
+        const tbody = document.getElementById('collaboratorsTableBody');
+        const filterBranch = document.getElementById('reportBranchFilter');
+        const selectedBranchId = filterBranch ? filterBranch.value : 'all';
+
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Cargando colaboradores...</td></tr>';
+
+        try {
+            // Reusing the same data source for consistency, though we could optimize.
+            // Fetching active employees
+            const [empSnap, posSnap, branchSnap] = await Promise.all([
+                db.collection('employees').where('status', '==', 'active').get(),
+                db.collection('positions').get(),
+                db.collection('sucursales').get()
+            ]);
+
+            if (empSnap.empty) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No hay datos disponibles.</td></tr>';
+                return;
+            }
+
+            const branchMap = {};
+            branchSnap.forEach(d => branchMap[d.id] = d.data().name || 'Sucursal Desconocida');
+
+            const positionMap = {};
+            posSnap.forEach(d => positionMap[d.id] = d.data().name || 'Sin Puesto');
+
+            const employees = [];
+            empSnap.forEach(doc => {
+                const emp = doc.data();
+                // Handle Temporary Transfers
+                let branchId = emp.sucursalId || 'unassigned';
+                if (emp.isTempTransfer && emp.tempSucursalId) {
+                    branchId = emp.tempSucursalId;
+                }
+
+                if (selectedBranchId !== 'all' && branchId !== selectedBranchId) return;
+
+                employees.push({
+                    name: emp.fullName,
+                    position: positionMap[emp.positionId] || 'Desconocido',
+                    branch: branchMap[branchId] || 'Sin Asignar',
+                    startDate: emp.startDate || '',
+                    originalDate: emp.startDate ? new Date(emp.startDate) : null
+                });
+            });
+
+            // Sort by Branch then Name
+            employees.sort((a, b) => {
+                if (a.branch === b.branch) {
+                    return a.name.localeCompare(b.name);
+                }
+                return a.branch.localeCompare(b.branch);
+            });
+
+            if (employees.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No se encontraron colaboradores con el filtro seleccionado.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            employees.forEach(e => {
+                // Calculate Seniority
+                let seniority = 'N/A';
+                if (e.originalDate) {
+                    const today = new Date();
+                    const diffTime = Math.abs(today - e.originalDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const years = Math.floor(diffDays / 365);
+                    const remainingDays = diffDays % 365;
+                    const months = Math.floor(remainingDays / 30);
+
+                    if (years > 0) seniority = `${years} años, ${months} meses`;
+                    else if (months > 0) seniority = `${months} meses`;
+                    else seniority = `${diffDays} días`;
+                }
+
+                // Format Date
+                const dateStr = e.originalDate ? e.originalDate.toLocaleDateString('es-GT') : 'Sin registro';
+
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px;"><strong>${e.name}</strong></td>
+                        <td style="padding: 12px;">${e.position}</td>
+                        <td style="padding: 12px;"><span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;">${e.branch}</span></td>
+                        <td style="padding: 12px;">${dateStr}</td>
+                        <td style="padding: 12px; text-align: center;">${seniority}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+        } catch (error) {
+            console.error("Error loading collaborators report:", error);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: red;">Error al cargar datos.</td></tr>';
+        }
+    },
+
     downloadImage: async function () {
         const btn = document.querySelector('button[onclick="window.reports.downloadImage()"]');
         const originalText = btn ? btn.innerHTML : '';
@@ -238,6 +354,15 @@ window.reports = {
         }
 
         try {
+            // Check which report is active
+            const reportType = document.getElementById('reportType').value;
+            let elementId = 'orgChartContainerCard'; // Default to card container for better BG
+
+            // For collaborators list, we might want a different export logic or just screenshot the table
+            if (reportType === 'collaborators') {
+                elementId = 'collaboratorsReportContainer';
+            }
+
             // Generate cleaner title for filename
             let filenameBranch = 'General';
             const filter = document.getElementById('reportBranchFilter');
@@ -245,57 +370,27 @@ window.reports = {
                 filenameBranch = filter.options[filter.selectedIndex].text.replace(/[^a-z0-9]/gi, '_');
             }
 
-            const element = document.getElementById('orgChartContainer');
+            const element = document.getElementById(elementId);
+            // Ensure white background for capture
+            const originalBg = element.style.backgroundColor;
+            element.style.backgroundColor = '#ffffff';
 
             const canvas = await html2canvas(element, {
-                scale: 3,
+                scale: 2, // Good quality
                 useCORS: true,
                 backgroundColor: '#ffffff',
-                windowWidth: element.scrollWidth + 100,
-                width: element.scrollWidth + 50,
-                logging: false, // disable logging for speed
+                logging: false,
                 onclone: (clonedDoc) => {
-                    const container = clonedDoc.getElementById('orgChartContainer');
-                    if (container) {
-                        container.style.width = 'fit-content';
-                        container.style.margin = '0 auto';
-                        container.style.textAlign = 'center';
-                    }
-
-                    // Ensure boxes are visible
-                    const empNodes = clonedDoc.querySelectorAll('.node-employee');
-                    empNodes.forEach(node => {
-                        node.style.fontFamily = 'Arial, sans-serif';
-                        // Force black text again just in case
-                        node.style.color = '#000000';
-                    });
-                    // Force all text children to black
-                    const allText = clonedDoc.querySelectorAll('.node-employee div, .node-employee span, .node-employee');
-                    allText.forEach(el => {
-                        el.style.color = '#000000';
-                        el.style.textShadow = 'none';
-                    });
-
-                    const texts = clonedDoc.querySelectorAll('.node-employee div');
-                    texts.forEach(t => {
-                        // Manually set style property to ensure it sticks
-                        t.style.color = '#000000';
-                        t.style.fontWeight = 'bold';
-                        t.style.textShadow = 'none';
-                        t.style.visibility = 'visible';
-                    });
-
-                    const roles = clonedDoc.querySelectorAll('.node-role');
-                    roles.forEach(r => {
-                        r.style.color = '#000000';
-                        r.style.textShadow = 'none';
-                        r.style.opacity = '1';
-                    });
+                    // Verify visibility hacks if needed
+                    const el = clonedDoc.getElementById(elementId);
+                    if (el) el.style.display = 'block';
                 }
             });
 
+            element.style.backgroundColor = originalBg; // Restore
+
             const link = document.createElement('a');
-            link.download = `Organigrama_${filenameBranch}_${new Date().toISOString().slice(0, 10)}.png`;
+            link.download = `Reporte_${reportType}_${filenameBranch}_${new Date().toISOString().slice(0, 10)}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
 
@@ -313,7 +408,12 @@ window.reports = {
     downloadReport: async function () {
         // PDF Export
         const { jsPDF } = window.jspdf;
-        const element = document.getElementById('orgChartContainer');
+        const reportType = document.getElementById('reportType').value;
+
+        let elementId = 'orgChartContainerCard';
+        if (reportType === 'collaborators') elementId = 'collaboratorsReportContainer';
+
+        const element = document.getElementById(elementId);
         const btn = document.querySelector('#reportes-section button[onclick*="downloadReport"]');
 
         if (!element) return;
@@ -323,22 +423,22 @@ window.reports = {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando PDF...';
             btn.disabled = true;
 
+            // Ensure white background for capture
+            const originalBg = element.style.backgroundColor;
+            element.style.backgroundColor = '#ffffff';
+
             // Capture full scroll width
             const canvas = await html2canvas(element, {
                 scale: 2,
                 useCORS: true,
-                backgroundColor: '#ffffff',
-                windowWidth: element.scrollWidth + 100,
-                width: element.scrollWidth + 50
+                backgroundColor: '#ffffff'
             });
+
+            element.style.backgroundColor = originalBg;
 
             const imgData = canvas.toDataURL('image/png');
 
             // Dynamic PDF Size based on Image
-            // We want to fit the image on a page, but if it's huge, make the page huge.
-            // 1px = 0.75 point approx, let's map pixels to mm roughly.
-            // A4 is 210mm width.
-
             const imgWidthpx = canvas.width;
             const imgHeightpx = canvas.height;
 
@@ -363,7 +463,7 @@ window.reports = {
 
             // Add image centered/margined
             pdf.addImage(imgData, 'PNG', 10, 10, imgWidthpx * pxToMm, imgHeightpx * pxToMm);
-            pdf.save(`Organigrama_EM_${new Date().toISOString().slice(0, 10)}.pdf`);
+            pdf.save(`Reporte_${reportType}_${new Date().toISOString().slice(0, 10)}.pdf`);
 
             btn.innerHTML = originalText;
             btn.disabled = false;

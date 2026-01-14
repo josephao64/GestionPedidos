@@ -540,9 +540,10 @@ function updatePlanillaExtra(index, type, value) {
 
     if (type === 'hours') {
         row.extraHours = val;
-        // Calc Amount: Base Monthly Salary / 30 / 8 * 1.5 * Hours
-        const hourlyRate = (row.monthlyBase / 30) / 8;
-        row.extraAmount = hourlyRate * 1.5 * val;
+        // Calc Amount: Base Monthly Salary * 12 / 365 / 8 * Hours (Straight Time)
+        const dailyRate = (row.monthlyBase * 12) / 365;
+        const hourlyRate = dailyRate / 8;
+        row.extraAmount = hourlyRate * val;
     } else if (type === 'other') {
         row.otherBonus = val;
     } else if (type === 'otherDesc') {
