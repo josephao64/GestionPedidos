@@ -661,7 +661,7 @@ function exportOrderAsImage(details) {
     ticket.style.left = '50%';
     ticket.style.transform = 'translateX(-50%)';
 
-    html2canvas(ticket, { scale: 2 })
+    html2canvas(ticket, { scale: 1 })
       .then(canvas => {
         canvas.toBlob(blob => {
           if (blob) {
@@ -676,8 +676,16 @@ function exportOrderAsImage(details) {
             Swal.fire({
               icon: 'success',
               title: 'Imagen Exportada',
-              text: 'El pedido ha sido exportado como imagen exitosamente.'
-            }).then(() => {
+              html: 'La imagen se ha comprimido y descargado.<br>¿Deseas notificar por WhatsApp?',
+              showCancelButton: true,
+              confirmButtonText: '<i class="fab fa-whatsapp"></i> WhatsApp',
+              cancelButtonText: 'Cerrar',
+              confirmButtonColor: '#25D366'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                const msg = `*Pedido #${details.orderId}*\nProveedor: ${details.providerName}\nSucursal: ${details.sucursalName}\nFecha: ${details.savedDate}\n(Adjuntar imagen descargada)`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+              }
               setupInitialProductTable();
               document.getElementById('orderCreationContainer').style.display = 'none';
               Swal.fire({
@@ -690,7 +698,7 @@ function exportOrderAsImage(details) {
           } else {
             Swal.fire({ icon: 'error', title: 'Error', text: 'Error al generar la imagen.' }).then(() => reject('Blob vacÃ­o.'));
           }
-        }, 'image/jpeg', 0.95);
+        }, 'image/jpeg', 0.6);
 
         ticket.style.display = 'none';
         ticket.style.left = '-9999px';

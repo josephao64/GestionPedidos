@@ -1198,15 +1198,15 @@ function exportAsImageTicket(order, fileName) {
   // Allow a brief render cycle
   setTimeout(() => {
     html2canvas(ticket, {
-      scale: 3,
+      scale: 1,
       useCORS: true,
       allowTaint: true,
-      logging: true
+      logging: false
     })
       .then((canvas) => {
         const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
-        link.download = `${safeFileName}.png`;
+        link.href = canvas.toDataURL("image/jpeg", 0.6);
+        link.download = `${safeFileName}.jpg`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

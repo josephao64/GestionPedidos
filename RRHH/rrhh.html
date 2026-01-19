@@ -1037,83 +1037,28 @@
                 </div>
             </div>
 
-            <div class="card" style="overflow-x: auto;" id="planillaMainView">
-                <!-- Header with Logo (Print/View) -->
-                <!-- Header with Logo (Print/View) -->
-                <div id="planillaHeaderInfo"
+            <div class="card" style="overflow-x: auto; padding-top: 20px;" id="planillaMainView">
+                <!-- Header with Logo (Template for dynamic generation, hidden) -->
+                <div id="planillaHeaderTemplate"
                     style="display: flex; align-items: center; margin-bottom: 20px; display: none; font-family: Arial, sans-serif;">
-                    <img id="headerCompanyLogo" src="" alt="Logo"
+                    <img id="headerCompanyLogoTemplate" src="" alt="Logo"
                         style="height: 60px; margin-right: 20px; object-fit: contain;">
                     <div style="flex: 1; text-align: center;">
-                        <h3 id="headerCompanyTitle" style="margin: 0; font-size: 1.1rem; text-transform: uppercase;">
+                        <h3 id="headerCompanyTitleTemplate"
+                            style="margin: 0; font-size: 1.1rem; text-transform: uppercase;">
                             NOMBRE EMPRESA</h3>
-                        <h2 style="margin: 4px 0; font-size: 1.2rem; text-transform: uppercase;" id="planillaTitleNode">
+                        <h2 style="margin: 4px 0; font-size: 1.2rem; text-transform: uppercase;"
+                            id="planillaTitleNodeTemplate">
                             NÓMINA DE SUELDOS</h2>
-                        <p style="margin: 0; font-weight: bold;" id="planillaDateDisplay"></p>
+                        <p style="margin: 0; font-weight: bold;" id="planillaDateDisplayTemplate"></p>
                     </div>
                     <!-- Spacer to balance logo -->
                     <div style="width: 80px;"></div>
                 </div>
 
-                <!-- Payroll Table Exact Match -->
-                <table id="planillaTable"
-                    style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 0.75rem; color: #000;">
-                    <thead>
-                        <!-- Top Header Row -->
-                        <tr style="border: 2px solid #000;">
-                            <th rowspan="2"
-                                style="border: 1px solid #000; padding: 4px; vertical-align: middle; text-align: center; width: 220px;">
-                                NOMBRE EMPLEADO</th>
-                            <th colspan="4"
-                                style="border: 1px solid #000; padding: 4px; text-align: center; border-bottom: 2px solid #000;">
-                                SALARIO DEVENGADO</th>
-                            <th colspan="6"
-                                style="border: 1px solid #000; padding: 4px; text-align: center; border-bottom: 2px solid #000;">
-                                DEDUCCIONES LEGALES</th>
-                            <th rowspan="2"
-                                style="border: 1px solid #000; padding: 4px; vertical-align: middle; text-align: center; background: #fff; width: 80px;">
-                                SALARIO<br>LÍQUIDO</th>
-                            <th colspan="5"
-                                style="border: 1px solid #000; padding: 4px; text-align: center; border-bottom: 2px solid #000; background: #f0fdf4;">
-                                INGRESOS ADICIONALES</th>
-                            <th rowspan="2"
-                                style="border: 1px solid #000; padding: 4px; vertical-align: middle; text-align: center; font-weight: bold; background: #dcfce7;">
-                                TOTAL<br>A RECIBIR</th>
-                            <th rowspan="2"
-                                style="border: 1px solid #000; padding: 4px; vertical-align: middle; text-align: center; width: 100px;">
-                                FIRMA</th>
-                        </tr>
-                        <!-- Sub Header Row -->
-                        <tr style="border: 2px solid #000; border-top: none;">
-                            <!-- Devengado -->
-                            <th style="border: 1px solid #000; padding: 4px; width: 50px;">DÍAS<br>TRAB.</th>
-                            <th style="border: 1px solid #000; padding: 4px;">SALARIO</th>
-                            <th style="border: 1px solid #000; padding: 4px;">BONIF.<br>DECRETO</th>
-                            <th style="border: 1px solid #000; padding: 4px; font-weight: bold;">SALARIO<br>TOTAL</th>
+                <!-- Container for Generated Tables -->
+                <div id="planillaTablesContainer"></div>
 
-                            <!-- Deducciones -->
-                            <th style="border: 1px solid #000; padding: 4px;">IGSS</th>
-                            <th style="border: 1px solid #000; padding: 4px;">ISR</th>
-                            <th style="border: 1px solid #000; padding: 4px;">JUDICIAL</th>
-                            <th style="border: 1px solid #000; padding: 4px;">DESCUENTO</th>
-                            <th style="border: 1px solid #000; padding: 4px;">ANTICIPO<br>QUINCENA</th>
-                            <th style="border: 1px solid #000; padding: 4px; font-weight: bold;">TOTAL<br>DEDUCC.</th>
-
-                            <!-- Ingresos Adicionales -->
-                            <th style="border: 1px solid #000; padding: 4px;">HORAS<br>EXTRAS</th>
-                            <th style="border: 1px solid #000; padding: 4px;">MONTO<br>H. EXTRAS</th>
-                            <th style="border: 1px solid #000; padding: 4px;">OTROS<br>INGRESOS</th>
-                            <th style="border: 1px solid #000; padding: 4px;">ASUETO</th>
-                            <th style="border: 1px solid #000; padding: 4px; font-weight: bold;">TOTAL<br>ADIC.</th>
-                        </tr>
-                    </thead>
-                    <tbody id="planillaBody">
-                        <!-- Rows generated by JS -->
-                    </tbody>
-                    <tfoot id="planillaFooter" style="font-weight: bold; background: #fff; display: none;">
-                        <!-- Totals generated by JS -->
-                    </tfoot>
-                </table>
             </div>
         </section>
 
@@ -1155,6 +1100,13 @@
                                 style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;"
                                 placeholder="Ej. 13.50" oninput="calculateFromHourly()">
                         </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Valor Hora Extra
+                                (Global)</label>
+                            <input type="number" id="configOvertimeRate" step="0.01" class="form-control"
+                                style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;"
+                                placeholder="Opcional: Fijo">
+                        </div>
                     </div>
 
                     <div
@@ -1190,7 +1142,14 @@
 
                 <!-- Card 3: Recruitment Params -->
                 <div class="card">
-                    <h3 style="margin-bottom: 20px;">Parámetros de Contratación</h3>
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0;">Parámetros de Contratación</h3>
+                        <select id="configBranchSelect" class="form-control"
+                            style="width: 200px; padding: 6px; font-size: 0.9em;">
+                            <option value="default">Configuración General (Default)</option>
+                        </select>
+                    </div>
                     <div style="margin-bottom: 20px;">
                         <label style="display: block; font-weight: 600; margin-bottom: 8px;">Días de Período de
                             Prueba</label>
@@ -1209,6 +1168,54 @@
                         <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 5px;">Salario base sugerido
                             para
                             nuevos empleados en período de prueba.</p>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">Valor Hora Extra
+                            (Prueba)</label>
+                        <input type="number" id="configProbationOvertimeRate" step="0.01" class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;"
+                            placeholder="Ej. 10.00">
+                        <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 5px;">Valor de la hora extra
+                            para empleados en prueba (dejar 0 para usar cálculo normal).</p>
+                    </div>
+
+                </div>
+
+                <!-- Card 3.5: Pedidos Flash Params (NEW) -->
+                <div class="card">
+                    <h3 style="margin-bottom: 20px; color: #ff6600;">Configuración Pedidos Flash/Ya</h3>
+                    <p style="font-size: 0.9em; color: var(--text-muted); margin-bottom: 15px;">
+                        Esta configuración aplica a empleados marcados como <strong>"Pedidos Flash"</strong>.
+                        Estos valores sobrescriben los del puesto.
+                    </p>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">Sueldo Base (Q)</label>
+                        <input type="number" id="configPedidosSalary" step="0.01" class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;"
+                            placeholder="Ej. 1250.00">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">Bonificación Incentivo
+                            (Q)</label>
+                        <input type="number" id="configPedidosBonus" step="0.01" class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;"
+                            placeholder="Ej. 250.00">
+                        <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 5px;">
+                            Bonificación mensual fija.
+                        </p>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">Precio Hora Extra
+                            (Q)</label>
+                        <input type="number" id="configPedidosOvertime" step="0.01" class="form-control"
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;"
+                            placeholder="Ej. 15.00">
+                        <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 5px;">
+                            Valor fijo por hora. Si se deja en 0 o vacío, se calculará normalmente en base al salario.
+                        </p>
                     </div>
                 </div>
 
@@ -2218,7 +2225,7 @@
     <!-- PAYROLL TOTALS MODAL -->
     <div id="payrollTotalsModal"
         style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1007; align-items: center; justify-content: center;">
-        <div
+        <div id="payrollTotalsContent"
             style="background: white; width: 600px; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="margin: 0; color: var(--primary);"><i class="fas fa-chart-bar"></i> Resumen de Planilla</h3>
@@ -2266,7 +2273,10 @@
                 </table>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+            <div style="display: flex; justify-content: flex-end; margin-top: 20px; gap: 10px;">
+                <button class="btn btn-primary" onclick="exportPayrollTotalsImage()">
+                    <i class="fas fa-image"></i> Exportar Imagen
+                </button>
                 <button class="btn btn-secondary" onclick="closePayrollTotalsModal()">Cerrar</button>
             </div>
         </div>
@@ -2324,7 +2334,7 @@
     </script>
     <script src="config.js"></script>
     <script src="salary_types.js"></script>
-    <script src="planillas.js"></script>
+    <script src="planillas.js?v=FIX_SUM_19"></script>
     <script src="vacaciones.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>

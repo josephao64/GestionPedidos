@@ -40,61 +40,49 @@ function togglePeriodInputs() {
 }
 
 // Called when switching to 'planillas' section or manually
+// Main Logic
 async function loadPlanillaTable() {
     isHistoryMode = false;
     currentLoadedId = null;
 
-    // Ensure view is correct
+    // Ensure view is correct - Modified for new Container
     document.getElementById('planillaMainView').style.display = 'block';
     document.getElementById('planillaHistoryView').style.display = 'none';
     document.getElementById('planillaControls').style.display = 'flex';
 
-    // Force close modals to prevent ghost appearances
+    // Force close modals
     if (window.closePayrollTotalsModal) window.closePayrollTotalsModal();
     if (window.closeSaveModal) window.closeSaveModal();
     if (window.closeDeleteModal) window.closeDeleteModal();
 
-    // Ensure branches are populated if empty
+    // Ensure branches are populated
     const sucursalSelect = document.getElementById('planillaSucursal');
     if (sucursalSelect && sucursalSelect.options.length <= 1) {
         await populatePlanillaBranches();
     }
 
-    const tbody = document.getElementById('planillaBody');
-    if (!tbody) return;
+    const tbodyContainer = document.getElementById('planillaTablesContainer');
+    if (!tbodyContainer) return;
 
-    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding: 20px;">Cargando planilla...</td></tr>';
-    const tfoot = document.getElementById('planillaFooter');
-    if (tfoot) tfoot.style.display = 'none';
+    tbodyContainer.innerHTML = '<div style="text-align:center; padding: 20px;">Cargando planilla...</div>';
 
     try {
         // 1. Fetch Active Employees
-        const empSnap = await db.collection('employees')
-            .where('status', '==', 'active')
-            .get();
-
+        const empSnap = await db.collection('employees').where('status', '==', 'active').get();
         if (empSnap.empty) {
-            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding: 20px;">No hay empleados activos.</td></tr>';
+            tbodyContainer.innerHTML = '<div style="text-align:center; padding: 20px;">No hay empleados activos.</div>';
             return;
         }
 
-        // 2. Fetch Positions to get Salary Info
+        // 2. Fetch Positions
         const posSnap = await db.collection('positions').get();
         const positions = {};
-        posSnap.forEach(doc => {
-            positions[doc.id] = doc.data();
-        });
+        posSnap.forEach(doc => positions[doc.id] = doc.data());
 
-        // 2.1 Fetch Active Loans
-        const loanSnap = await db.collection('loans').where('status', '==', 'active').get();
-        const loansByEmp = {};
-        loanSnap.forEach(doc => {
-            const data = doc.data();
-            if (!loansByEmp[data.employeeId]) loansByEmp[data.employeeId] = [];
-            loansByEmp[data.employeeId].push({ id: doc.id, ...data });
-        });
+        // 3. Fetch Active Loans (Wrapper function or direct)
+        const loansByEmp = await fetchActiveLoansForPayroll();
 
-        // 3. Process Data
+        // 4. Process Data Setup
         let daysWorked = 15;
         const selectedSucursal = sucursalSelect ? sucursalSelect.value : 'all';
         const periodVal = document.getElementById('planillaPeriod').value;
@@ -102,84 +90,51 @@ async function loadPlanillaTable() {
         const monthVal = parseInt(document.getElementById('planillaMonth').value);
 
         let startDate, endDate;
-        let periodString = "";
 
         if (periodVal === 'custom') {
             const pStart = document.getElementById('planillaStart').value;
             const pEnd = document.getElementById('planillaEnd').value;
-
             if (!pStart || !pEnd) {
                 alert("Por favor seleccione fechas de inicio y fin.");
-                tbody.innerHTML = '';
+                tbodyContainer.innerHTML = '';
                 return;
             }
+            startDate = new Date(pStart + 'T12:00:00');
+            endDate = new Date(pEnd + 'T12:00:00');
 
-            startDate = new Date(pStart);
-            endDate = new Date(pEnd);
-
-            // Calc days difference
-            // Add 1 to include start date
             const diffTime = Math.abs(endDate - startDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-            daysWorked = diffDays;
-
-            // Format for Header
-            const formatDate = (d) => `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-            periodString = `Del ${formatDate(startDate)} al ${formatDate(endDate)}`;
-
+            daysWorked = diffDays; // Custom days
         } else {
             // Standard Quincena Logic
-            // 1st: 1-15, 2nd: 16-End
             if (periodVal == '1') {
                 startDate = new Date(yearVal, monthVal, 1);
                 endDate = new Date(yearVal, monthVal, 15);
-                periodString = `Del 01 al 15 de ${startDate.toLocaleString('es-GT', { month: 'long' })} ${yearVal}`;
                 daysWorked = 15;
             } else {
                 startDate = new Date(yearVal, monthVal, 16);
-                // End of Month
-                endDate = new Date(yearVal, monthVal + 1, 0);
-                periodString = `Del 16 al ${endDate.getDate()} de ${startDate.toLocaleString('es-GT', { month: 'long' })} ${yearVal}`;
-                daysWorked = 15; // Standard 15 days payment regardless of 28/30/31 days? Usually yes for monthly salary.
+                endDate = new Date(yearVal, monthVal + 1, 0); // Last day
+                daysWorked = 15; // Standardize 2nd fortnight as 15 days even if 28/31
             }
         }
-
-        // HEADER UPDATE LOGIC
-        const logoImg = document.getElementById('headerCompanyLogo');
-        const titleH3 = document.getElementById('headerCompanyTitle');
-
-        // Reset defaults
-        titleH3.innerText = "AMERICAN PIZZA";
-        logoImg.src = "../Recibos/logo.png";
-
+        // Fetch Branch Info (for headers) once
+        let mainBranchInfo = { name: "CORPORACION DE ALIMENTOS, S.A.", logo: "../Recibos/logo.png" };
         if (selectedSucursal !== 'all') {
             try {
-                // Fetch Branch to get empresaId
                 const branchDoc = await db.collection('sucursales').doc(selectedSucursal).get();
                 if (branchDoc.exists) {
-                    const branchData = branchDoc.data();
-                    // If has empresaId, fetch Company from 'empresas' collection
-                    if (branchData.empresaId) {
-                        const compDoc = await db.collection('empresas').doc(branchData.empresaId).get();
-                        if (compDoc.exists) {
-                            const compData = compDoc.data();
-                            titleH3.innerText = (compData.name || "AMERICAN PIZZA").toUpperCase();
-                            // Try logo field or default
-                            if (compData.logo || compData.logoUrl) {
-                                logoImg.src = compData.logo || compData.logoUrl;
-                            }
+                    const bData = branchDoc.data();
+                    if (bData.empresaId) {
+                        const cDoc = await db.collection('empresas').doc(bData.empresaId).get();
+                        if (cDoc.exists) {
+                            mainBranchInfo.name = cDoc.data().name || "CORPORACION DE ALIMENTOS, S.A.";
+                            if (cDoc.data().logo) mainBranchInfo.logo = cDoc.data().logo;
                         }
-                    } else if (branchData.companyName) {
-                        // Fallback if name is directly on branch
-                        titleH3.innerText = branchData.companyName.toUpperCase();
+                    } else if (bData.companyName) {
+                        mainBranchInfo.name = bData.companyName.toUpperCase();
                     }
                 }
-            } catch (err) {
-                console.error("Error updating header company info:", err);
-            }
-        } else {
-            titleH3.innerText = "CORPORACIÓN";
+            } catch (e) { console.error(e); }
         }
 
 
@@ -205,17 +160,113 @@ async function loadPlanillaTable() {
                 const config = window.rrhhConfig.get ? window.rrhhConfig.get() : {};
                 if (config.minWageMonthly) monthlySalary = parseFloat(config.minWageMonthly);
             }
-            const monthlyBonus = parseFloat(pos.bonificacion || pos.bonus || (window.rrhhConfig.get().bonus) || 250);
 
+            // Capture Global Overtime Rate
+            const globalOvertimeRate = parseFloat(window.rrhhConfig.get ? (window.rrhhConfig.get().overtimeRate || 0) : 0);
+            let overtimeRateOverride = 0;
+
+            // Pedidos Flash Overrides (Salary, Bonus, Overtime Rate)
+            const empSettings = window.rrhhConfig.getBranchSettings(effectiveSucursalId);
+
+            // --- PROBATION CHECK ---
+            let isProbation = false;
+            if (emp.hiringDate) {
+                // Parse YYYY-MM-DD or DD/MM/YYYY
+                let parts = emp.hiringDate.split('-');
+                if (parts.length < 3) parts = emp.hiringDate.split('/');
+
+                if (parts.length === 3) {
+                    let y, m, d;
+                    // Check if first part is Year (4 digits)
+                    if (parts[0].length === 4) {
+                        y = parseInt(parts[0]);
+                        m = parseInt(parts[1]) - 1;
+                        d = parseInt(parts[2]);
+                    } else {
+                        // Assume DD/MM/YYYY
+                        d = parseInt(parts[0]);
+                        m = parseInt(parts[1]) - 1;
+                        y = parseInt(parts[2]);
+                    }
+                    const hireDate = new Date(y, m, d);
+                    const today = new Date(); // Now
+
+                    // Reset times to compare dates only
+                    hireDate.setHours(0, 0, 0, 0);
+                    today.setHours(0, 0, 0, 0);
+
+                    const diffTime = today - hireDate;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    const pDays = parseInt(empSettings.probationDays) || 60;
+
+
+
+                    if (diffDays >= 0 && diffDays <= pDays) {
+                        // Employee is in Probation
+                        isProbation = true;
+
+                        // 1. Salary Override
+                        if (empSettings.probationSalary && empSettings.probationSalary > 0) {
+                            monthlySalary = parseFloat(empSettings.probationSalary);
+                        }
+
+                        // 2. Overtime Rate Override (Request 2)
+                        if (empSettings.probationOvertimeRate && empSettings.probationOvertimeRate > 0) {
+                            overtimeRateOverride = parseFloat(empSettings.probationOvertimeRate);
+                        }
+                    }
+                }
+            }
+            // -----------------------
+
+            const subEmpresaCheck = (emp.subEmpresa || 'Propia').trim();
+            const isPedidosFlash = (subEmpresaCheck === 'Pedidos Flash' || subEmpresaCheck.toUpperCase() === 'PEDIDOS FLASH');
+
+            // Initialize Bonus from Position or Global Default
+            let monthlyBonus = parseFloat(pos.bonificacion || pos.bonus || (window.rrhhConfig.get().bonus) || 250);
+
+
+
+            if (isPedidosFlash) {
+                if (empSettings.pedidosSalary && empSettings.pedidosSalary > 0) {
+                    monthlySalary = parseFloat(empSettings.pedidosSalary);
+                }
+
+                // Allow 0 overrides for Bonus
+                if (empSettings.pedidosBonus !== undefined) {
+                    // Check if it's not null/undefined/empty string
+                    const bVal = parseFloat(empSettings.pedidosBonus);
+                    if (!isNaN(bVal)) monthlyBonus = bVal;
+                }
+
+                if (empSettings.pedidosOvertime && empSettings.pedidosOvertime > 0) {
+                    overtimeRateOverride = parseFloat(empSettings.pedidosOvertime);
+                }
+            } else {
+                // Check defaults? No, default flow is fine.
+            }
+
+            // Bonus Fallback if not overridden
+            // already handled by initial assignment of monthlyBonus
 
             // Calculations
-            // Proportional Calculation based on Day worked
-            // Monthly / 30 * daysWorked
-            const dailyRate = monthlySalary / 30; // Standard commercial month
-            const periodSalary = dailyRate * daysWorked;
+            // Consistent Logic with updatePlanillaDays
+            let periodSalary = 0;
+            let periodBonus = 0;
 
-            const bonusDaily = monthlyBonus / 30;
-            const periodBonus = bonusDaily * daysWorked;
+            if (daysWorked >= 15) {
+                // Full Quincena (Half Month)
+                periodSalary = monthlySalary / 2;
+                periodBonus = monthlyBonus / 2;
+            } else {
+                // Proportional (< 15 days) using 365-day basis standard
+                const dailyRate = (monthlySalary * 12) / 365;
+                periodSalary = dailyRate * daysWorked;
+
+                const dailyBonus = (monthlyBonus * 12) / 365;
+                periodBonus = dailyBonus * daysWorked;
+            }
 
             const totalSalary = periodSalary + periodBonus;
             // Dynamic IGSS from Config
@@ -292,24 +343,28 @@ async function loadPlanillaTable() {
                 bonus: periodBonus,
                 totalSalary: totalSalary,
                 igss: igss,
+                overtimeRate: overtimeRateOverride, // Can be 0 if not set
+                globalOvertimeRate: globalOvertimeRate, // New Global Config
                 isr: isr,
                 judicial: 0,
                 discount: loanDeduction,
                 advance: wageAdvance,
                 appliedLoans: appliedLoans,
-                // New Fields for Additional Income
                 extraHours: 0,
                 extraAmount: 0,
                 otherBonus: 0,
                 otherBonusDesc: "", // Description for Other Income
                 holidayBonus: 0,
                 finalTotal: 0, // Will be calculated
-                isNew: true
+                isNew: true,
+                subEmpresa: isProbation ? 'EN PRUEBA' : (emp.subEmpresa || 'Propia').trim(),
+                branchName: mainBranchInfo.name,
+                branchLogo: mainBranchInfo.logo
             });
         });
 
         if (currentPayrollData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding: 20px;">No se encontraron empleados para esta sucursal.</td></tr>';
+            tbodyContainer.innerHTML = '<div style="text-align:center; padding: 20px;">No se encontraron empleados para esta sucursal.</div>';
             return;
         }
 
@@ -320,7 +375,7 @@ async function loadPlanillaTable() {
 
     } catch (e) {
         console.error("Error generating payroll:", e);
-        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; color:red; padding: 20px;">Error: ${e.message}</td></tr>`;
+        tbodyContainer.innerHTML = `<div style="text-align:center; color:red; padding: 20px;">Error: ${e.message}</div>`;
     }
 }
 
@@ -350,122 +405,274 @@ async function populatePlanillaBranches() {
     }
 }
 
+// Render rows grouped by subEmpresa (split Pedidos Flash)
 function renderPlanillaRows() {
-    const tbody = document.getElementById('planillaBody');
-    const tfoot = document.getElementById('planillaFooter');
-    tbody.innerHTML = '';
+    const container = document.getElementById('planillaTablesContainer');
+    if (!container) return;
+    container.innerHTML = '';
 
-    // Totals Accumulators
-    let sumSalary = 0;
-    let sumBonus = 0;
-    let sumTotalSalary = 0;
-    let sumIgss = 0;
-    let sumIsr = 0;
-    let sumJudicial = 0;
-    let sumDiscount = 0;
-    let sumAdvance = 0;
-    let sumTotalDeductions = 0;
-    let sumLiquid = 0;
+    // Group Data
+    const groups = {};
+    // Ensure we process "Propia" first, then others? Or just order keys.
+    const defaultKey = 'Propia';
 
     currentPayrollData.forEach((row, index) => {
-        // Calculate dynamic totals based on potentially edited values
-        const totalDeductions = row.igss + row.isr + row.judicial + row.discount + row.advance;
-        const liquid = row.totalSalary - totalDeductions;
-
-        // Accumulate
-        sumSalary += row.salary;
-        sumBonus += row.bonus;
-        sumTotalSalary += row.totalSalary;
-        sumIgss += row.igss;
-        sumIsr += row.isr;
-        sumJudicial += row.judicial;
-        sumDiscount += row.discount;
-        sumAdvance += row.advance;
-        sumTotalDeductions += totalDeductions;
-        sumLiquid += liquid;
-
-        // Sum Extra
-        const totalAdic = row.extraAmount + row.otherBonus + row.holidayBonus;
-        const finalPay = liquid + totalAdic;
-
-        row.finalTotal = finalPay; // Store for save
-
-
-        const tr = document.createElement('tr');
-        tr.style.background = '#fff';
-
-        const cellStyle = 'padding: 6px; border: 1px solid #000; text-align: center;';
-        const numStyle = 'padding: 6px; border: 1px solid #000; text-align: center;';
-
-        tr.innerHTML = `
-            <td style="${cellStyle} text-align: left; width: 220px;">${row.name}</td>
-            
-            <!-- Editable Days -->
-            <td style="${cellStyle} padding: 2px;">
-                 <input type="number" min="0" max="31" value="${row.days}" 
-                    onchange="updatePlanillaDays(${index}, this.value)"
-                    style="width: 40px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
-            </td>
-
-            <td style="${numStyle}">Q${row.salary.toFixed(2)}</td>
-            <td style="${numStyle}">Q${row.bonus.toFixed(2)}</td>
-            <td style="${numStyle}">Q${row.totalSalary.toFixed(2)}</td>
-            
-            <td style="${numStyle}">Q${row.igss.toFixed(2)}</td>
-            <td style="${numStyle}">Q${row.isr.toFixed(2)}</td>
-            
-            <!-- Editable Deductions -->
-            <td style="${cellStyle} padding: 2px;">
-                <input type="number" step="0.01" value="${row.judicial.toFixed(2)}" 
-                    onchange="updatePlanillaRow(${index}, 'judicial', this.value)"
-                    style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
-            </td>
-            <td style="${cellStyle} padding: 2px;">
-                <input type="number" step="0.01" value="${row.discount.toFixed(2)}" 
-                    onchange="updatePlanillaRow(${index}, 'discount', this.value)"
-                    style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
-            </td>
-            <td style="${cellStyle} padding: 2px;">
-                <input type="number" step="0.01" value="${row.advance.toFixed(2)}" 
-                    onchange="updatePlanillaRow(${index}, 'advance', this.value)"
-                    style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
-            </td>
-
-            <td style="${numStyle}">Q${totalDeductions.toFixed(2)}</td>
-            <td style="${numStyle}">Q${liquid.toFixed(2)}</td>
-
-            <!-- Extra Income Inputs -->
-             <td style="${cellStyle} padding: 2px;">
-                <input type="number" step="0.5" value="${row.extraHours}" 
-                    onchange="updatePlanillaExtra(${index}, 'hours', this.value)"
-                    style="width: 40px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
-            </td>
-            <td style="${numStyle} background: #f0fdf4;">Q${row.extraAmount.toFixed(2)}</td>
-            <td style="${cellStyle} padding: 2px;">
-                <input type="number" step="0.01" value="${row.otherBonus.toFixed(2)}" 
-                    onchange="updatePlanillaExtra(${index}, 'other', this.value)"
-                    style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
-                <input type="text" placeholder="Desc." value="${row.otherBonusDesc || ''}"
-                    onchange="updatePlanillaExtra(${index}, 'otherDesc', this.value)"
-                    style="width: 60px; padding: 2px; border: none; border-top: 1px dotted #ccc; text-align: center; font-family: inherit; font-size: 0.8em; background: #f0fdf4; display: block; margin-top:2px;">
-            </td>
-             <td style="${cellStyle} padding: 2px;">
-                <input type="number" step="0.01" value="${row.holidayBonus.toFixed(2)}" 
-                    onchange="updatePlanillaExtra(${index}, 'holiday', this.value)"
-                    style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
-            </td>
-            <td style="${numStyle} font-weight: bold; background: #f0fdf4;">Q${(row.extraAmount + row.otherBonus + row.holidayBonus).toFixed(2)}</td>
-            
-            <td style="${numStyle} font-weight: bold; background: #dcfce7;">Q${(liquid + row.extraAmount + row.otherBonus + row.holidayBonus).toFixed(2)}</td>
-            <td style="${cellStyle} border-bottom: 2px solid #000;">____________</td>
-        `;
-
-        tbody.appendChild(tr);
+        const key = row.subEmpresa || defaultKey;
+        if (!groups[key]) groups[key] = [];
+        // Store original index to bind events correctly
+        groups[key].push({ ...row, originalIndex: index });
     });
 
-    // Render Footer
-    if (tfoot) {
-        tfoot.style.display = 'table-footer-group';
+    const keys = Object.keys(groups).sort((a, b) => {
+        if (a === defaultKey) return -1;
+        if (b === defaultKey) return 1;
+        return a.localeCompare(b);
+    });
+
+    keys.forEach((groupKey, groupIdx) => {
+        const groupRows = groups[groupKey];
+
+        // Container for this table
+        const tableWrapper = document.createElement('div');
+        tableWrapper.className = 'planilla-sheet';
+        if (groupIdx > 0) {
+            tableWrapper.style.pageBreakBefore = 'always';
+            tableWrapper.style.marginTop = '40px';
+            // Add a visual separator for screen view
+            const sep = document.createElement('hr');
+            sep.style.margin = '40px 0';
+            sep.style.borderTop = '2px dashed #ccc';
+            // Only visible on screen, print uses page-break
+            sep.className = 'screen-only-separator';
+            container.appendChild(sep);
+        }
+
+        // 1. Header Generation
+        const headerTemplate = document.getElementById('planillaHeaderTemplate');
+        const header = headerTemplate.cloneNode(true);
+        header.id = '';
+        header.style.display = 'flex'; // Make visible
+
+        // Customize Header
+        const titleH3 = header.querySelector('h3');
+        const logoImg = header.querySelector('img');
+        const dateP = header.querySelector('p'); // #planillaDateDisplayTemplate
+
+        // Set Date
+        // We need to reconstruct date string or read from hidden template?
+        // Better: reconstruct.
+        const m = document.getElementById('planillaMonth');
+        const p = document.getElementById('planillaPeriod');
+        const y = document.getElementById('planillaYear');
+        let dateText = "";
+        if (p.value === 'custom') {
+            const s = new Date(document.getElementById('planillaStart').value);
+            const e = new Date(document.getElementById('planillaEnd').value);
+            // Simple format
+            const f = d => `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+            dateText = `${f(s)} - ${f(e)}`;
+        } else {
+            const pText = p.value == '1' ? 'DEL 01' : 'DEL 16';
+            const pEndText = p.value == '1' ? 'AL 15' : 'AL ' + new Date(y.value, parseInt(m.value) + 1, 0).getDate();
+            dateText = `${pText}/${(parseInt(m.value) + 1).toString().padStart(2, '0')}/${y.value} ${pEndText}/${(parseInt(m.value) + 1).toString().padStart(2, '0')}/${y.value}`;
+        }
+        dateP.innerText = dateText;
+
+        // Set Company Name
+        if (groupKey.toUpperCase() === 'PEDIDOS FLASH') {
+            titleH3.innerText = "PEDIDOS FLASH";
+            logoImg.src = "../resources/images/PEDIDOS FLASH.png";
+        } else {
+            // Use the one from the first row (common branch info)
+            titleH3.innerText = groupRows[0].branchName || "CORPORACION DE ALIMENTOS, S.A.";
+            if (groupKey === 'EN PRUEBA') {
+                titleH3.innerText += " (EN PERIODO DE PRUEBA)";
+            }
+            if (groupRows[0].branchLogo) logoImg.src = groupRows[0].branchLogo;
+        }
+
+        tableWrapper.appendChild(header);
+
+        // 2. Table Generation
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.fontFamily = 'Arial, sans-serif';
+        table.style.fontSize = '0.75rem';
+        table.style.color = '#000';
+
+        // Header HTML (Static copy from HTML)
+        table.innerHTML = `
+            <thead>
+                <tr style="border: 2px solid #000;">
+                    <th rowspan="2" style="border: 1px solid #000; padding: 4px; vertical-align: middle; text-align: center; width: 220px;">NOMBRE EMPLEADO</th>
+                    <th colspan="4" style="border: 1px solid #000; padding: 4px; text-align: center; border-bottom: 2px solid #000;">SALARIO DEVENGADO</th>
+                    <th colspan="6" style="border: 1px solid #000; padding: 4px; text-align: center; border-bottom: 2px solid #000;">DEDUCCIONES LEGALES</th>
+                    <th rowspan="2" style="border: 1px solid #000; padding: 4px; vertical-align: middle; text-align: center; background: #fff; width: 80px;">SALARIO<br>LÍQUIDO</th>
+                    <th colspan="5" style="border: 1px solid #000; padding: 4px; text-align: center; border-bottom: 2px solid #000; background: #f0fdf4;">INGRESOS ADICIONALES</th>
+                    <th rowspan="2" style="border: 1px solid #000; padding: 4px; vertical-align: middle; text-align: center; font-weight: bold; background: #dcfce7;">TOTAL<br>A RECIBIR</th>
+                    <th rowspan="2" style="border: 1px solid #000; padding: 4px; vertical-align: middle; text-align: center; width: 150px;">FIRMA</th>
+                </tr>
+                <tr style="border: 2px solid #000; border-top: none;">
+                    <th style="border: 1px solid #000; padding: 4px; width: 50px;">DÍAS<br>TRAB.</th>
+                    <th style="border: 1px solid #000; padding: 4px;">SALARIO</th>
+                    <th style="border: 1px solid #000; padding: 4px;">BONIF.<br>DECRETO</th>
+                    <th style="border: 1px solid #000; padding: 4px; font-weight: bold;">SALARIO<br>TOTAL</th>
+                    <th style="border: 1px solid #000; padding: 4px;">IGSS</th>
+                    <th style="border: 1px solid #000; padding: 4px;">ISR</th>
+                    <th style="border: 1px solid #000; padding: 4px;">JUDICIAL</th>
+                    <th style="border: 1px solid #000; padding: 4px;">DESCUENTO</th>
+                    <th style="border: 1px solid #000; padding: 4px;">ANTICIPO<br>QUINCENA</th>
+                    <th style="border: 1px solid #000; padding: 4px; font-weight: bold;">TOTAL<br>DEDUCC.</th>
+                    <th style="border: 1px solid #000; padding: 4px;">HORAS<br>EXTRAS</th>
+                    <th style="border: 1px solid #000; padding: 4px;">MONTO<br>H. EXTRAS</th>
+                    <th style="border: 1px solid #000; padding: 4px;">OTROS<br>INGRESOS</th>
+                    <th style="border: 1px solid #000; padding: 4px;">ASUETO</th>
+                    <th style="border: 1px solid #000; padding: 4px; font-weight: bold;">TOTAL<br>ADIC.</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot style="font-weight: bold; background: #fff;"></tfoot>
+        `;
+
+        const tbody = table.querySelector('tbody');
+        const tfoot = table.querySelector('tfoot');
+
+        // Accumulators
+        let sumSalary = 0;
+        let sumBonus = 0;
+        let sumTotalSalary = 0;
+        let sumIgss = 0;
+        let sumIsr = 0;
+        let sumJudicial = 0;
+        let sumDiscount = 0;
+        let sumAdvance = 0;
+        let sumTotalDeductions = 0;
+        let sumLiquid = 0;
+
+        // Extra Accumulators
+        let sumExtraAmount = 0;
+        let sumOtherBonus = 0;
+        let sumHolidayBonus = 0;
+        let sumTotalAdic = 0;
+        let sumFinalTotal = 0;
+
+        groupRows.forEach(row => {
+            const index = row.originalIndex; // Vital for inputs
+
+            // Calculate dynamic totals based on potentially edited values (live from currentPayrollData)
+            // We use 'row' but 'row' is from 'groupRows' which is a shallow copy of currentPayrollData?
+            // No, in the map we did { ...row }. This splits references for top level!
+            // ISSUE: editing inputs updates currentPayrollData[index], but NOT groupRows[i].
+            // FIX: We must read from currentPayrollData[index] to get latest values.
+            const liveRow = currentPayrollData[index];
+
+            const totalDeductions = liveRow.igss + liveRow.isr + liveRow.judicial + liveRow.discount + liveRow.advance;
+            const liquid = liveRow.totalSalary - totalDeductions;
+
+            const totalAdic = liveRow.extraAmount + liveRow.otherBonus + liveRow.holidayBonus;
+            const finalPay = liquid + totalAdic;
+            liveRow.finalTotal = finalPay;
+
+            // Accumulate
+            // Accumulate (Rounding to 2 decimals to ensure visual sum matches actual sum)
+            sumSalary += Number(liveRow.salary.toFixed(2));
+            sumBonus += Number(liveRow.bonus.toFixed(2));
+            sumTotalSalary += Number(liveRow.totalSalary.toFixed(2));
+            sumIgss += Number(liveRow.igss.toFixed(2));
+            sumIsr += Number(liveRow.isr.toFixed(2));
+            sumJudicial += Number(liveRow.judicial.toFixed(2));
+            sumDiscount += Number(liveRow.discount.toFixed(2));
+            sumAdvance += Number(liveRow.advance.toFixed(2));
+            sumTotalDeductions += Number(totalDeductions.toFixed(2));
+            sumLiquid += Number(liquid.toFixed(2));
+
+            sumExtraAmount += Number(liveRow.extraAmount.toFixed(2));
+            sumOtherBonus += Number(liveRow.otherBonus.toFixed(2));
+            sumHolidayBonus += Number(liveRow.holidayBonus.toFixed(2));
+            sumTotalAdic += Number(totalAdic.toFixed(2));
+            sumFinalTotal += Number(finalPay.toFixed(2));
+
+            const tr = document.createElement('tr');
+            tr.style.background = '#fff';
+            // Increase padding for signature space (even more)
+            const cellStyle = 'padding: 20px 6px; border: 1px solid #000; text-align: center;';
+            const numStyle = 'padding: 20px 6px; border: 1px solid #000; text-align: center;';
+
+            tr.innerHTML = `
+                <td style="${cellStyle} text-align: left; width: 220px;">${liveRow.name}</td>
+                <td style="${cellStyle} padding: 2px;">
+                     <input type="number" min="0" max="31" value="${liveRow.days}" 
+                        onchange="updatePlanillaDays(${index}, this.value)"
+                        style="width: 40px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
+                </td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.01" value="${liveRow.salary.toFixed(2)}"
+                        onchange="updatePlanillaRowSalary(${index}, this.value)"
+                        title="Salario Devengado (Calculado o Manual)"
+                        style="width: 70px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
+                </td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.01" value="${liveRow.bonus.toFixed(2)}"
+                        onchange="updatePlanillaRowBonus(${index}, this.value)"
+                        title="Bonificación (Calculado o Manual)"
+                        style="width: 70px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
+                </td>
+                <td style="${numStyle}">Q${liveRow.totalSalary.toFixed(2)}</td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.01" value="${liveRow.igss.toFixed(2)}" 
+                        onchange="updatePlanillaRow(${index}, 'igss', this.value)"
+                        style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
+                </td>
+                <td style="${numStyle}">Q${liveRow.isr.toFixed(2)}</td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.01" value="${liveRow.judicial.toFixed(2)}" 
+                        onchange="updatePlanillaRow(${index}, 'judicial', this.value)"
+                        style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
+                </td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.01" value="${liveRow.discount.toFixed(2)}" 
+                        onchange="updatePlanillaRow(${index}, 'discount', this.value)"
+                        style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
+                </td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.01" value="${liveRow.advance.toFixed(2)}" 
+                        onchange="updatePlanillaRow(${index}, 'advance', this.value)"
+                        style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit;">
+                </td>
+                <td style="${numStyle}">Q${totalDeductions.toFixed(2)}</td>
+                <td style="${numStyle}">Q${liquid.toFixed(2)}</td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.5" value="${liveRow.extraHours}" 
+                        onchange="updatePlanillaExtra(${index}, 'hours', this.value)"
+                        style="width: 40px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
+                </td>
+                <td style="${cellStyle} padding: 2px; background: #f0fdf4;">
+                    <input type="number" step="0.01" value="${liveRow.extraAmount.toFixed(2)}"
+                        onchange="updatePlanillaExtra(${index}, 'amount', this.value)"
+                        style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
+                </td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.01" value="${liveRow.otherBonus.toFixed(2)}" 
+                        onchange="updatePlanillaExtra(${index}, 'other', this.value)"
+                        style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
+                    <input type="text" placeholder="Desc." value="${liveRow.otherBonusDesc || ''}"
+                        onchange="updatePlanillaExtra(${index}, 'otherDesc', this.value)"
+                        style="width: 60px; padding: 2px; border: none; border-top: 1px dotted #ccc; text-align: center; font-family: inherit; font-size: 0.8em; background: #f0fdf4; display: block; margin-top:2px;">
+                </td>
+                <td style="${cellStyle} padding: 2px;">
+                    <input type="number" step="0.01" value="${liveRow.holidayBonus.toFixed(2)}" 
+                        onchange="updatePlanillaExtra(${index}, 'holiday', this.value)"
+                        style="width: 60px; padding: 2px; border: none; text-align: center; font-family: inherit; font-size: inherit; background: #f0fdf4;">
+                </td>
+                <td style="${numStyle} font-weight: bold; background: #f0fdf4;">Q${totalAdic.toFixed(2)}</td>
+                <td style="${numStyle} font-weight: bold; background: #dcfce7;">Q${finalPay.toFixed(2)}</td>
+                <td style="${cellStyle} border-bottom: 2px solid #000;">____________</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Footer Totals for this group
         tfoot.innerHTML = `
             <tr style="text-align: center; font-weight: bold; ">
                 <td style="padding: 6px; border: 1px solid #000; text-align: right;">TOTALES:</td>
@@ -480,41 +687,35 @@ function renderPlanillaRows() {
                 <td style="padding: 6px; border: 1px solid #000;">Q${sumAdvance.toFixed(2)}</td>
                 <td style="padding: 6px; border: 1px solid #000;">Q${sumTotalDeductions.toFixed(2)}</td>
                 <td style="padding: 6px; border: 1px solid #000;">Q${sumLiquid.toFixed(2)}</td>
-                
-                <!-- Extra Totals -->
                 <td style="padding: 6px; border: 1px solid #000;">-</td>
-                 <td style="padding: 6px; border: 1px solid #000;">Q${currentPayrollData.reduce((a, b) => a + b.extraAmount, 0).toFixed(2)}</td>
-                 <td style="padding: 6px; border: 1px solid #000;">Q${currentPayrollData.reduce((a, b) => a + b.otherBonus, 0).toFixed(2)}</td>
-                 <td style="padding: 6px; border: 1px solid #000;">Q${currentPayrollData.reduce((a, b) => a + b.holidayBonus, 0).toFixed(2)}</td>
-                 <td style="padding: 6px; border: 1px solid #000;">Q${currentPayrollData.reduce((a, b) => a + (b.extraAmount + b.otherBonus + b.holidayBonus), 0).toFixed(2)}</td>
-                 <td style="padding: 6px; border: 1px solid #000; background: #eee;">Q${currentPayrollData.reduce((a, b) => a + b.finalTotal, 0).toFixed(2)}</td>
-
-                <td style="border: 1px solid #000;"></td>
+                <td style="padding: 6px; border: 1px solid #000;">Q${sumExtraAmount.toFixed(2)}</td>
+                <td style="padding: 6px; border: 1px solid #000;">Q${sumOtherBonus.toFixed(2)}</td>
+                <td style="padding: 6px; border: 1px solid #000;">Q${sumHolidayBonus.toFixed(2)}</td>
+                <td style="padding: 6px; border: 1px solid #000;">Q${sumTotalAdic.toFixed(2)}</td>
+                <td style="padding: 6px; border: 1px solid #000; background: #eee;">Q${sumFinalTotal.toFixed(2)}</td>
+                <td style="border: 1px solid #000; font-size: 8px; vertical-align: bottom;">v4</td>
             </tr>
         `;
-    }
 
-    // Update Header Text for View (Immediate Feedback)
-    updateHeaderInfo();
+        tableWrapper.appendChild(table);
+        container.appendChild(tableWrapper);
+    });
+
+    // 3. Overall Totals at bottom? Or just separate sheets? User asked for "Hoja aparte" for Flash.
+    // So splitting is the goal. We don't need a Grand Total table effectively.
 }
-
+// Helper to update global state and re-render
 function updatePlanillaDays(index, value) {
     const days = parseFloat(value) || 0;
     const row = currentPayrollData[index];
-
     row.days = days;
-
-    // Recalculate Proportional Salary & Bonus
-    // Rule: IF days >= 15, assume Full Fortnight Pay (Monthly / 2)
-    // Rule: IF days < 15, use 365-day Daily Rate
 
     if (days >= 15) {
         row.salary = row.monthlyBase / 2;
-        row.bonus = row.monthlyBonusBase / 2;
+        row.bonus = 125.00;
     } else {
         const dailyRate365 = (row.monthlyBase * 12) / 365;
-        const dailyBonus365 = (row.monthlyBonusBase * 12) / 365;
-
+        const dailyBonus365 = (250 * 12) / 365;
         row.salary = dailyRate365 * days;
         row.bonus = dailyBonus365 * days;
     }
@@ -523,10 +724,8 @@ function updatePlanillaDays(index, value) {
     row.totalSalary = row.salary + row.bonus;
     const igssPct = (window.rrhhConfig && window.rrhhConfig.get().iggsPercentage ? window.rrhhConfig.get().iggsPercentage : 4.83) / 100;
     row.igss = row.salary * igssPct;
-
     renderPlanillaRows();
 }
-
 
 function updatePlanillaRow(index, field, value) {
     const val = parseFloat(value) || 0;
@@ -540,50 +739,104 @@ function updatePlanillaExtra(index, type, value) {
 
     if (type === 'hours') {
         row.extraHours = val;
-        // Calc Amount: Base Monthly Salary * 12 / 365 / 8 * Hours (Straight Time)
-        const dailyRate = (row.monthlyBase * 12) / 365;
-        const hourlyRate = dailyRate / 8;
+        // Calc Amount
+        let hourlyRate = 0;
+
+        if (row.overtimeRate && row.overtimeRate > 0) {
+            // Fixed Rate from Config (Pedidos)
+            hourlyRate = row.overtimeRate;
+        } else if (row.globalOvertimeRate && row.globalOvertimeRate > 0) {
+            // Global Fixed Rate
+            hourlyRate = row.globalOvertimeRate;
+        } else {
+            // Standard Calc
+            const dailyRate = (row.monthlyBase * 12) / 365;
+            hourlyRate = dailyRate / 8;
+        }
+
         row.extraAmount = hourlyRate * val;
+
+    } else if (type === 'amount') {
+        // Direct Amount Edit
+        row.extraAmount = val;
+        // Optionally clear hours or keep them as reference?
+        // Let's keep hours as is, but this allows manual "rounding" fix.
+
     } else if (type === 'other') {
         row.otherBonus = val;
     } else if (type === 'otherDesc') {
-        row.otherBonusDesc = value; // Store string directly
+        row.otherBonusDesc = value;
     } else if (type === 'holiday') {
         row.holidayBonus = val;
     }
-
     renderPlanillaRows();
 }
 
-function updateHeaderInfo() {
-    const header = document.getElementById('planillaHeaderInfo');
-    const table = document.getElementById('planillaTable');
-
-    const m = document.getElementById('planillaMonth');
-    const p = document.getElementById('planillaPeriod');
-    const y = document.getElementById('planillaYear');
-    const s = document.getElementById('planillaSucursal');
-
-    // If saving/loading history, we might not rely on selectors, but for now we do.
-    const mText = m.options[m.selectedIndex].text;
-    const pText = p.value == '1' ? 'DEL 01' : 'DEL 16';
-    const pEndText = p.value == '1' ? 'AL 15' : 'AL ' + new Date(y.value, parseInt(m.value) + 1, 0).getDate();
-
-    const branchName = (s && s.options[s.selectedIndex].text !== 'Todas las Sucursales') ? s.options[s.selectedIndex].text : 'GENERAL';
-
-    const titleNode = document.getElementById('planillaTitleNode');
-    if (titleNode) titleNode.innerText = `NÓMINA DE SUELDOS ${branchName.toUpperCase()}`;
-
-    document.getElementById('planillaDateDisplay').innerText = `${pText}/${(parseInt(m.value) + 1).toString().padStart(2, '0')}/${y.value} ${pEndText}/${(parseInt(m.value) + 1).toString().padStart(2, '0')}/${y.value}`;
-}
-
 function exportPlanillaPDF() {
-    updateHeaderInfo(); // Ensure latest
-    const header = document.getElementById('planillaHeaderInfo');
-    if (header) header.style.display = 'flex';
+    // Inject Print Styles to ensure Page Breaks work
+    let style = document.getElementById('planillaPrintStyles');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'planillaPrintStyles';
+        style.innerHTML = `
+            @media print {
+                @page { margin: 10mm; size: landscape; }
+                body, html { 
+                    overflow: visible !important; 
+                    height: auto !important; 
+                    background: white !important;
+                }
+                /* Hide everything by default */
+                body > * { display: none !important; }
+                
+                /* Show only our print container */
+                #planillaMainView { 
+                    display: block !important; 
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    overflow: visible !important; 
+                    height: auto !important; 
+                }
+                
+                /* Ensure children are visible */
+                #planillaMainView * { visibility: visible !important; }
+
+                /* Specific Overrides */
+                .card { 
+                    border: none !important; 
+                    box-shadow: none !important; 
+                    margin: 0 !important; 
+                    padding: 0 !important;
+                    overflow: visible !important;
+                }
+                #planillaTablesContainer { 
+                    display: block !important; 
+                    overflow: visible !important;
+                }
+
+                .screen-only-separator { display: none !important; }
+                
+                .planilla-sheet { 
+                    page-break-inside: avoid; 
+                    margin-bottom: 0px !important; 
+                    display: block !important;
+                    width: 100% !important;
+                }
+                /* Explicit break */
+                .planilla-sheet + .planilla-sheet { 
+                    page-break-before: always !important; 
+                    margin-top: 20px !important; 
+                }
+
+                /* Hide Controls */
+                #planillaControls, .header-controls { display: none !important; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
     window.print();
-    // Header stays visible in DOM for simplicity or can be hidden. 
-    // CSS @media print handles visibility mostly, but we toggle display:none here.
 }
 
 
@@ -790,7 +1043,7 @@ async function updateHeaderInfo() {
     if (!titleH3 || !logoImg) return;
 
     // Reset defaults
-    titleH3.innerText = "AMERICAN PIZZA";
+    titleH3.innerText = "CORPORACION DE ALIMENTOS, S.A.";
     logoImg.src = "../Recibos/logo.png";
 
     const selectedSucursal = sEl ? sEl.value : 'all';
@@ -889,7 +1142,7 @@ function printPaymentSlips(type) {
     const y = document.getElementById('planillaYear');
     const s = document.getElementById('planillaSucursal');
     // Get Company Title - Fallback to global or derive
-    let companyTitle = "AMERICAN PIZZA";
+    let companyTitle = "CORPORACION DE ALIMENTOS, S.A.";
     const headerTitleEl = document.getElementById('headerCompanyTitle');
     if (headerTitleEl && headerTitleEl.innerText) companyTitle = headerTitleEl.innerText;
 
@@ -938,128 +1191,200 @@ function printPaymentSlips(type) {
         // Table Styles for Normal View
         w.document.write('@page { size: landscape; margin: 0; }');
         w.document.write('body { padding: 10mm; }');
-        w.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #000; }');
-        w.document.write('th { border: 1px solid #000; padding: 4px; text-align: center; font-weight: bold; font-size: 10px; }');
-        w.document.write('td { border: 1px solid #000; padding: 4px; font-size: 11px; }');
+        w.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; border: none; page-break-inside: auto; }');
+        w.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
+        // Restore Header Borders (User wanted "Like This" -> Screenshot shows borders)
+        w.document.write('th { border: 1px solid #000; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; }');
+        // Clean Data Rows
+        w.document.write('td { border: none; padding: 25px 4px; font-size: 11px; vertical-align: bottom; }');
+        // Signature Line
+        w.document.write('td:last-child { border-bottom: 1px solid #000; }');
         w.document.write('.amount { text-align: right; }');
         w.document.write('.center { text-align: center; }');
         w.document.write('.header-container { display: flex; align-items: center; margin-bottom: 20px; }');
         w.document.write('.logo { height: 50px; margin-right: 20px; }');
         w.document.write('.title-box { text-align: center; flex: 1; text-transform: uppercase; font-weight: bold; }');
         w.document.write('tfoot { font-weight: bold; background: #f0f0f0; }');
+        w.document.write('.page-break { page-break-after: always; display: block; height: 0; overflow: hidden; }');
 
         w.document.write('</style></head><body>');
 
-        // Header
-        w.document.write(`
-            <div class="header-container">
-                <img src="${logoSrc}" class="logo" alt="Logo">
-                <div class="title-box">
-                    <div>${companyTitle}</div>
-                    ${branchName ? `<div>${branchName.toUpperCase()}</div>` : ''}
-                    <div>NÓMINA DE SUELDOS</div>
-                    <div>${periodStr}</div>
-                </div>
-                <div style="width: 70px;"></div>
-            </div>
-        `);
-
-        // Table Normal
-        w.document.write('<table><thead>');
-        // Main Headers
-        w.document.write(`
-            <tr>
-                <th rowspan="2" style="width: 200px;">NOMBRE EMPLEADO</th>
-                <th colspan="4">SALARIO DEVENGADO</th>
-                <th colspan="6">DEDUCCIONES LEGALES</th>
-                <th rowspan="2">SALARIO<br>LÍQUIDO</th>
-                <th rowspan="2" style="width: 120px;">FIRMA</th>
-            </tr>
-        `);
-        // Sub Headers
-        w.document.write(`
-            <tr>
-                <th>DÍAS<br>TRAB.</th>
-                <th>SALARIO</th>
-                <th>BONIF.<br>DECRETO</th>
-                <th>SALARIO<br>TOTAL</th>
-                
-                <th>IGSS</th>
-                <th>ISR</th>
-                <th>JUDICIAL</th>
-                <th>DESCUENTO</th>
-                <th>ANTICIPO<br>QUINCENA</th>
-                <th>TOTAL<br>DEDUCC.</th>
-            </tr>
-        `);
-        w.document.write('</thead><tbody>');
-
-        // Totals
-        let tSalary = 0, tBonus = 0, tTotalSal = 0;
-        let tIgss = 0, tIsr = 0, tJud = 0, tDisc = 0, tAdv = 0, tTotalDed = 0;
-        let tLiquid = 0;
-
+        // Group Data
+        const groups = {};
+        const defaultKey = 'Propia';
         currentPayrollData.forEach(row => {
-            const totalSal = row.salary + row.bonus;
-            const totalDed = row.igss + row.isr + row.judicial + row.discount + row.advance;
-            const liq = totalSal - totalDed;
-
-            tSalary += row.salary; tBonus += row.bonus; tTotalSal += totalSal;
-            tIgss += row.igss; tIsr += row.isr; tJud += row.judicial;
-            tDisc += row.discount; tAdv += row.advance; tTotalDed += totalDed;
-            tLiquid += liq;
-
-            w.document.write(`
-                <tr>
-                    <td>${row.name}</td>
-                    <td class="center">${row.days}</td>
-                    <td class="amount">Q${row.salary.toFixed(2)}</td>
-                    <td class="amount">Q${row.bonus.toFixed(2)}</td>
-                    <td class="amount">Q${totalSal.toFixed(2)}</td>
-                    
-                    <td class="amount">Q${row.igss.toFixed(2)}</td>
-                    <td class="amount">Q${row.isr.toFixed(2)}</td>
-                    <td class="amount">Q${row.judicial.toFixed(2)}</td>
-                    <td class="amount">Q${row.discount.toFixed(2)}</td>
-                    <td class="amount">Q${row.advance.toFixed(2)}</td>
-                    <td class="amount">Q${totalDed.toFixed(2)}</td>
-                    
-                    <td class="amount">Q${liq.toFixed(2)}</td>
-                    <td style="border-bottom: 1px solid #000;"></td>
-                </tr>
-            `);
+            const key = row.subEmpresa || defaultKey;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(row);
         });
 
-        // Footer Totals
-        w.document.write(`
-            </tbody><tfoot>
-                <tr>
-                    <td style="text-align:right;">TOTALES:</td>
-                    <td>-</td>
-                    <td class="amount">Q${tSalary.toFixed(2)}</td>
-                    <td class="amount">Q${tBonus.toFixed(2)}</td>
-                    <td class="amount">Q${tTotalSal.toFixed(2)}</td>
-                    
-                    <td class="amount">Q${tIgss.toFixed(2)}</td>
-                    <td class="amount">Q${tIsr.toFixed(2)}</td>
-                    <td class="amount">Q${tJud.toFixed(2)}</td>
-                    <td class="amount">Q${tDisc.toFixed(2)}</td>
-                    <td class="amount">Q${tAdv.toFixed(2)}</td>
-                    <td class="amount">Q${tTotalDed.toFixed(2)}</td>
-                    
-                    <td class="amount">Q${tLiquid.toFixed(2)}</td>
-                    <td></td>
-                </tr>
-            </tfoot></table>
-        `);
+        const keys = Object.keys(groups).sort((a, b) => {
+            if (a === defaultKey) return -1;
+            if (b === defaultKey) return 1;
+            return a.localeCompare(b);
+        });
 
-        w.document.write(`<div style="margin-top:20px; font-weight:bold; font-size: 1.2em; text-align:right;">TOTAL PLANILLA: Q${tLiquid.toFixed(2)}</div>`);
+        keys.forEach((groupKey, groupIdx) => {
+            const groupRows = groups[groupKey];
+
+            // Determine Header Info for this Group
+            let currentTitle = companyTitle;
+            let currentLogo = logoSrc;
+
+            if (groupKey.toUpperCase() === 'PEDIDOS FLASH') {
+                currentTitle = "PEDIDOS FLASH";
+                currentLogo = "../resources/images/PEDIDOS FLASH.png";
+            } else {
+                // Use the one from the first row (common branch info) if available
+                if (groupRows[0].branchName) {
+                    currentTitle = groupRows[0].branchName.toUpperCase();
+                }
+                // Handle Branch Logo from row if we want to be super specific?
+                // For now, title is the critical part requested.
+                // if (groupRows[0].branchLogo) currentLogo = groupRows[0].branchLogo;
+            }
+
+            // Header
+            w.document.write(`
+                <div class="header-container">
+                    <img src="${currentLogo}" class="logo" alt="Logo">
+                    <div class="title-box">
+                        <div>${currentTitle}</div>
+                        ${branchName ? `<div>${branchName.toUpperCase()}</div>` : ''}
+                        <div>NÓMINA DE SUELDOS</div>
+                        <div>${periodStr}</div>
+                    </div>
+                    <div style="width: 70px;"></div>
+                </div>
+            `);
+
+            // Table Normal
+            w.document.write('<table><thead>');
+            // Main Headers
+            w.document.write(`
+                <tr>
+                    <th rowspan="2" style="width: 200px;">NOMBRE EMPLEADO</th>
+                    <th colspan="4">SALARIO DEVENGADO</th>
+                    <th colspan="6">DEDUCCIONES LEGALES</th>
+                    <th rowspan="2">SALARIO<br>LÍQUIDO</th>
+                    <th rowspan="2" style="width: 120px;">FIRMA</th>
+                </tr>
+            `);
+            // Sub Headers
+            w.document.write(`
+                <tr>
+                    <th>DÍAS<br>TRAB.</th>
+                    <th>SALARIO</th>
+                    <th>BONIF.<br>DECRETO</th>
+                    <th>SALARIO<br>TOTAL</th>
+                    
+                    <th>IGSS</th>
+                    <th>ISR</th>
+                    <th>JUDICIAL</th>
+                    <th>DESCUENTO</th>
+                    <th>ANTICIPO<br>QUINCENA</th>
+                    <th>TOTAL<br>DEDUCC.</th>
+                </tr>
+            `);
+            w.document.write('</thead><tbody>');
+
+            // Totals
+            let tSalary = 0, tBonus = 0, tTotalSal = 0;
+            let tIgss = 0, tIsr = 0, tJud = 0, tDisc = 0, tAdv = 0, tTotalDed = 0;
+            let tLiquid = 0;
+
+            groupRows.forEach(row => {
+                // Use the same final calculated properties if they exist, or re-calc with rounding
+                // Ideally we should rely on row.finalTotal if it exists, but this table is specific.
+
+                // Re-calculate with rounding to match main table display
+                // Note: The main table logic for totalDeductions is:
+                // const totalDeductions = liveRow.igss + liveRow.isr + liveRow.judicial + liveRow.discount + liveRow.advance;
+                // But in main table we sum Number(totalDeductions.toFixed(2)).
+                // Here we should do the same.
+
+                const totalSal = row.salary + row.bonus;
+                const totalDed = row.igss + row.isr + row.judicial + row.discount + row.advance;
+                const liq = totalSal - totalDed;
+
+                // Accumulate ROUNDED values
+                tSalary += Number(row.salary.toFixed(2));
+                tBonus += Number(row.bonus.toFixed(2));
+                tTotalSal += Number(totalSal.toFixed(2));
+
+                tIgss += Number(row.igss.toFixed(2));
+                tIsr += Number(row.isr.toFixed(2));
+                tJud += Number(row.judicial.toFixed(2));
+                tDisc += Number(row.discount.toFixed(2));
+                tAdv += Number(row.advance.toFixed(2));
+                tTotalDed += Number(totalDed.toFixed(2));
+
+                tLiquid += Number(liq.toFixed(2));
+
+
+                w.document.write(`
+                    <tr>
+                        <td>${row.name}</td>
+                        <td class="center">${row.days}</td>
+                        <td class="amount">Q${row.salary.toFixed(2)}</td>
+                        <td class="amount">Q${row.bonus.toFixed(2)}</td>
+                        <td class="amount">Q${totalSal.toFixed(2)}</td>
+                        
+                        <td class="amount">Q${row.igss.toFixed(2)}</td>
+                        <td class="amount">Q${row.isr.toFixed(2)}</td>
+                        <td class="amount">Q${row.judicial.toFixed(2)}</td>
+                        <td class="amount">Q${row.discount.toFixed(2)}</td>
+                        <td class="amount">Q${row.advance.toFixed(2)}</td>
+                        <td class="amount">Q${totalDed.toFixed(2)}</td>
+                        
+                        <td class="amount">Q${liq.toFixed(2)}</td>
+
+                        <td class="amount">Q${liq.toFixed(2)}</td>
+
+                        <!-- Remove explicit inline border since CSS handles it now, or keep empty -->
+                        <td></td>
+                    </tr>
+                `);
+            });
+
+            // Footer Totals
+            w.document.write(`
+                </tbody><tfoot>
+                    <tr>
+                        <td style="text-align:right;">TOTALES:</td>
+                        <td>-</td>
+                        <td class="amount">Q${tSalary.toFixed(2)}</td>
+                        <td class="amount">Q${tBonus.toFixed(2)}</td>
+                        <td class="amount">Q${tTotalSal.toFixed(2)}</td>
+                        
+                        <td class="amount">Q${tIgss.toFixed(2)}</td>
+                        <td class="amount">Q${tIsr.toFixed(2)}</td>
+                        <td class="amount">Q${tJud.toFixed(2)}</td>
+                        <td class="amount">Q${tDisc.toFixed(2)}</td>
+                        <td class="amount">Q${tAdv.toFixed(2)}</td>
+                        <td class="amount">Q${tTotalDed.toFixed(2)}</td>
+                        
+                        <td class="amount">Q${tLiquid.toFixed(2)}</td>
+
+                        <td></td>
+                    </tr>
+                </tfoot></table>
+            `);
+
+            w.document.write(`<div style="margin-top:20px; font-weight:bold; font-size: 1.2em; text-align:right;">TOTAL PLANILLA: Q${tLiquid.toFixed(2)}</div>`);
+
+            // Page Break if not last
+            if (groupIdx < keys.length - 1) {
+                w.document.write('<div class="page-break"></div>');
+            }
+        });
 
     } else {
         // EXTRA SLIPS (Individual)
+        // EXTRA SLIPS (Individual)
         w.document.write('@page { size: portrait; margin: 0; }');
         w.document.write('body { padding: 10mm; }');
-        w.document.write('.slip-outer { height: 48%; box-sizing: border-box; margin-bottom: 2%; display: block; page-break-inside: avoid; }'); // Wrapper for size control
+        w.document.write('.slip-outer { height: 45%; box-sizing: border-box; margin-bottom: 5%; display: block; page-break-inside: avoid; }'); // Wrapper for size control
         w.document.write('.slip-container { border-bottom: 2px dashed #000; padding-bottom: 10px; height: 100%; box-sizing: border-box; }');
         w.document.write('.header { display: flex; justify-content: space-between; margin-bottom: 5px; }');
         w.document.write('.header h2 { margin: 0; font-size: 16px; text-transform: uppercase; }');
@@ -1068,8 +1393,8 @@ function printPaymentSlips(type) {
         w.document.write('td { border: 1px solid #000; padding: 2px; vertical-align: top; }');
         w.document.write('.amount { text-align: right; }');
         w.document.write('.total-box { border: 2px solid #000; padding: 5px 20px; font-weight: bold; font-size: 14px; display: inline-block; margin-top: 5px; }');
-        w.document.write('.footer { margin-top: 20px; display: flex; justify-content: space-between; }');
-        w.document.write('.signature { border-top: 2px solid #000; width: 40%; text-align: center; padding-top: 5px; }');
+        w.document.write('.footer { margin-top: 60px; display: flex; justify-content: space-between; }');
+        w.document.write('.signature { border-top: 2px solid #000; width: 40%; text-align: center; padding-top: 10px; }');
         w.document.write('.page-break { page-break-after: always; height: 0; }'); // Explicit break
         w.document.write('</style></head><body>');
 
@@ -1104,6 +1429,24 @@ function generateSlipHtml(row, type, companyName, branchName, period, emission) 
     let totalDeduct = 0;
     let liquid = 0;
 
+    // Check for Pedidos Flash override or Branch Name
+    let displayCompanyName = companyName;
+
+    // Use Row's Branch Name if available (More accurate than global title)
+    // "Boletas Adicionales" issue: user wants Branch Name (e.g. American Pizza), not "Corporacion Alimentos".
+    if (row.branchName) {
+        displayCompanyName = row.branchName.toUpperCase();
+    }
+
+    if (row.subEmpresa === 'Pedidos Flash') {
+        displayCompanyName = "PEDIDOS FLASH";
+    } else if (row.subEmpresa === 'EN PRUEBA') {
+        // Optional: append status? User didn't ask, but safe to just show Branch Name
+        // displayCompanyName += " (EN PRUEBA)";
+    }
+
+    const showSubtitle = branchName && branchName.toUpperCase() !== displayCompanyName && branchName !== 'Todas las Sucursales';
+
     // NOTE: 'normal' is now handled by Table view above, but we keep this just in case logic is reused or reverted.
     // Logic below handles 'extra' individual slip.
 
@@ -1135,8 +1478,8 @@ function generateSlipHtml(row, type, companyName, branchName, period, emission) 
         <div class="slip-container">
             <div class="header">
                 <div>
-                    <h2>${companyName}</h2>
-                    ${branchName ? `<div>${branchName.toUpperCase()}</div>` : ''}
+                    <h2>${displayCompanyName}</h2>
+                    ${showSubtitle ? `<div>${branchName.toUpperCase()}</div>` : ''}
                     <div>BOLETA DE PAGO</div>
                     <div>${period.toLowerCase().startsWith('del:') ? 'Periodo ' + period : 'Periodo: ' + period}</div>
                 </div>
@@ -1303,18 +1646,13 @@ function showPayrollTotals() {
     // Helper to parser currency
     const parseQ = (str) => parseFloat(str.replace('Q', '')) || 0;
 
-    // Get Total Planilla from DOM (to match exactly what is shown)
-    // We look for the "TOTAL A RECIBIR" column which has background #dcfce7
-    const tableRows = document.querySelectorAll('#planillaBody tr');
-    let domTotal = 0;
-    tableRows.forEach(tr => {
-        const cell = tr.querySelector('td[style*="dcfce7"]');
-        if (cell) {
-            domTotal += parseQ(cell.innerText);
-        }
-    });
+    // Calculate Total Planilla directly from data (safest and supports multiple tables)
+    let totalPlanilla = 0;
 
     currentPayrollData.forEach(row => {
+        // Ensure we sum the rounded value as displayed
+        totalPlanilla += Number((row.finalTotal || 0).toFixed(2));
+
         const extrasSum = (row.extraAmount || 0) + (row.otherBonus || 0) + (row.holidayBonus || 0);
         totalExtras += extrasSum;
 
@@ -1333,7 +1671,7 @@ function showPayrollTotals() {
     });
 
     document.getElementById('payrollTotalsModal').style.display = 'flex';
-    document.getElementById('pt_totalPlanilla').innerText = `Q${domTotal.toFixed(2)}`;
+    document.getElementById('pt_totalPlanilla').innerText = `Q${totalPlanilla.toFixed(2)}`;
     document.getElementById('pt_totalEmployees').innerText = currentPayrollData.length;
     document.getElementById('pt_totalExtras').innerText = `Q${totalExtras.toFixed(2)}`;
 
@@ -1355,6 +1693,120 @@ function showPayrollTotals() {
     }
 }
 
+
 function closePayrollTotalsModal() {
     document.getElementById('payrollTotalsModal').style.display = 'none';
 }
+
+// Helper to fetch active loans grouped by employee
+async function fetchActiveLoansForPayroll() {
+    try {
+
+        const loanSnap = await db.collection('loans').where('status', '==', 'active').get();
+        const loansByEmp = {};
+        loanSnap.forEach(doc => {
+            const data = doc.data();
+            if (!loansByEmp[data.employeeId]) loansByEmp[data.employeeId] = [];
+            loansByEmp[data.employeeId].push({ id: doc.id, ...data });
+        });
+        return loansByEmp;
+    } catch (e) {
+        console.error("Error fetching loans:", e);
+        return {}; // Return empty object on error to prevent crash
+    }
+}
+
+function exportPayrollTotalsImage() {
+    const element = document.getElementById('payrollTotalsContent');
+    if (!element) return;
+
+    // Create a clone to capture full content without scrollbars/clipping
+    const clone = element.cloneNode(true);
+
+    // Style the clone to ensure full visibility and layout
+    clone.style.maxHeight = 'none';
+    clone.style.overflow = 'visible';
+    clone.style.height = 'auto';
+    clone.style.width = '600px'; // Enforce original width
+    clone.style.position = 'absolute';
+    clone.style.top = '0';
+    clone.style.left = '-9999px'; // Render off-screen
+    clone.style.zIndex = '-1000';
+    clone.style.borderRadius = '0'; // Optional: cleaner edges?
+
+    document.body.appendChild(clone);
+
+    html2canvas(clone, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `Resumen_Planilla_${new Date().toLocaleDateString().split('/').join('-')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        document.body.removeChild(clone);
+    }).catch(err => {
+        console.error("Error creating image:", err);
+        alert("No se pudo generar la imagen.");
+        if (document.body.contains(clone)) document.body.removeChild(clone);
+    });
+}
+
+
+function updatePlanillaRowSalary(index, newVal) {
+    const row = currentPayrollData[index];
+    if (!row) return;
+
+    // Use float, default 0 if invalid
+    const salary = parseFloat(newVal);
+    if (isNaN(salary)) return; // Don't update if NaN
+
+    row.salary = salary;
+
+    // Recalculate Total Salary
+    row.totalSalary = row.salary + row.bonus;
+
+    // Recalculate IGSS (Check overrides?)
+    // Default 4.83%
+    let igssPct = (window.rrhhConfig && window.rrhhConfig.get().iggsPercentage ? window.rrhhConfig.get().iggsPercentage : 4.83) / 100;
+    row.igss = row.salary * igssPct;
+
+    // Recalculate Liquid
+    const totalDeductions = row.igss + row.isr + row.judicial + row.discount + row.advance;
+    const liquid = row.totalSalary - totalDeductions;
+
+    // Recalculate Final
+    const totalAdic = row.extraAmount + row.otherBonus + row.holidayBonus;
+    row.finalTotal = liquid + totalAdic;
+
+    // Re-render to update dependent columns (Total Salary, IGSS, Liquid, etc.)
+    renderPlanillaRows();
+}
+
+
+function updatePlanillaRowBonus(index, newVal) {
+    const row = currentPayrollData[index];
+    if (!row) return;
+
+    const bonus = parseFloat(newVal);
+    if (isNaN(bonus)) return;
+
+    row.bonus = bonus;
+
+    // Recalculate Total Salary
+    row.totalSalary = row.salary + row.bonus;
+
+    // Recalculate Liquid
+    const totalDeductions = row.igss + row.isr + row.judicial + row.discount + row.advance;
+    const liquid = row.totalSalary - totalDeductions;
+
+    // Recalculate Final
+    const totalAdic = row.extraAmount + row.otherBonus + row.holidayBonus;
+    row.finalTotal = liquid + totalAdic;
+
+    renderPlanillaRows();
+}
+

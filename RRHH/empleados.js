@@ -151,8 +151,12 @@ async function loadEmployees() {
             if (emp.status === 'inactive') return false;
 
             // Determine dynamic status
+            // Calculate Probation per Employee Branch
             let isProbation = false;
             if (emp.startDate) {
+                const settings = window.rrhhConfig.getBranchSettings(emp.sucursalId);
+                const probationMs = settings.probationDays * 24 * 60 * 60 * 1000;
+
                 const start = new Date(emp.startDate).getTime();
                 if (now - start < probationMs) isProbation = true;
             }
@@ -194,6 +198,9 @@ async function loadEmployees() {
                 let probationEndDateStr = '';
 
                 if (data.startDate) {
+                    const settings = window.rrhhConfig.getBranchSettings(data.sucursalId);
+                    const probationMs = settings.probationDays * 24 * 60 * 60 * 1000;
+
                     const start = new Date(data.startDate).getTime();
                     if (now - start < probationMs) {
                         isProbation = true;
