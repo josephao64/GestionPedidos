@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Seed Data</title>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-storage.js"></script>
+    <script src="database/connection.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Inicializando Datos Base (Puestos)</h1>
+    <div id="log"></div>
+
+    <script>
+        const log = (msg) => {
+            document.getElementById('log').innerHTML += `<div>${msg}</div>`;
+            console.log(msg);
+        };
+
+        async function seed() {
+            try {
+                // 1. Check Salary Types
+                const stRef = db.collection('salary_types');
+                const stSnap = await stRef.get();
+                let minWageId = null;
+
+                if (stSnap.empty) {
+                    log("Creando Tipos de Salario...");
+                    // Create Min Wage
+                    const mwRef = await stRef.add({
+                        name: "Salario Mínimo 2025",
+                        monthlyValue: 3634.59,
+                        description: "Salario mínimo vigente + bonificación de ley",
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    minWageId = mwRef.id;
+
+                    // Create Admin Base
+                    await stRef.add({
+                        name: "Administrativo Base",
+                        monthlyValue: 4500.00,
+                        description: "Salario base para puestos administrativos",
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    log("Tipos de salario creados.");
+                } else {
+                    log("Tipos de salario ya existen. Usando el primero encontrado para puestos nuevos.");
+                    minWageId = stSnap.docs[0].id;
+                }
+
+                // 2. Check Positions
+                const pRef = db.collection('positions');
+                const pSnap = await pRef.get();
+
+                if (pSnap.empty) {
+                    log("Creando Puestos Estándar...");
+
+                    const positions = [
+                        { name: "Gerente de Tienda", department: "Administración", baseSalary: 5000 },
+                        { name: "Sub-Gerente", department: "Administración", baseSalary: 4000 },
+                        { name: "Cajero", department: "Operaciones", baseSalary: 3634.59 },
+                        { name: "Cocinero", department: "Operaciones", baseSalary: 3634.59 },
+                        { name: "Motorista", department: "Operaciones", baseSalary: 3634.59 },
+                        { name: "Servicio al Cliente", department: "Operaciones", baseSalary: 3634.59 },
+                        { name: "Conserje", department: "Mantenimiento", baseSalary: 3634.59 }
+                    ];
+
+                    for (const p of positions) {
+                        await pRef.add({
+                            ...p,
+                            salaryTypeId: minWageId,
+                            salaryTypeName: "Salario Mínimo", // Simplified
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    log("Puestos creados exitosamente.");
+                } else {
+                    log("Ya existen puestos registrados.");
+                }
+
+                log("PROCESO COMPLETADO. Puede cerrar esta ventana.");
+
+            } catch (e) {
+                log("Error: " + e.message);
+                console.error(e);
+            }
+        }
+
+        seed();
+    </script>
+</body>
+
+</html>

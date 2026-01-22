@@ -637,101 +637,293 @@ async function loadVacationHistory(empId) {
 }
 
 // --- PRINT RECEIPT ---
-window.printVacationReceipt = function (docId) {
+// --- PRINT RECEIPT ---
+// --- PRINT RECEIPT ---
+window.printVacationReceipt = async function (docId) {
     if (!window.currentVacationDocs) return;
     const doc1 = window.currentVacationDocs.find(d => d.id === docId);
     if (!doc1) return;
     let v1 = doc1.data();
 
-    // Check for Linked Record (Mixed Vacation)
-    let v2 = null;
-    if (v1.linkedRecordId) {
-        const doc2 = window.currentVacationDocs.find(d => d.id === v1.linkedRecordId);
-        if (doc2) v2 = doc2.data();
+    const employee = selectedVacationEmployee || {};
+
+    // Fetch Letterhead
+    let letterheadImg = 'membrete vipizza.png'; // Default
+    try {
+        if (employee.sucursalId) {
+            const sDoc = await db.collection('sucursales').doc(employee.sucursalId).get();
+            if (sDoc.exists && sDoc.data().membrete) {
+                letterheadImg = sDoc.data().membrete;
+            }
+        }
+    } catch (e) { console.error("Error fetching letterhead", e); }
+
+    // Dates Formatting Helpers
+    const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const days = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+    function formatDateLong(dateStr) {
+        if (!dateStr) return '...';
+        // Fix timezone issue by appending time or handling as local
+        // Assuming dateStr is YYYY-MM-DD
+        const parts = dateStr.split('-');
+        const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+
+        const dayName = days[date.getDay()];
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        return `${dayName} ${day} de ${month} de ${year}`;
     }
 
-    const win = window.open('', '', 'height=700,width=800');
-    win.document.write('<html><head><title>Comprobante de Vacaciones</title>');
-    win.document.write('<style>body { font-family: Arial, sans-serif; padding: 20px; } .header { text-align: center; font-weight: bold; margin-bottom: 20px; } .section { border: 1px solid #000; padding: 15px; margin-bottom: 20px; } .row { display: flex; justify-content: space-between; margin-bottom: 10px; } .label { font-weight: bold; } .signature-box { margin-top: 40px; text-align: center; } .line { border-top: 1px solid #000; width: 200px; display: inline-block; margin-top: 40px; } </style>');
+    function formatDateShort(date) {
+        const d = date.getDate().toString().padStart(2, '0');
+        const m = (date.getMonth() + 1).toString().padStart(2, '0');
+        const y = date.getFullYear();
+        return `${d}/${m}/${y}`;
+    }
+
+    // Logic for Return to Work (End Date + 1 Day)
+    let returnDateStr = '...';
+    if (v1.endDate) {
+        const parts = v1.endDate.split('-');
+        const endDateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        endDateObj.setDate(endDateObj.getDate() + 1);
+        returnDateStr = formatDateLong(`${endDateObj.getFullYear()}-${(endDateObj.getMonth() + 1).toString().padStart(2, '0')}-${endDateObj.getDate()}`);
+    }
+
+    // Logic for Period Dates (Refined for Anniversaries)
+    let periodText = v1.periodIdentifier || '...';
+    try {
+        if (employee.startDate && (v1.period || v1.periodIdentifier)) {
+            // Extract the main year. Usually stored as "2025" or "2024-2025"
+            let pYearStr = (v1.period || v1.periodIdentifier).toString();
+            if (pYearStr.includes('-')) pYearStr = pYearStr.split('-')[1]; // Take the second year as the closing year? 
+            // User said: "2025" -> 01/01/2025 to 31/12/2025. 
+            // If the record says "2025", we use 2025 as the base year.
+            // If the record says "2024-2025", typically means period starting 2024 ending 2025.
+            // However, existing data might just be "2024". 
+            // Let's rely on the integer value.
+
+            let periodYear = parseInt(pYearStr.match(/\d{4}/)[0]);
+
+            // If the periodIdentifier was "2023-2024", and we picked 2024, but start date is Jan 1...
+            // Let's assume the user selects the "Year" of the vacation. 
+            // If they selected "2025", it means the period *starting* in 2025? No, user example: "01/01/2025 al 31/12/2025".
+            // So if `period` is 2025, Start Date = Anniversary 2025.
+
+            const startParts = employee.startDate.split('-'); // YYYY-MM-DD
+            const baseMonth = parseInt(startParts[1]) - 1; // 0-indexed
+            const baseDay = parseInt(startParts[2]);
+
+            // Construct Start Date: Anniversary in the Period Year
+            // Warning: If periodYear is "2025" but the period actually started in 2024?
+            // User example: "Si son vacaciones del último año (2025)... del 01/01/2025"
+            // This implies the Period Year matches the Start Year of the period.
+
+            const pStartObj = new Date(periodYear, baseMonth, baseDay);
+
+            // Construct End Date: Start Date + 1 Year - 1 Day
+            const pEndObj = new Date(periodYear + 1, baseMonth, baseDay);
+            pEndObj.setDate(pEndObj.getDate() - 1);
+
+            const pStartStr = formatDateShort(pStartObj); // Defined above
+            const pEndStr = formatDateShort(pEndObj);
+
+            periodText = `del ${pStartStr} al ${pEndStr}`;
+        }
+    } catch (e) { console.error("Error calc period", e); }
+
+    const todayDate = new Date();
+    const todayLong = `Poptún, ${todayDate.getDate().toString().padStart(2, '0')} de ${months[todayDate.getMonth()]} de ${todayDate.getFullYear()}`;
+
+    // --- HTML GENERATION ---
+    const win = window.open('', '', 'height=1000,width=850');
+    win.document.write('<html><head><title>Constancia de Vacaciones</title>');
+    win.document.write(`
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+            
+            /* Remove Browser Headers/Footers */
+            @page { 
+                margin: 0; 
+                size: auto; 
+            }
+
+            body { 
+                font-family: 'Roboto', Arial, sans-serif; 
+                margin: 0; 
+                padding: 0; 
+                background: #fff;
+                color: #000;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .page {
+                width: 8.5in;
+                height: 11in;
+                padding: 1in;
+                box-sizing: border-box;
+                position: relative;
+                page-break-after: always;
+                margin: 0 auto;
+                background-image: url('../resources/images/${letterheadImg}');
+                background-size: 100% 100%;
+                background-repeat: no-repeat;
+            }
+            /* LETTER STYLES */
+            .letter-date {
+                text-align: right;
+                margin-top: 1in; /* Adjust for header if needed */
+                margin-bottom: 60px;
+                font-size: 1.1em;
+            }
+            .letter-body {
+                text-align: justify;
+                line-height: 1.8;
+                font-size: 1.1em;
+                margin-bottom: 60px;
+            }
+            .letter-sign {
+                margin-top: 100px;
+                text-align: center;
+            }
+            .sign-line {
+                border-top: 1px solid #000;
+                width: 60%;
+                margin: 0 auto 10px auto;
+            }
+
+            /* FORM STYLES */
+            .form-header {
+                text-align: center;
+                font-weight: bold;
+                font-size: 1.4em;
+                margin-top: 1in; /* Adjust for header if needed */
+                margin-bottom: 20px;
+                text-transform: uppercase;
+                border-bottom: 2px solid #ccc;
+                padding-bottom: 20px;
+            }
+            .form-section {
+                margin-bottom: 25px;
+                
+            }
+            .section-title {
+                font-weight: bold;
+                margin-bottom: 10px;
+                font-size: 1.1em;
+                color: #000;
+            }
+            .field-row {
+                margin-bottom: 8px;
+                font-size: 1em;
+            }
+            .field-label {
+                font-weight: bold;
+                width: 200px;
+                display: inline-block;
+            }
+            .divider {
+                border-bottom: 1px solid #ccc;
+                margin: 20px 0;
+            }
+            .legal-text {
+                margin-top: 30px;
+                text-align: justify;
+                font-size: 0.9em;
+                line-height: 1.6;
+            }
+            .form-signatures {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 80px;
+            }
+            .sig-block {
+                text-align: center;
+                width: 45%;
+            }
+        </style>
+    `);
     win.document.write('</head><body>');
 
-    if (v2) {
-        // MIXED PRINTING (Dual Section)
-        // Identify which is Enjoy and which is Payout
-        const enjoy = v1.type === 'enjoy' ? v1 : v2;
-        const payout = v1.type === 'payout' ? v1 : v2;
-
-        win.document.write(`
-            <div class="header">
-                CONSTANCIA DE VACACIONES (MIXTA)<br>
-                ${selectedVacationEmployee.fullName}
-            </div>
+    // --- PAGE 1: LETTER ---
+    win.document.write(`
+        <div class="page">
+            <div class="letter-date">${todayLong}.</div>
             
-            <div class="section">
-                <strong>SECCIÓN 1: DÍAS GOZADOS (DISFRUTE)</strong>
-                <div class="row"><span class="label">Periodo:</span> <span>${enjoy.periodIdentifier || 'N/A'}</span></div>
-                <div class="row"><span class="label">Fechas:</span> <span>${enjoy.startDate} al ${enjoy.endDate}</span></div>
-                <div class="row"><span class="label">Días Tomados:</span> <span>${enjoy.daysTaken}</span></div>
-                <div class="row"><span class="label">Comentarios:</span> <span>${enjoy.comments || ''}</span></div>
-                
-                <div class="signature-box">
-                     <div>Firma por Días Gozados</div>
-                     <div class="line"></div>
+            <div class="letter-body">
+                <br><br>
+                Por medio de la presente, yo, <strong>${employee.fullName}</strong>, dejo constancia de que he sido informado y he aceptado tomar las vacaciones que me corresponde ${periodText}, el cual ha sido debidamente aprobado por la empresa.
+                <br><br>
+                Asimismo, me comprometo a coordinar con el equipo para asegurar que mi ausencia no afecte el normal desarrollo de nuestras actividades. Además, me responsabilizo de dejar todas mis tareas y responsabilidades en orden antes de mi salida.
+                <br><br>
+                Atentamente,
+            </div>
+
+            <div class="letter-sign">
+                <br><br><br>
+                <div>Firmado,</div>
+                <br><br><br><br>
+                <div class="sign-line"></div>
+                <div><strong>${employee.fullName}</strong></div>
+                <div><strong>DPI: ${employee.dpi || 'N/A'}</strong></div>
+            </div>
+        </div>
+    `);
+
+    // --- PAGE 2: FORM ---
+    win.document.write(`
+        <div class="page">
+             <div class="form-header">Concesión de Vacaciones</div>
+
+             <div class="form-section">
+                <div class="section-title">Datos del colaborador</div>
+                <div class="field-row"><span class="field-label">Nombre del colaborador:</span> ${employee.fullName}</div>
+                <div class="field-row"><span class="field-label">DPI del colaborador:</span> ${employee.dpi || 'N/A'}</div>
+                <div class="field-row"><span class="field-label">Puesto:</span> ${employee.positionName || employee.puesto || v1.employeePosition || 'N/A'}</div>
+             </div>
+             
+             <div class="divider"></div>
+
+             <div class="form-section">
+                <div class="section-title">Fecha de las Vacaciones</div>
+                <div class="field-row"><span class="field-label">Inicio de vacaciones:</span> ${formatDateLong(v1.startDate)}</div>
+                <div class="field-row"><span class="field-label">Fin de vacaciones:</span> ${formatDateLong(v1.endDate)}</div>
+                <div class="field-row"><span class="field-label">Inicio de labor:</span> ${returnDateStr}</div>
+             </div>
+
+             <div class="divider"></div>
+
+             <div class="form-section">
+                <div class="field-row" style="font-weight:bold;">
+                    Número de días de vacaciones: ${v1.daysTaken} días hábiles
                 </div>
-            </div>
+             </div>
 
-            <div class="section">
-                <strong>SECCIÓN 2: DÍAS PAGADOS (EFECTIVO)</strong>
-                <div class="row"><span class="label">Periodo:</span> <span>${payout.periodIdentifier || 'N/A'}</span></div>
-                <div class="row"><span class="label">Días Pagados:</span> <span>${payout.daysTaken}</span></div>
-                <div class="row"><span class="label">Monto Pagado:</span> <span>Q${payout.amountPaid || '0.00'}</span></div>
-                <div class="row"><span class="label">Comentarios:</span> <span>${payout.comments || ''}</span></div>
+             <div class="divider"></div>
 
-                <div class="signature-box">
-                     <div>Firma por Pago en Efectivo</div>
-                     <div class="line"></div>
+             <div class="legal-text">
+                Estoy de acuerdo con lo establecido en este documento y hago constar que se ha dado cumplimiento a lo señalado en el artículo 130 del código de trabajo el cual expone “Todo trabajador sin excepción, tiene derecho a un período de vacaciones remuneradas después de cada año de trabajo al servicio de un mismo patrono, cuya duración mínima es de quince días hábiles”. He disfrutado de las vacaciones señaladas.
+             </div>
+
+             <div class="form-signatures">
+                <div class="sig-block">
+                    <div style="border-top: 1px solid #000; margin-bottom: 5px;"></div>
+                    <div>Firma del colaborador</div>
                 </div>
-            </div>
-            
-            <div style="font-size: 0.8em; text-align: center; margin-top: 20px;">
-                Fecha de Impresión: ${new Date().toLocaleDateString()}
-            </div>
-        `);
-    } else {
-        // STANDARD PRINTING (Single)
-        // Use existing logic but written out since we replaced the function call
-        // Helper to format
-        const datesStr = v1.startDate ? `${v1.startDate} al ${v1.endDate}` : 'N/A (Pago Directo)';
-        const typeStr = v1.type === 'enjoy' ? 'Tiempo (Disfrute)' : 'Pago en Efectivo';
-
-        win.document.write(`
-             <div class="header">
-                CONSTANCIA DE VACACIONES<br>
-                ${selectedVacationEmployee.fullName}
-            </div>
-            <div class="section">
-                <div class="row"><span class="label">Tipo:</span> <span>${typeStr}</span></div>
-                <div class="row"><span class="label">Periodo:</span> <span>${v1.periodIdentifier || 'N/A'}</span></div>
-                <div class="row"><span class="label">Fechas:</span> <span>${datesStr}</span></div>
-                <div class="row"><span class="label">Días:</span> <span>${v1.daysTaken}</span></div>
-                <div class="row"><span class="label">Monto:</span> <span>${v1.amountPaid ? 'Q' + v1.amountPaid : '-'}</span></div>
-                <div class="row"><span class="label">Comentarios:</span> <span>${v1.comments || ''}</span></div>
-
-                <div class="signature-box">
-                     <div>Firma del Empleado</div>
-                     <div class="line"></div>
+                <div class="sig-block">
+                    <div style="border-top: 1px solid #000; margin-bottom: 5px;"></div>
+                    <div>Firma del Encargado</div>
                 </div>
-            </div>
-             <div style="font-size: 0.8em; text-align: center; margin-top: 20px;">
-                Fecha de Impresión: ${new Date().toLocaleDateString()}
-            </div>
-        `);
-    }
+             </div>
+        </div>
+    `);
 
     win.document.write('</body></html>');
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 1000);
+    // setTimeout(() => win.print(), 1000); // Optional auto-print
 };
 
 window.editVacation = async function (docId) {

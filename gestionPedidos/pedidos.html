@@ -260,6 +260,29 @@
   <!-- Hidden Export Helpers (Preserved IDs) -->
   <div id="receiptExportContainer" style="display: none; position: absolute; left: -9999px;"></div>
 
+  <!-- Modal para selección de productos (EDICIÓN) -->
+  <div id="productSelectionModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeProductSelectionModal()">&times;</span>
+      <h2>Seleccionar Productos</h2>
+      <table id="productSelectionTable" style="width:100%; text-align:left;">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Presentación</th>
+          </tr>
+          <tr>
+            <th colspan="2">
+              <input type="text" id="productSearchForEdit" onkeyup="filterProductsForEdit()"
+                placeholder="Buscar Producto..." style="width:100%; padding:8px;" />
+            </th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
   <div id="orderDetailsForImage"
     style="display: none; position: absolute; left: -9999px; background: white; padding: 40px; width: 600px; font-family: 'Outfit', sans-serif; color: #1e293b;">
     <div

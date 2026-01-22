@@ -938,6 +938,9 @@ function closeOrderDetailsModal() {
 /**********************************************************
  * EDITAR PEDIDO
  **********************************************************/
+// Variable global para tracking del proveedor en edición
+let currentEditingProviderId = null;
+
 function editOrder(orderDocId) {
   db.collection("orders")
     .doc(orderDocId)
@@ -948,11 +951,13 @@ function editOrder(orderDocId) {
         return;
       }
       const order = docSnap.data();
+      currentEditingProviderId = order.providerId || null; // Guardar proveedor
 
       const idInput = $("#editOrderDocId");
       const idDisplay = $("#editOrderIdDisplay");
       const destSel = $("#editOrderDestination");
       const tbody = $("#editOrderProducts");
+      const btnAdd = $("#btnAddProductRow");
 
       if (!idInput || !idDisplay || !destSel || !tbody) {
         Swal.fire({
@@ -967,19 +972,26 @@ function editOrder(orderDocId) {
       idDisplay.textContent = order.orderId;
       destSel.value = order.destination || "Bodega";
 
+      // Actualizar botón para llamar al modal en lugar de agregar fila vacía
+      if (btnAdd) {
+        btnAdd.onclick = openProductSelectModalForEdit;
+        btnAdd.innerHTML = '<i class="fas fa-plus"></i> Agregar Producto';
+      }
+
       tbody.innerHTML = "";
       if (order.products?.length) {
         order.products.forEach((prod) => {
           const tr = document.createElement("tr");
+          tr.setAttribute("data-id", prod.id || "");
           tr.innerHTML = `
             <td>
-              <input type="text" value="${prod.name}" class="editProdName"/>
+              <input type="text" value="${prod.name}" class="editProdName" readonly/>
               <input type="hidden" value="${prod.id || ''}" class="editProdId"/>
             </td>
-            <td><input type="text" value="${prod.presentation}" class="editProdPresentation"/></td>
+            <td><input type="text" value="${prod.presentation}" class="editProdPresentation" readonly/></td>
             <td><input type="number" value="${prod.quantity}" min="0" class="editProdQuantity"/></td>
             <td><input type="number" value="${prod.inventory || 0}" min="0" class="editProdInventory"/></td>
-            <td><button type="button" data-action="removeRow">Eliminar</button></td>
+            <td><button type="button" data-action="removeRow" onclick="removeProductRow(this)">Eliminar</button></td>
           `;
           tbody.appendChild(tr);
         });
@@ -990,7 +1002,107 @@ function editOrder(orderDocId) {
       Swal.fire({ icon: "error", title: "Error", text: err.message })
     );
 }
-function addProductRow() {
+// --- Funciones para Modal de Selección (Edición) ---
+async function openProductSelectModalForEdit() {
+  if (!currentEditingProviderId) {
+    Swal.fire({
+      icon: "warning",
+      title: "Proveedor desconocido",
+      text: "No se tiene registrado el proveedor de este pedido para filtrar productos.",
+    });
+    // Fallback: Si no hay providerId, quizás permitir agregar fila manual (comportamiento antiguo)
+    addProductRowManual();
+    return;
+  }
+
+  const modal = $("#productSelectionModal");
+  if (!modal) return;
+  modal.style.display = "block";
+
+  const tbody = $("#productSelectionTable").getElementsByTagName("tbody")[0];
+  tbody.innerHTML = '<tr><td colspan="2">Cargando productos...</td></tr>';
+
+  try {
+    const snap = await db.collection("products")
+      .where("providerId", "==", currentEditingProviderId)
+      .get();
+
+    tbody.innerHTML = "";
+    if (snap.empty) {
+      tbody.innerHTML = '<tr><td colspan="2">Este proveedor no tiene productos registrados.</td></tr>';
+      return;
+    }
+
+    snap.forEach(doc => {
+      const prod = doc.data();
+      const row = tbody.insertRow();
+      row.setAttribute("data-id", doc.id);
+      row.setAttribute("data-name", prod.name);
+      row.setAttribute("data-pres", prod.presentation);
+      row.style.cursor = "pointer";
+      row.onclick = () => addSelectedProductToEditTable({ id: doc.id, ...prod });
+
+      row.innerHTML = `
+        <td>${prod.name || "Sin Nombre"}</td>
+        <td>${prod.presentation || "-"}</td>
+      `;
+    });
+  } catch (error) {
+    console.error(error);
+    tbody.innerHTML = '<tr><td colspan="2">Error al cargar productos.</td></tr>';
+  }
+}
+
+function closeProductSelectionModal() {
+  const modal = $("#productSelectionModal");
+  if (modal) modal.style.display = "none";
+}
+
+function filterProductsForEdit() {
+  const input = $("#productSearchForEdit");
+  const filter = input.value.toLowerCase();
+  const table = $("#productSelectionTable");
+  const tr = table.getElementsByTagName("tr");
+  for (let i = 2; i < tr.length; i++) { // Skip headers
+    const tdProduct = tr[i].getElementsByTagName("td")[0];
+    const tdPres = tr[i].getElementsByTagName("td")[1];
+    if (tdProduct || tdPres) {
+      const txtValue = (tdProduct.textContent || "") + " " + (tdPres.textContent || "");
+      if (txtValue.toLowerCase().indexOf(filter) > -1) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
+    }
+  }
+}
+
+function addSelectedProductToEditTable(product) {
+  closeProductSelectionModal();
+  const tbody = $("#editOrderProducts");
+
+  // Verificar duplicados visuales (opcional)
+  const existingIds = Array.from(tbody.querySelectorAll(".editProdId")).map(i => i.value);
+  if (existingIds.includes(product.id)) {
+    Swal.fire({ icon: 'info', title: 'Producto ya listado', text: 'Este producto ya está en la lista.' });
+    return;
+  }
+
+  const newRow = document.createElement("tr");
+  newRow.innerHTML = `
+    <td>
+      <input type="text" value="${product.name}" class="editProdName" readonly />
+      <input type="hidden" value="${product.id}" class="editProdId" />
+    </td>
+    <td><input type="text" value="${product.presentation}" class="editProdPresentation" readonly /></td>
+    <td><input type="number" value="" placeholder="Cant." min="0" class="editProdQuantity" /></td>
+    <td><input type="number" value="0" min="0" class="editProdInventory" /></td>
+    <td><button type="button" data-action="removeRow" onclick="removeProductRow(this)">Eliminar</button></td>
+  `;
+  tbody.appendChild(newRow);
+}
+
+function addProductRowManual() {
   const tbody = $("#editOrderProducts");
   const newRow = document.createElement("tr");
   newRow.innerHTML = `
@@ -1001,9 +1113,14 @@ function addProductRow() {
     <td><input type="text" placeholder="Presentación" class="editProdPresentation"/></td>
     <td><input type="number" placeholder="Cantidad" min="0" class="editProdQuantity"/></td>
     <td><input type="number" placeholder="Inventario" min="0" value="0" class="editProdInventory"/></td>
-    <td><button type="button" data-action="removeRow">Eliminar</button></td>
+    <td><button type="button" data-action="removeRow" onclick="removeProductRow(this)">Eliminar</button></td>
   `;
   tbody.appendChild(newRow);
+}
+
+// Deprecated direct call, redirected if somehow called manually
+function addProductRow() {
+  openProductSelectModalForEdit();
 }
 function removeProductRow(btn) {
   const row = btn.closest("tr");

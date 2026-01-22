@@ -255,6 +255,7 @@ async function addSucursal() {
         email: document.getElementById('sucursalEmail').value,
         creationDate: document.getElementById('sucursalCreationDate').value,
         encargado: document.getElementById('sucursalEncargado').value,
+        membrete: document.getElementById('sucursalMembrete').value,
         description: document.getElementById('sucursalDescription').value,
         status: document.getElementById('sucursalStatus').value
     };
@@ -302,6 +303,7 @@ async function openEditSucursalModal(id) {
     document.getElementById('editSucursalEmail').value = data.email;
     document.getElementById('editSucursalCreationDate').value = data.creationDate;
     document.getElementById('editSucursalEncargado').value = data.encargado;
+    document.getElementById('editSucursalMembrete').value = data.membrete || '';
     document.getElementById('editSucursalDescription').value = data.description;
     document.getElementById('editSucursalStatus').value = data.status;
 
@@ -338,6 +340,7 @@ async function updateSucursal() {
         email: document.getElementById('editSucursalEmail').value,
         creationDate: document.getElementById('editSucursalCreationDate').value,
         encargado: document.getElementById('editSucursalEncargado').value,
+        membrete: document.getElementById('editSucursalMembrete').value,
         description: document.getElementById('editSucursalDescription').value,
         status: document.getElementById('editSucursalStatus').value
     };
