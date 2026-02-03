@@ -129,7 +129,7 @@ function renderLoansTable() {
             <td style="padding:12px; font-weight:bold;">Q${loan.balance.toFixed(2)}</td>
             <td style="padding:12px; text-align:center;">${loan.type === 'prestamo' ? progress : '-'}</td>
             <td style="padding:12px;">${statusLabel}</td>
-            <td style="padding:12px; display:flex; gap:5px;">
+            <td style="padding:12px; display:flex; gap:5px; justify-content:center;">
                 ${actions}
             </td>
         `;
@@ -291,61 +291,135 @@ async function approveLoan(id, isApproved) {
     }
 }
 
-function printAuthLetter(loanId) {
+async function printAuthLetter(loanId) {
     const loan = allLoans.find(l => l.id === loanId);
     if (!loan) return;
 
-    const win = window.open('', '_blank');
-    const dateStr = new Date().toLocaleDateString('es-GT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    // Fetch Letterhead
+    let letterheadImg = 'membrete vipizza.png'; // Default
+    let branchName = 'Poptún'; // Default
+    try {
+        if (loan.sucursalId) {
+            const sDoc = await db.collection('sucursales').doc(loan.sucursalId).get();
+            if (sDoc.exists) {
+                const sData = sDoc.data();
+                if (sData.membrete) letterheadImg = sData.membrete;
+                if (sData.name) branchName = sData.name;
+            }
+        }
+    } catch (e) { console.error("Error fetching letterhead", e); }
 
+    const win = window.open('', '_blank');
+    const today = new Date();
+    const dateStr = `${branchName}, ${today.getDate()} de ${["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"][today.getMonth()]} de ${today.getFullYear()}`;
+
+    // Deduction Text Logic
+    const paymentText = loan.installments > 1
+        ? `en ${loan.installments} cuotas de Q${loan.installmentAmount.toFixed(2)} cada una`
+        : `en 1 pago de Q${loan.amount.toFixed(2)}`;
+
+    const freqBase = loan.frequency === 'quincenal' ? 'quincena' : 'mensualidad';
+    const freqPlural = loan.installments > 1 ? `${freqBase}s` : freqBase;
+    const nextText = loan.installments > 1 ? 'las próximas' : 'la próxima';
+
+    // "... en las próximas 5 quincenas" / "... en la próxima quincena"
+    const durationText = `${nextText} ${loan.installments > 1 ? loan.installments + ' ' : ''}${freqPlural}`;
+
+    // HTML Content update below uses this durationText variable
     win.document.write(`
         <html>
         <head>
-            <title>Carta de Autorización</title>
+            <title>Carta de Adelanto</title>
             <style>
-                body { font-family: 'Times New Roman', serif; padding: 40px; max-width: 800px; margin: 0 auto; line-height: 1.6; }
-                .header { text-align: center; margin-bottom: 40px; }
-                .title { font-size: 18px; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin-bottom: 40px; text-align: center; }
-                .content { font-size: 14px; text-align: justify; }
-                .signatures { margin-top: 100px; display: flex; justify-content: space-between; }
-                .sig-block { text-align: center; width: 40%; border-top: 1px solid black; padding-top: 10px; }
+                @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+                
+                @page { margin: 0; size: auto; }
+                
+                body { 
+                    font-family: 'Roboto', Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 0;
+                    color: #000;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                
+                .page {
+                    width: 8.5in;
+                    height: 11in;
+                    padding: 1in;
+                    box-sizing: border-box;
+                    background-image: url('../resources/images/${letterheadImg}');
+                    background-size: 100% 100%;
+                    background-repeat: no-repeat;
+                    position: relative;
+                }
+
+                .header-date {
+                    text-align: right;
+                    margin-top: 1in;
+                    margin-bottom: 40px;
+                    font-size: 1.1em;
+                }
+
+                .title {
+                    font-size: 1.4em;
+                    font-weight: bold;
+                    text-decoration: underline;
+                    text-transform: uppercase;
+                    margin-bottom: 40px;
+                    text-align: center;
+                }
+
+                .content {
+                    font-size: 1.1em;
+                    text-align: justify;
+                    line-height: 1.8;
+                }
+
+                .signatures {
+                    margin-top: 100px;
+                    display: flex;
+                    justify-content: center;
+                    gap: 50px;
+                }
+
+                .sig-block {
+                    text-align: center;
+                    width: 250px;
+                    border-top: 1px solid black;
+                    padding-top: 10px;
+                }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h2>${loan.sucursalName || 'Empresa'}</h2>
-                <p>Departamento de Recursos Humanos</p>
-            </div>
-            
-            <div class="title">AUTORIZACIÓN DE DESCUENTO</div>
-
-            <div class="content">
-                <p>Guatemala, ${dateStr}</p>
-                <br>
-                <p>Yo, <strong>${loan.employeeName}</strong>, por este medio autorizo expresamente a la empresa a realizar los descuentos respectivos de mi salario por concepto de <strong>${loan.type.toUpperCase()}</strong>.</p>
+            <div class="page">
+                <div class="header-date">${dateStr}</div>
                 
-                <p>Detalles del compromiso:</p>
-                <ul>
-                    <li><strong>Monto Total:</strong> Q${loan.amount.toFixed(2)}</li>
-                    <li><strong>Forma de Pago:</strong> ${loan.frequency.toUpperCase()}</li>
-                    ${loan.type === 'prestamo' ? `<li><strong>Cuotas:</strong> ${loan.installments} de Q${loan.installmentAmount.toFixed(2)}</li>` : ''}
-                </ul>
+                <div class="title">CARTA DE ADELANTO</div>
 
-                <p>Entiendo y acepto que estos descuentos se realizarán automáticamente en mi planilla hasta cubrir la totalidad del saldo adeudado.</p>
-            </div>
+                <div class="content">
+                    <p>Yo, <strong>${loan.employeeName}</strong>, recibo la cantidad de <strong>Q${loan.amount.toFixed(2)}</strong> en concepto de adelanto salarial.</p>
+                    
+                    <p>Por este medio, me comprometo formalmente a pagar la totalidad de la cantidad adelantada a la empresa.</p>
 
-            <div class="signatures">
-                <div class="sig-block">
-                    Firma del Empleado<br>
-                    ${loan.employeeName}
+                    <p>El descuento se realizará ${paymentText}, el cual será deducido de mi salario en ${durationText} de forma consecutiva a partir de la presente fecha o en la fecha de pago más próxima.</p>
+                    
+                    <p>Autorizo expresamente a la empresa para que realice dichos descuentos en mi planilla de pago.</p>
                 </div>
-                <div class="sig-block">
-                    Autorizado por<br>
-                    Gerencia / RRHH
+
+                <div class="signatures">
+                    <div class="sig-block">
+                        Firma del Empleado<br>
+                        <strong>${loan.employeeName}</strong>
+                    </div>
                 </div>
             </div>
             
-            <script>window.print();</script>
+            <script>
+                // Auto print after images load
+                window.onload = function() { setTimeout(function(){ window.print(); }, 500); }
+            </script>
         </body>
         </html>
     `);

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="prestamos.css">
     <style>
         :root {
             --primary: #6f42c1;
@@ -998,6 +999,16 @@
                         style="background-color: #d97706; border-color: #b45309;">
                         <i class="fas fa-file-invoice-dollar"></i> Boletas Adicionales
                     </button>
+                    <!-- NEW EXPORT FORMAT BUTTON -->
+                    <button class="btn btn-secondary" onclick="exportarFormatoPlanilla()"
+                        style="background-color: #107c41; border-color: #0b572e; color: white;">
+                        <i class="fas fa-file-excel"></i> Exportar Formato
+                    </button>
+                    <!-- NEW BUTTON -->
+                    <button class="btn btn-warning" onclick="openPersonalizedSlipModal()"
+                        style="background-color: #7c3aed; border-color: #6d28d9; color: white;">
+                        <i class="fas fa-user-edit"></i> Boleta Personalizada
+                    </button>
                     <button class="btn btn-info" onclick="showPayrollTotals()"
                         style="background-color: #0ea5e9; border-color: #0284c7; color: white;">
                         <i class="fas fa-calculator"></i> Ver Totales
@@ -1791,7 +1802,7 @@
     </div>
 
     <!-- PRESTAMOS SECTION -->
-    <div id="prestamos-section" class="hr-section" style="width: 90%; max-width: 1100px; margin: 0 auto;">
+    <div id="prestamos-section" class="hr-section">
         <div class="header">
             <div class="page-title">
                 <h1>Préstamos y Anticipos</h1>
@@ -1803,36 +1814,33 @@
         </div>
 
         <div class="card">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                <div style="display:flex; gap:10px;">
-                    <select id="loanFilterBranch" class="form-select" onchange="loadLoans()"
-                        style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+            <div>
+                <div>
+                    <select id="loanFilterBranch" class="form-select" onchange="loadLoans()">
                         <option value="all">Todas las Sucursales</option>
                     </select>
-                    <select id="loanFilterType" class="form-select" onchange="loadLoans()"
-                        style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+                    <select id="loanFilterType" class="form-select" onchange="loadLoans()">
                         <option value="all">Todos los Tipos</option>
                         <option value="adelanto">Adelantos</option>
                         <option value="prestamo">Préstamos</option>
                     </select>
                 </div>
                 <input type="text" id="loanSearch" placeholder="Buscar empleado, código o sucursal..."
-                    onkeyup="loadLoans()"
-                    style="padding: 8px; border-radius: 8px; border: 1px solid var(--border); width: 250px;">
+                    onkeyup="loadLoans()">
             </div>
 
             <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                <table>
                     <thead>
-                        <tr style="text-align: left; border-bottom: 2px solid var(--border);">
-                            <th style="padding: 12px; white-space: nowrap;">Empleado</th>
-                            <th style="padding: 12px; white-space: nowrap;">Sucursal</th>
-                            <th style="padding: 12px; white-space: nowrap;">Tipo</th>
-                            <th style="padding: 12px; white-space: nowrap;">Monto</th>
-                            <th style="padding: 12px; white-space: nowrap;">Saldo</th>
-                            <th style="padding: 12px; white-space: nowrap;">Cuotas</th>
-                            <th style="padding: 12px; white-space: nowrap;">Estado</th>
-                            <th style="padding: 12px; white-space: nowrap;">Acciones</th>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Sucursal</th>
+                            <th>Tipo</th>
+                            <th>Monto</th>
+                            <th>Saldo</th>
+                            <th>Cuotas</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="loansTableBody">
@@ -1845,6 +1853,8 @@
             </table>
         </div>
     </div>
+
+
 
     <!-- REPORTS SECTION -->
     <div id="reportes-section" class="hr-section">
@@ -2337,8 +2347,11 @@
     <script src="planillas.js?v=FIX_SUM_19"></script>
     <script src="vacaciones.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- SheetJS (xlsx-js-style) for Excel Export with Styles -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script src="liquidaciones.js"></script>
     <script src="puestos.js"></script>
     <script src="empleados.js"></script>
@@ -2389,6 +2402,81 @@
                     <div style="border-top: 1px solid #000; padding-top: 5px;">Firma Autorizada RRHH</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal for Personalized Payment Slip -->
+    <div id="personalizedSlipModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; align-items: center; justify-content: center;">
+        <div
+            style="background: white; width: 90%; max-width: 500px; padding: 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: var(--primary);">Boleta Personalizada</h3>
+                <i class="fas fa-times" style="cursor: pointer; font-size: 1.2em;"
+                    onclick="closePersonalizedSlipModal()"></i>
+            </div>
+
+            <form id="personalizedSlipForm" onsubmit="event.preventDefault(); printPersonalizedSlip();">
+                <!-- Editable Branch -->
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Empresa / Sucursal
+                        (Editable)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="customSlipBranchInput" required class="form-control"
+                            placeholder="Nombre de la Empresa"
+                            style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                        <select id="customSlipBranchSelect"
+                            onchange="document.getElementById('customSlipBranchInput').value = this.options[this.selectedIndex].text; if(this.selectedOptions[0].dataset.logo) document.getElementById('customSlipLogoUrl').value = this.selectedOptions[0].dataset.logo;"
+                            class="form-control"
+                            style="width: 150px; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                            <option value="">Cargar...</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="customSlipLogoUrl">
+                </div>
+
+                <!-- Editable Title -->
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Título del Documento</label>
+                    <input type="text" id="customSlipTitle" class="form-control" value="BOLETA DE PAGO"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Nombre del Empleado</label>
+                    <input type="text" id="customSlipName" required class="form-control" placeholder="Nombre Completo"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Fecha / Periodo</label>
+                        <input type="text" id="customSlipDateText" required class="form-control"
+                            placeholder="Ej. 15/01/2026"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Monto (Q)</label>
+                        <input type="number" id="customSlipAmount" step="0.01" required class="form-control"
+                            placeholder="0.00"
+                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Concepto (Aparecerá en
+                        Devengado)</label>
+                    <textarea id="customSlipDetail" rows="3" class="form-control"
+                        placeholder="Ej. Pago de horas extras..."
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closePersonalizedSlipModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-print"></i> Imprimir</button>
+                </div>
+            </form>
         </div>
     </div>
 

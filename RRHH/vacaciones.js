@@ -73,6 +73,8 @@ window.vacations = {
                 const diff = today - start;
                 const yearsService = diff / oneYear;
 
+                if (yearsService > 100 || yearsService < 0) return; // Skip invalid dates
+
                 // Eligibility Rule: Proportional (15 days per year)
                 // const completedYears = Math.floor(yearsService); // Old rule
                 const totalEligible = parseFloat((yearsService * 15).toFixed(2));
@@ -647,13 +649,16 @@ window.printVacationReceipt = async function (docId) {
 
     const employee = selectedVacationEmployee || {};
 
-    // Fetch Letterhead
+    // Fetch Letterhead & Branch Name
     let letterheadImg = 'membrete vipizza.png'; // Default
+    let branchName = 'Poptún'; // Default fallback
     try {
         if (employee.sucursalId) {
             const sDoc = await db.collection('sucursales').doc(employee.sucursalId).get();
-            if (sDoc.exists && sDoc.data().membrete) {
-                letterheadImg = sDoc.data().membrete;
+            if (sDoc.exists) {
+                const sData = sDoc.data();
+                if (sData.membrete) letterheadImg = sData.membrete;
+                if (sData.name) branchName = sData.name;
             }
         }
     } catch (e) { console.error("Error fetching letterhead", e); }
@@ -698,7 +703,7 @@ window.printVacationReceipt = async function (docId) {
         if (employee.startDate && (v1.period || v1.periodIdentifier)) {
             // Extract the main year. Usually stored as "2025" or "2024-2025"
             let pYearStr = (v1.period || v1.periodIdentifier).toString();
-            if (pYearStr.includes('-')) pYearStr = pYearStr.split('-')[1]; // Take the second year as the closing year? 
+            if (pYearStr.includes('-')) pYearStr = pYearStr.split('-')[0]; // Use the start year of the period 
             // User said: "2025" -> 01/01/2025 to 31/12/2025. 
             // If the record says "2025", we use 2025 as the base year.
             // If the record says "2024-2025", typically means period starting 2024 ending 2025.
@@ -735,7 +740,9 @@ window.printVacationReceipt = async function (docId) {
     } catch (e) { console.error("Error calc period", e); }
 
     const todayDate = new Date();
-    const todayLong = `Poptún, ${todayDate.getDate().toString().padStart(2, '0')} de ${months[todayDate.getMonth()]} de ${todayDate.getFullYear()}`;
+    // const todayLong = `Poptún, ${todayDate.getDate().toString().padStart(2, '0')} de ${months[todayDate.getMonth()]} de ${todayDate.getFullYear()}`;
+    // User requested: Branch Name + Short Date (Non-literal)
+    const todayFormatted = `${branchName}, ${formatDateShort(todayDate)}`;
 
     // --- HTML GENERATION ---
     const win = window.open('', '', 'height=1000,width=850');
@@ -850,7 +857,7 @@ window.printVacationReceipt = async function (docId) {
     // --- PAGE 1: LETTER ---
     win.document.write(`
         <div class="page">
-            <div class="letter-date">${todayLong}.</div>
+            <div class="letter-date">${todayFormatted}</div>
             
             <div class="letter-body">
                 <br><br>

@@ -336,12 +336,25 @@ async function generateOrderIdOnce() {
     }
     return generatedOrderId;
   } catch (error) {
+    console.warn("Failed to generate global ID (likely quota exceeded). Using temporary ID.", error);
+    // Fallback: Generate a local temporary ID
+    generatedOrderId = 'TEMP-' + Math.floor(Math.random() * 100000);
+
+    if (userRole === 'administrador') {
+      const idField = document.getElementById('orderId');
+      if (idField) idField.value = generatedOrderId;
+    } else {
+      const idText = document.getElementById('orderIdText');
+      if (idText) idText.textContent = generatedOrderId;
+    }
+
     Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error al generar ID: ' + error.message
+      icon: 'warning',
+      title: 'Modo Offline / Cuota Excedida',
+      text: 'No se pudo generar un ID global. Se usará un ID temporal: ' + generatedOrderId,
+      timer: 3000
     });
-    throw error;
+    return generatedOrderId;
   }
 }
 
@@ -818,6 +831,21 @@ async function loadProductsForAverage(providerId) {
     const tbody = document.getElementById('usageAverageTable').querySelector('tbody');
     tbody.innerHTML = '';
     const snap = await db.collection('products').where('providerId', '==', providerId).get();
+    // Batch fetch averages
+    let averagesMap = {};
+    if (sucursalIdSel) {
+      try {
+        const avgsSnap = await db.collection('usageAverages')
+          .where('sucursalId', '==', sucursalIdSel)
+          .where('providerId', '==', providerId)
+          .get();
+        avgsSnap.forEach(d => {
+          const dat = d.data();
+          if (dat.productId) averagesMap[dat.productId] = dat.weeklyAverage;
+        });
+      } catch (err) { console.error(err); }
+    }
+
     for (const doc of snap.docs) {
       const prod = doc.data();
       const tr = tbody.insertRow();
@@ -827,8 +855,8 @@ async function loadProductsForAverage(providerId) {
         <td>${escapeHtml(prod.presentation || '')}</td>
         <td><input type="number" min="0" step="1" class="avg-input" placeholder="0" /></td>
       `;
-      // Cargar valor existente
-      const avg = await fetchUsageAverageValue(sucursalIdSel, providerId, doc.id);
+      // Cargar valor existente desde mapa
+      const avg = averagesMap[doc.id];
       const input = tr.querySelector('.avg-input');
       if (avg != null) input.value = Number(avg);
     }
@@ -1039,16 +1067,36 @@ async function loadAllProvidersAndProducts() {
                 `;
 
         // Process products 
-        // We'll fetch averages. Ideally parallel, but let's loop cleanly first.
-        const productPromises = productsSnap.docs.map(async (prodDoc) => {
+        // Batched fetch of usage averages for this provider to avoid N+1 queries
+        const averagesMap = {};
+        if (sucursalId) {
+          try {
+            const avgsSnap = await db.collection('usageAverages')
+              .where('sucursalId', '==', sucursalId)
+              .where('providerId', '==', providerId)
+              .get();
+
+            avgsSnap.forEach(doc => {
+              const d = doc.data();
+              if (d.productId) {
+                averagesMap[d.productId] = d.weeklyAverage;
+              }
+            });
+          } catch (e) {
+            console.error("Error fetching batch averages for provider " + providerId, e);
+            // averagesMap remains empty, so all avgs will be null/undefined, effectively 0. Safe fallback.
+          }
+        }
+
+        // Map products using the pre-fetched averages
+        const productsData = productsSnap.docs.map(prodDoc => {
           const prod = prodDoc.data();
           if (prod.visibleInBulk === false) return null;
 
-          const avg = await fetchUsageAverageValue(sucursalId, providerId, prodDoc.id);
+          // Get average from map (undefined checks differ from null checks, keeping strict logic)
+          const avg = (averagesMap[prodDoc.id] !== undefined) ? averagesMap[prodDoc.id] : null;
           return { doc: prodDoc, data: prod, avg: avg };
         });
-
-        const productsData = await Promise.all(productPromises);
 
         productsData.forEach(item => {
           if (!item) return; // filtered out

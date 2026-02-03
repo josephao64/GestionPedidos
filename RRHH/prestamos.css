@@ -1,0 +1,78 @@
+/* prestamos.css - Estilos específicos para la sección de Préstamos y Anticipos */
+
+/* Contenedor Principal Centrado */
+#prestamos-section {
+    width: 95%;
+    /* Use 95% to ensure some padding on mobile if <1200px */
+    max-width: 1200px;
+    margin: 0 auto !important;
+    /* Force centering */
+}
+
+/* Centrar el Encabezado de la Página */
+#prestamos-section .header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Centrar la Tarjeta de Filtros */
+#prestamos-section .card>div:first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px !important;
+}
+
+/* Centrar y estilizar inputs y selects */
+#prestamos-section .card>div:first-child>div {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+#prestamos-section .form-select,
+#prestamos-section input[type="text"] {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+#prestamos-section #loanSearch {
+    width: 300px !important;
+    text-align: center;
+}
+
+/* Estilos de la Tabla */
+#prestamos-section table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+#prestamos-section table tr {
+    border-bottom: 2px solid var(--border);
+}
+
+#prestamos-section table th,
+#prestamos-section table td {
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 12px;
+}
+
+#prestamos-section table th {
+    white-space: nowrap;
+}
+
+/* Centrar botones de acción en la tabla */
+#prestamos-section table td div.actions-cell,
+#prestamos-section table td[style*="display:flex"] {
+    justify-content: center !important;
+    display: flex;
+    gap: 5px;
+}

@@ -1,4 +1,210 @@
 
+// --- PERSONALIZED SLIP LOGIC ---
+
+async function openPersonalizedSlipModal() {
+    const modal = document.getElementById('personalizedSlipModal');
+    const branchSelect = document.getElementById('customSlipBranchSelect');
+
+    // Reset Form
+    document.getElementById('personalizedSlipForm').reset();
+
+    // Set default date to today
+    document.getElementById('customSlipDateText').value = new Date().toLocaleDateString('es-GT');
+
+    // Show Modal
+    modal.style.display = 'flex';
+
+    // Populate Branches
+    branchSelect.innerHTML = '<option value="">Cargando...</option>';
+    try {
+        // Fetch branches from Firestore
+        const snap = await db.collection('sucursales').orderBy('name').get();
+        branchSelect.innerHTML = '<option value="">Seleccione para Autocompletar...</option>';
+
+        snap.forEach(doc => {
+            const data = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id;
+            // Store additional data for printing
+            option.dataset.name = data.name;
+            option.dataset.membrete = data.membrete || '';
+            option.dataset.logo = data.logo || '';
+            option.dataset.company = data.companyName ? data.companyName.toUpperCase() : data.name.toUpperCase();
+            option.textContent = data.name;
+            branchSelect.appendChild(option);
+        });
+    } catch (e) {
+        console.error("Error loading branches:", e);
+        branchSelect.innerHTML = '<option value="">Error al cargar</option>';
+    }
+}
+
+function closePersonalizedSlipModal() {
+    document.getElementById('personalizedSlipModal').style.display = 'none';
+}
+
+async function printPersonalizedSlip() {
+    // Gather Data
+    // Logic updated to support the new Editable Inputs
+    const companyInput = document.getElementById('customSlipBranchInput').value;
+    const titleInput = document.getElementById('customSlipTitle').value || 'BOLETA DE PAGO';
+    const name = document.getElementById('customSlipName').value;
+    const dateText = document.getElementById('customSlipDateText').value;
+    const amount = parseFloat(document.getElementById('customSlipAmount').value) || 0;
+    const details = document.getElementById('customSlipDetail').value;
+
+    // Logo URL from hidden input or fallback
+    const logoUrl = document.getElementById('customSlipLogoUrl').value || '../Recibos/logo.png';
+
+    /* 
+       Format: Tabular Style (American Pizza Boleta)
+       Header: Left Logo + Title + Period info. Right: Emision Date.
+       Table: Detalle Devengado | Detalle Descuentos
+    */
+
+    const win = window.open('', '_blank');
+    const emissionDate = new Date().toLocaleDateString('es-GT');
+
+    win.document.write(`
+        <html>
+        <head>
+            <title>${titleInput}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+                @page { margin: 0; size: letter; }
+                body { font-family: 'Roboto', Arial, sans-serif; padding: 40px; font-size: 13px; color: #000; }
+                
+                .header-section {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 20px;
+                }
+                .company-name {
+                    font-size: 18px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                }
+                .doc-type {
+                    font-size: 14px;
+                    margin-top: 5px;
+                }
+                .period-line {
+                    font-size: 13px;
+                    margin-top: 5px;
+                }
+                .emission-line {
+                    font-size: 12px;
+                    text-align: right;
+                }
+                
+                .emp-info {
+                    margin-bottom: 15px;
+                }
+                .emp-line {
+                    margin-bottom: 4px;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                    border: 2px solid #000;
+                }
+                th {
+                    border: 1px solid #000;
+                    padding: 4px 8px;
+                    text-align: center;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    background: #fff;
+                }
+                td {
+                    border: 1px solid #000;
+                    padding: 4px 8px;
+                    vertical-align: top;
+                    height: 24px; /* Min height for empty look */
+                }
+                .col-money {
+                    text-align: right;
+                    width: 100px;
+                }
+                .footer-liquid {
+                    display: flex;
+                    justify-content: center;
+                    margin-top: 10px;
+                    margin-bottom: 60px;
+                }
+                .liquid-box {
+                    border: 2px solid #000;
+                    padding: 8px 30px;
+                    font-weight: bold;
+                    font-size: 16px;
+                }
+                
+                .signatures {
+                    margin-top: 80px;
+                    border-top: 2px solid #000;
+                    width: 300px;
+                }
+            </style>
+        </head>
+        <body>
+            
+            <div class="header-section">
+                <div>
+                    <div class="company-name">${companyInput}</div>
+                    <div class="doc-type">${titleInput}</div>
+                    <div class="period-line">Periodo/Fecha: ${dateText}</div>
+                </div>
+                <div class="emission-line">
+                    EMISIÓN: ${emissionDate}
+                </div>
+            </div>
+
+            <div class="emp-info">
+                <div class="emp-line"><strong>Empleado:</strong> ${name}</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">DETALLE DEVENGADO</th>
+                        <th colspan="2">DETALLE DE DESCUENTOS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Row 1: The Main Item -->
+                    <tr>
+                        <td>${details || 'Pago Regular'}</td>
+                        <td class="col-money">Q${amount.toFixed(2)}</td>
+                        <td>-</td>
+                        <td class="col-money">Q0.00</td>
+                    </tr>
+                    <!-- Row 2: Totals Header inside table -->
+                    <tr style="font-weight:bold;">
+                        <td>Total Devengado</td>
+                        <td class="col-money">Q${amount.toFixed(2)}</td>
+                        <td>Total Descuentos</td>
+                        <td class="col-money">Q0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="footer-liquid">
+                <div class="liquid-box">Líquido Q${amount.toFixed(2)}</div>
+            </div>
+
+            <div class="signatures">
+                <div style="margin-top: 5px; font-size: 11px;">F. __________________________________</div>
+            </div>
+
+            <script>window.print();</script>
+        </body>
+        </html>
+    `);
+    win.document.close();
+}
 // planillas.js - Payroll Logic
 
 let currentPayrollData = [];
@@ -1143,7 +1349,8 @@ function printPaymentSlips(type) {
     const s = document.getElementById('planillaSucursal');
     // Get Company Title - Fallback to global or derive
     let companyTitle = "CORPORACION DE ALIMENTOS, S.A.";
-    const headerTitleEl = document.getElementById('headerCompanyTitle');
+    // CAUTION: The ID in rrhh.html is 'headerCompanyTitleTemplate'
+    const headerTitleEl = document.getElementById('headerCompanyTitleTemplate');
     if (headerTitleEl && headerTitleEl.innerText) companyTitle = headerTitleEl.innerText;
 
     // Attempt to get Logo
@@ -1189,25 +1396,74 @@ function printPaymentSlips(type) {
 
     if (type === 'normal') {
         // Table Styles for Normal View
-        w.document.write('@page { size: landscape; margin: 0; }');
-        w.document.write('body { padding: 10mm; }');
-        w.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; border: none; page-break-inside: auto; }');
+        w.document.write('<style>');
+        // Top level page rule - highest priority for layout engines
+        w.document.write('@page { size: landscape; margin: 5mm; }');
+        // Media specific adjustments
+        w.document.write('@media print { body { -webkit-print-color-adjust: exact; width: 100%; } }');
+
+        // Ensure body is wide enough to force landscape mode if automatic
+        w.document.write('body { font-family: "Arial", sans-serif; font-size: 10px; margin: 0; padding: 0; width: 100%; min-width: 1050px; }');
+        w.document.write('* { box-sizing: border-box; }');
+        // Force table to be wide but auto height
+        w.document.write('table { width: 100%; min-width: 1000px; border-collapse: collapse; border: 2px solid #000; page-break-inside: auto; }');
         w.document.write('tr { page-break-inside: avoid; page-break-after: auto; }');
-        // Restore Header Borders (User wanted "Like This" -> Screenshot shows borders)
-        w.document.write('th { border: 1px solid #000; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; }');
-        // Clean Data Rows
-        w.document.write('td { border: none; padding: 25px 4px; font-size: 11px; vertical-align: bottom; }');
-        // Signature Line
-        w.document.write('td:last-child { border-bottom: 1px solid #000; }');
-        w.document.write('.amount { text-align: right; }');
-        w.document.write('.center { text-align: center; }');
-        w.document.write('.header-container { display: flex; align-items: center; margin-bottom: 20px; }');
-        w.document.write('.logo { height: 50px; margin-right: 20px; }');
-        w.document.write('.title-box { text-align: center; flex: 1; text-transform: uppercase; font-weight: bold; }');
-        w.document.write('tfoot { font-weight: bold; background: #f0f0f0; }');
+
+        // Header Cells
+        w.document.write('thead th { border: 1px solid #000; padding: 3px; text-align: center; font-weight: bold; font-size: 9px; vertical-align: middle; background-color: #fff; height: 30px; }');
+
+        // Body Cells - Fixed Height for Signatures
+        w.document.write('tbody tr { height: 45px; }');
+        w.document.write('tbody td { border: none; border-bottom: 1px dotted #ccc; padding: 5px 2px; font-size: 10px; vertical-align: middle; }');
+        w.document.write('tbody tr:last-child td { border-bottom: 2px solid #000; }');
+
+
+        // Specific Column Styles
+        w.document.write('.col-name { text-align: left; padding-left: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }');
+        w.document.write('.col-center { text-align: center; }');
+        w.document.write('.col-amount { text-align: right; padding-right: 4px; }');
+
+        w.document.write('.header-container { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; position: relative; height: 50px; }');
+        w.document.write('.logo { height: 45px; position: absolute; left: 0; top: 50%; transform: translateY(-50%); }');
+        w.document.write('.header-text { text-align: center; }');
+        // Header Fonts reduced
+        w.document.write('.header-text h1 { margin: 0; font-size: 13px; font-weight: bold; text-transform: uppercase; }');
+        w.document.write('.header-text h2 { margin: 2px 0; font-size: 11px; font-weight: bold; text-transform: uppercase; }');
+        w.document.write('.header-text h3 { margin: 0; font-size: 11px; font-weight: bold; }');
+
         w.document.write('.page-break { page-break-after: always; display: block; height: 0; overflow: hidden; }');
 
         w.document.write('</style></head><body>');
+        // Add a wrapper to ensure width and force scrolling/landscape
+        w.document.write('<div style="width: 100%; min-width: 1000px;">');
+
+        // Prepare Date String in DD/MM/YYYY format
+        // Re-parsing logic to ensure correct format
+        let dateRangeStr = "";
+
+        // Check if Custom
+        if (p && p.value === 'custom') {
+            const sVal = document.getElementById('planillaStart').value; // yyyy-mm-dd
+            const eVal = document.getElementById('planillaEnd').value;
+            const fmt = (d) => { if (!d) return ""; const [y, m, d_] = d.split('-'); return `${d_}/${m}/${y}`; };
+            dateRangeStr = `DEL ${fmt(sVal)} AL ${fmt(eVal)}`;
+        } else {
+            // Standard
+            const mVal = parseInt(m.value);
+            const yVal = parseInt(y.value);
+            const pVal = p.value; // '1' or '2'
+            // Calculate Dates
+            let d1, d2;
+            if (pVal == '1') {
+                d1 = new Date(yVal, mVal, 1);
+                d2 = new Date(yVal, mVal, 15);
+            } else {
+                d1 = new Date(yVal, mVal, 16);
+                d2 = new Date(yVal, mVal + 1, 0); // Last day
+            }
+            const fmt = (d) => `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+            dateRangeStr = `DEL ${fmt(d1)} AL ${fmt(d2)}`;
+        }
 
         // Group Data
         const groups = {};
@@ -1227,87 +1483,93 @@ function printPaymentSlips(type) {
         keys.forEach((groupKey, groupIdx) => {
             const groupRows = groups[groupKey];
 
-            // Determine Header Info for this Group
-            let currentTitle = companyTitle;
-            let currentLogo = logoSrc;
+            // Header Info
+            // Header Info
+            let displayBranch = branchName;
 
-            if (groupKey.toUpperCase() === 'PEDIDOS FLASH') {
-                currentTitle = "PEDIDOS FLASH";
-                currentLogo = "../resources/images/PEDIDOS FLASH.png";
-            } else {
-                // Use the one from the first row (common branch info) if available
-                if (groupRows[0].branchName) {
-                    currentTitle = groupRows[0].branchName.toUpperCase();
+            // Only try to deduce branch from row if we are in 'All Branches' mode
+            if (displayBranch === 'Todas las Sucursales' || displayBranch === 'TODAS') {
+                displayBranch = 'TODAS'; // Default fallback
+                if (groupKey === 'Pedidos Flash') {
+                    displayBranch = 'PEDIDOS FLASH';
+                } else if (groupRows[0].branchName) {
+                    // CAUTION: This might be the Company Name depending on data
+                    displayBranch = groupRows[0].branchName;
                 }
-                // Handle Branch Logo from row if we want to be super specific?
-                // For now, title is the critical part requested.
-                // if (groupRows[0].branchLogo) currentLogo = groupRows[0].branchLogo;
             }
 
-            // Header
+            // Logo
+            // Use the logo from the first row of the group if available, or the generic one
+            let currentLogo = logoSrc;
+            if (groupKey.toUpperCase() === 'PEDIDOS FLASH') {
+                currentLogo = "../resources/images/PEDIDOS FLASH.png";
+            } else if (groupRows[0].branchLogo) {
+                currentLogo = groupRows[0].branchLogo;
+            }
+
+            // Header HTML
+            // Determine printing title:
+            // If group is 'Propia', use the Company Name from data (same as web view)
+            let printTitle = "AMERICAN PIZZA"; // Global Default
+
+            if (groupKey === 'Propia') {
+                if (groupRows[0].branchName) {
+                    printTitle = groupRows[0].branchName;
+                }
+            } else {
+                printTitle = groupKey; // e.g. 'Pedidos Flash'
+            }
+
             w.document.write(`
                 <div class="header-container">
-                    <img src="${currentLogo}" class="logo" alt="Logo">
-                    <div class="title-box">
-                        <div>${currentTitle}</div>
-                        ${branchName ? `<div>${branchName.toUpperCase()}</div>` : ''}
-                        <div>NÓMINA DE SUELDOS</div>
-                        <div>${periodStr}</div>
+                    <img src="${currentLogo}" class="logo">
+                    <div class="header-text">
+                        <h1>${printTitle.toUpperCase()}</h1>
+                        <h2>NÓMINA DE SUELDOS ${displayBranch.toUpperCase()}</h2>
+                        <h3>${dateRangeStr}</h3>
                     </div>
-                    <div style="width: 70px;"></div>
                 </div>
             `);
 
-            // Table Normal
-            w.document.write('<table><thead>');
-            // Main Headers
+            // Table Structure
+            w.document.write('<table>');
             w.document.write(`
-                <tr>
-                    <th rowspan="2" style="width: 200px;">NOMBRE EMPLEADO</th>
-                    <th colspan="4">SALARIO DEVENGADO</th>
-                    <th colspan="6">DEDUCCIONES LEGALES</th>
-                    <th rowspan="2">SALARIO<br>LÍQUIDO</th>
-                    <th rowspan="2" style="width: 120px;">FIRMA</th>
-                </tr>
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width: 180px; border-bottom: 2px solid #000;">NOMBRE EMPLEADO</th>
+                        <th colspan="4" style="border-bottom: 2px solid #000;">SALARIO DEVENGADO</th>
+                        <th colspan="6" style="border-bottom: 2px solid #000;">DEDUCCIONES LEGALES</th>
+                        <th rowspan="2" style="width: 70px; border-bottom: 2px solid #000;">SALARIO<br>LÍQUIDO</th>
+                        <th rowspan="2" style="width: 120px; border-bottom: 2px solid #000;">FIRMA</th>
+                    </tr>
+                    <tr>
+                        <!-- Salario Devengado Cols -->
+                        <th style="width: 30px;">DÍAS<br>TRAB.</th>
+                        <th>SALARIO</th>
+                        <th>BONIF.<br>DECRETO</th>
+                        <th>SALARIO<br>TOTAL</th>
+                        
+                        <!-- Deducciones Cols -->
+                        <th style="width: 45px;">IGSS</th>
+                        <th style="width: 45px;">ISR</th>
+                        <th style="width: 45px;">JUDICIAL</th>
+                        <th style="width: 50px;">DESCUENTO</th>
+                        <th>ANTICIPO<br>QUINCENA</th>
+                        <th>TOTAL<br>DEDUCCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
             `);
-            // Sub Headers
-            w.document.write(`
-                <tr>
-                    <th>DÍAS<br>TRAB.</th>
-                    <th>SALARIO</th>
-                    <th>BONIF.<br>DECRETO</th>
-                    <th>SALARIO<br>TOTAL</th>
-                    
-                    <th>IGSS</th>
-                    <th>ISR</th>
-                    <th>JUDICIAL</th>
-                    <th>DESCUENTO</th>
-                    <th>ANTICIPO<br>QUINCENA</th>
-                    <th>TOTAL<br>DEDUCC.</th>
-                </tr>
-            `);
-            w.document.write('</thead><tbody>');
 
-            // Totals
             let tSalary = 0, tBonus = 0, tTotalSal = 0;
             let tIgss = 0, tIsr = 0, tJud = 0, tDisc = 0, tAdv = 0, tTotalDed = 0;
             let tLiquid = 0;
 
             groupRows.forEach(row => {
-                // Use the same final calculated properties if they exist, or re-calc with rounding
-                // Ideally we should rely on row.finalTotal if it exists, but this table is specific.
-
-                // Re-calculate with rounding to match main table display
-                // Note: The main table logic for totalDeductions is:
-                // const totalDeductions = liveRow.igss + liveRow.isr + liveRow.judicial + liveRow.discount + liveRow.advance;
-                // But in main table we sum Number(totalDeductions.toFixed(2)).
-                // Here we should do the same.
-
                 const totalSal = row.salary + row.bonus;
                 const totalDed = row.igss + row.isr + row.judicial + row.discount + row.advance;
                 const liq = totalSal - totalDed;
 
-                // Accumulate ROUNDED values
                 tSalary += Number(row.salary.toFixed(2));
                 tBonus += Number(row.bonus.toFixed(2));
                 tTotalSal += Number(totalSal.toFixed(2));
@@ -1321,63 +1583,47 @@ function printPaymentSlips(type) {
 
                 tLiquid += Number(liq.toFixed(2));
 
-
                 w.document.write(`
                     <tr>
-                        <td>${row.name}</td>
-                        <td class="center">${row.days}</td>
-                        <td class="amount">Q${row.salary.toFixed(2)}</td>
-                        <td class="amount">Q${row.bonus.toFixed(2)}</td>
-                        <td class="amount">Q${totalSal.toFixed(2)}</td>
+                        <td class="col-name">${row.name}</td>
+                        <td class="col-center">${row.days}</td>
+                        <td class="col-amount">Q${row.salary.toFixed(2)}</td>
+                        <td class="col-amount">Q${row.bonus.toFixed(2)}</td>
+                        <td class="col-amount">Q${totalSal.toFixed(2)}</td>
                         
-                        <td class="amount">Q${row.igss.toFixed(2)}</td>
-                        <td class="amount">Q${row.isr.toFixed(2)}</td>
-                        <td class="amount">Q${row.judicial.toFixed(2)}</td>
-                        <td class="amount">Q${row.discount.toFixed(2)}</td>
-                        <td class="amount">Q${row.advance.toFixed(2)}</td>
-                        <td class="amount">Q${totalDed.toFixed(2)}</td>
+                        <td class="col-amount">Q${row.igss.toFixed(2)}</td>
+                        <td class="col-amount">Q${row.isr.toFixed(2)}</td>
+                        <td class="col-amount">Q${row.judicial.toFixed(2)}</td>
+                        <td class="col-amount">Q${row.discount.toFixed(2)}</td>
+                        <td class="col-amount">Q${row.advance.toFixed(2)}</td>
+                        <td class="col-amount">Q${totalDed.toFixed(2)}</td>
                         
-                        <td class="amount">Q${liq.toFixed(2)}</td>
-
-                        <td class="amount">Q${liq.toFixed(2)}</td>
-
-                        <!-- Remove explicit inline border since CSS handles it now, or keep empty -->
-                        <td></td>
+                        <td class="col-amount">Q${liq.toFixed(2)}</td>
+                        <td><div style="border-bottom: 2px solid #000; width: 100%; margin-top: 15px;"></div></td>
                     </tr>
                 `);
             });
 
-            // Footer Totals
             w.document.write(`
-                </tbody><tfoot>
-                    <tr>
-                        <td style="text-align:right;">TOTALES:</td>
-                        <td>-</td>
-                        <td class="amount">Q${tSalary.toFixed(2)}</td>
-                        <td class="amount">Q${tBonus.toFixed(2)}</td>
-                        <td class="amount">Q${tTotalSal.toFixed(2)}</td>
-                        
-                        <td class="amount">Q${tIgss.toFixed(2)}</td>
-                        <td class="amount">Q${tIsr.toFixed(2)}</td>
-                        <td class="amount">Q${tJud.toFixed(2)}</td>
-                        <td class="amount">Q${tDisc.toFixed(2)}</td>
-                        <td class="amount">Q${tAdv.toFixed(2)}</td>
-                        <td class="amount">Q${tTotalDed.toFixed(2)}</td>
-                        
-                        <td class="amount">Q${tLiquid.toFixed(2)}</td>
-
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; background-color: #f9f9f9;">
+                        <!-- Adjusted colspan to align "TOTAL" with the liquid salary column -->
+                        <!-- Columns: Name (1), Days(1), Sal(1), Bon(1), TotalSal(1), IGSS(1), ISR(1), Jud(1), Desc(1), Ant(1), TotalDed(1) -->
+                        <td colspan="11" style="text-align: right; padding-right: 15px; font-size: 11px;">TOTAL A PAGAR:</td>
+                        <td class="col-amount" style="font-size: 11px; border-top: 2px solid #000;">Q${tLiquid.toFixed(2)}</td>
                         <td></td>
                     </tr>
-                </tfoot></table>
+                </tfoot>
+            </table>
             `);
 
-            w.document.write(`<div style="margin-top:20px; font-weight:bold; font-size: 1.2em; text-align:right;">TOTAL PLANILLA: Q${tLiquid.toFixed(2)}</div>`);
-
-            // Page Break if not last
             if (groupIdx < keys.length - 1) {
                 w.document.write('<div class="page-break"></div>');
             }
         });
+
+        w.document.write('</div>'); // Close Wrapper
 
     } else {
         // EXTRA SLIPS (Individual)
@@ -1786,6 +2032,177 @@ function updatePlanillaRowSalary(index, newVal) {
     renderPlanillaRows();
 }
 
+
+// ==========================================
+// EXCEL EXPORT - FORMATO PLANILLA
+// ==========================================
+function exportarFormatoPlanilla() {
+    // 1. Get Context Info
+    const sucursalSelect = document.getElementById('planillaSucursal');
+    const branchName = sucursalSelect.options[sucursalSelect.selectedIndex].text;
+
+    // Period
+    const m = document.getElementById('planillaMonth');
+    const y = document.getElementById('planillaYear');
+    const p = document.getElementById('planillaPeriod');
+    let periodText = "";
+    if (p.value === 'custom') {
+        const s = document.getElementById('planillaStart').value;
+        const e = document.getElementById('planillaEnd').value;
+        periodText = `Del ${s} al ${e}`;
+    } else {
+        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        const mText = months[parseInt(m.value)];
+        const pText = p.value == '1' ? '1ra Quincena' : '2da Quincena';
+        periodText = `${pText} de ${mText} ${y.value}`;
+    }
+
+    // 2. Define Headers (Added Observaciones)
+    const headers = ["No.", "Nombre completo", "Días laborados", "Horas adicionales", "Adelanto (Q)", "Descuentos (Q)", "Ingreso (fecha)", "Renuncia (fecha)", "Asueto", "Observaciones"];
+
+    // 3. Prepare Data
+    // We construct the cells manually to apply styles
+    const wb = XLSX.utils.book_new();
+    const ws = {};
+
+    // Helper for CellRef
+    const encode = XLSX.utils.encode_cell;
+
+    // Styles
+    const styleBorder = {
+        border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+        },
+        font: { name: "Arial", sz: 10 }
+    };
+
+    const styleHeader = {
+        border: styleBorder.border,
+        font: { name: "Arial", sz: 10, bold: true },
+        alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    const styleInstruction = {
+        fill: { fgColor: { rgb: "FFFF00" } },
+        font: { name: "Arial", sz: 10 },
+        alignment: { wrapText: true }
+    };
+
+    const styleInstructionBold = {
+        fill: { fgColor: { rgb: "FFFF00" } },
+        font: { name: "Arial", sz: 10, bold: true },
+        alignment: { wrapText: true }
+    };
+
+    // --- ROW 1: Sucursal ---
+    ws[encode({ r: 0, c: 0 })] = { v: "Sucursal:", t: "s" };
+    ws[encode({ r: 0, c: 1 })] = { v: branchName, t: "s", s: { font: { bold: true } } };
+
+    // --- ROW 2: Periodo ---
+    ws[encode({ r: 1, c: 0 })] = { v: "Periodo:", t: "s" };
+    ws[encode({ r: 1, c: 1 })] = { v: periodText, t: "s", s: { font: { bold: true } } };
+
+    // --- ROW 4: Headers ---
+    headers.forEach((h, i) => {
+        ws[encode({ r: 3, c: i })] = { v: h, t: "s", s: styleHeader };
+    });
+
+    // --- DATA ROWS (Start Row 5 / Index 4) ---
+    let currentRow = 4;
+    const items = (currentPayrollData && currentPayrollData.length > 0) ? currentPayrollData : Array(10).fill({ name: "" });
+
+    items.forEach((emp, i) => {
+        const rowData = [
+            i + 1,
+            emp.name || "",
+            15,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "" // Observaciones placeholder
+        ];
+
+        rowData.forEach((val, colIndex) => {
+            ws[encode({ r: currentRow, c: colIndex })] = { v: val, t: (typeof val === 'number' ? 'n' : 's'), s: styleBorder };
+        });
+        currentRow++;
+    });
+
+    // --- INSTRUCTIONS (Yellow Block) ---
+    currentRow += 2; // Spacer
+
+    const instructions = [
+        ["*** INSTRUCCIONES Y REGLAS DE LLENADO ***", true],
+        ["", false],
+        ["1. DÍAS LABORADOS:", true],
+        ["- Colocar el número exacto. (Quincena completa = 15).", false],
+        ["- Si faltó o está suspendido: Colocar días reales (ej: 4, 12, 0).", false],
+        ["", false],
+        ["2. FECHAS (Ingreso / Renuncia):", true],
+        ["- OBLIGATORIO: Formato dd/mm/aaaa (Ej: 28/12/2025).", false],
+        ["- Solo llenar si hubo movimiento en esta quincena.", false],
+        ["", false],
+        ["3. ASUETO:", true],
+        ["- Escribir 'SÍ' si trabajó el feriado. 'NO' si descansó. Y si no aplica dejar vacío", false],
+        ["", false],
+        ["4. DESCUENTOS:", true],
+        ["- Anotar solo el monto en Q", false],
+        ["", false],
+        ["5. SUSPENSIONES:", true],
+        ["- Si está suspendido, poner 0 días y una nota '(SUSPENDIDO)' junto al nombre.", false]
+    ];
+
+    // Merges Array
+    if (!ws['!merges']) ws['!merges'] = [];
+
+    instructions.forEach(line => {
+        const text = line[0];
+        const isBold = line[1];
+
+        // Merge A to J (Columns 0 to 9) - UPDATED FOR EXTRA COLUMN
+        ws['!merges'].push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 9 } });
+
+        // Set value and style for the first cell (Main Cell)
+        ws[encode({ r: currentRow, c: 0 })] = {
+            v: text,
+            t: "s",
+            s: (isBold ? styleInstructionBold : styleInstruction)
+        };
+
+        // We must stick styling on the other cells in the range too for background color to show properly in some viewers
+        for (let c = 1; c <= 9; c++) {
+            ws[encode({ r: currentRow, c: c })] = { v: "", t: "s", s: (isBold ? styleInstructionBold : styleInstruction) };
+        }
+
+        currentRow++;
+    });
+
+    // Extents (Columns 0-9)
+    ws['!ref'] = XLSX.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: 9, r: currentRow } });
+
+    // Column Widths
+    ws['!cols'] = [
+        { wch: 5 },  // No.
+        { wch: 40 }, // Nombre
+        { wch: 15 }, // Dias
+        { wch: 18 }, // Horas
+        { wch: 15 }, // Adelanto
+        { wch: 15 }, // Desc
+        { wch: 15 }, // Ingreso
+        { wch: 15 }, // Renuncia
+        { wch: 10 }, // Asueto
+        { wch: 30 }  // Observaciones (NEW)
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Planilla");
+    XLSX.writeFile(wb, `Formato_Planilla_${branchName.replace(/[^a-z0-9]/gi, '_').substring(0, 20)}.xlsx`);
+}
 
 function updatePlanillaRowBonus(index, newVal) {
     const row = currentPayrollData[index];
