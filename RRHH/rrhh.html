@@ -1403,7 +1403,7 @@
                             style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;">
                     <div>
                         <label style="display: block; font-weight: 600; margin-bottom: 4px;">Código de
                             Empleado</label>
@@ -1420,6 +1420,15 @@
                         <label style="display: block; font-weight: 600; margin-bottom: 4px;">IGSS (Opcional)</label>
                         <input type="text" name="igss"
                             style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Sexo</label>
+                        <select name="sexo"
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                            <option value="">Seleccione...</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Femenino">Femenino</option>
+                        </select>
                     </div>
                 </div>
 
@@ -1911,10 +1920,12 @@
                 <thead style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                     <tr>
                         <th style="padding: 12px; text-align: left; color: #475569;">Nombre Completo</th>
+                        <th style="padding: 12px; text-align: left; color: #475569;">DPI</th>
+                        <th style="padding: 12px; text-align: left; color: #475569;">Sexo</th>
                         <th style="padding: 12px; text-align: left; color: #475569;">Puesto</th>
                         <th style="padding: 12px; text-align: left; color: #475569;">Sucursal</th>
                         <th style="padding: 12px; text-align: left; color: #475569;">Fecha Ingreso</th>
-                        <th style="padding: 12px; text-align: center; color: #475569;">Antigüedad</th>
+                        <th style="padding: 12px; text-align: center; color: #475569;">Tiempo Laborado</th>
                     </tr>
                 </thead>
                 <tbody id="collaboratorsTableBody">

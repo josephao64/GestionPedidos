@@ -11,8 +11,138 @@ var firebaseConfig = {
   messagingSenderId: "917523682093",
   appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
 };
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
 var db = firebase.firestore();
+
+/* =========================
+   ESTADO GLOBAL
+============================*/
+var currentBodegaId = null;
+
+async function initBodegas() {
+  await loadBodegasForSelector();
+}
+
+async function loadBodegasForSelector() {
+  try {
+    let selector = document.getElementById("globalBodegaSelector");
+    let snapshot = await db.collection("bodegas").orderBy("createdAt", "asc").get();
+    selector.innerHTML = "";
+
+    let optPrincipal = document.createElement("option");
+    optPrincipal.value = "principal";
+    optPrincipal.textContent = "Bodega Principal";
+    selector.appendChild(optPrincipal);
+
+    snapshot.forEach(doc => {
+      let option = document.createElement("option");
+      option.value = doc.id;
+      option.textContent = doc.data().name + (doc.data().location ? ` (${doc.data().location})` : "");
+      selector.appendChild(option);
+    });
+
+    // Restaurar selección anterior o usar primera
+    if (currentBodegaId && document.querySelector(`#globalBodegaSelector option[value="${currentBodegaId}"]`)) {
+      selector.value = currentBodegaId;
+    } else {
+      currentBodegaId = "principal";
+      selector.value = currentBodegaId;
+    }
+  } catch (error) {
+    console.error("Error cargando bodegas:", error);
+  }
+}
+
+function onBodegaChange() {
+  currentBodegaId = document.getElementById("globalBodegaSelector").value;
+  // Recargar vistas actuales
+  if (document.getElementById("productsSection").style.display === "block") loadProducts();
+  if (document.getElementById("movementsSection").style.display === "block") {
+    if (typeof loadMovements === "function") loadMovements();
+  }
+  if (document.getElementById("invoicesSection").style.display === "block") loadInvoices();
+  if (document.getElementById("transfersSection").style.display === "block") loadTransfers();
+  // Actualizar selects de productos
+  populateProductSelects();
+}
+
+/* =========================
+   GESTIÓN DE BODEGAS (CRUD)
+============================*/
+function showAddBodegaForm() {
+  document.getElementById("bodegaModalLabel").textContent = "Añadir Bodega";
+  document.getElementById("bodegaId").value = "";
+  document.getElementById("bodegaName").value = "";
+  document.getElementById("bodegaLocation").value = "";
+}
+
+async function saveBodega() {
+  try {
+    let id = document.getElementById("bodegaId").value;
+    let name = document.getElementById("bodegaName").value.trim();
+    let location = document.getElementById("bodegaLocation").value.trim();
+
+    if (!name) throw new Error("El nombre de la bodega es obligatorio.");
+
+    let data = {
+      name: name,
+      location: location,
+    };
+
+    if (id) {
+      await db.collection("bodegas").doc(id).update(data);
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection("bodegas").add(data);
+    }
+
+    closeModal("bodegaModal");
+    await loadBodegasForSelector(); // actualiza selector arriba
+    loadBodegasTable(); // actualiza tabla en seccion bodegas
+  } catch (error) {
+    console.error("Error al guardar bodega:", error);
+    alert("Error al guardar bodega: " + error.message);
+  }
+}
+
+async function loadBodegasTable() {
+  try {
+    let snapshot = await db.collection("bodegas").orderBy("createdAt", "asc").get();
+    let tbody = document.getElementById("bodegasTable").querySelector("tbody");
+    tbody.innerHTML = "";
+    snapshot.forEach(doc => {
+      let b = doc.data();
+      let row = tbody.insertRow();
+      row.insertCell(0).textContent = b.name;
+      row.insertCell(1).textContent = b.location || "-";
+      row.insertCell(2).innerHTML = `
+        <button class="btn btn-sm btn-primary" onclick="editBodega('${doc.id}')">
+          <i class="fa-solid fa-edit"></i>
+        </button>
+      `;
+    });
+  } catch (error) {
+    console.error("Error cargando tabla bodegas:", error);
+  }
+}
+
+async function editBodega(id) {
+  try {
+    let doc = await db.collection("bodegas").doc(id).get();
+    if (!doc.exists) return;
+    let data = doc.data();
+    document.getElementById("bodegaId").value = doc.id;
+    document.getElementById("bodegaName").value = data.name;
+    document.getElementById("bodegaLocation").value = data.location || "";
+    document.getElementById("bodegaModalLabel").textContent = "Editar Bodega";
+    new bootstrap.Modal(document.getElementById("bodegaModal")).show();
+  } catch (error) {
+    console.error("Error editando bodega:", error);
+  }
+}
 
 /* =========================
    FUNCIONES DE UTILIDAD
@@ -32,6 +162,8 @@ function closeModal(modalId) {
 
 function showSection(section) {
   document.getElementById("productsSection").style.display = "none";
+  document.getElementById("bodegasSection").style.display = "none";
+  document.getElementById("transfersSection").style.display = "none";
   document.getElementById("movementsSection").style.display = "none";
   document.getElementById("adjustmentsSection").style.display = "none";
   document.getElementById("invoicesSection").style.display = "none";
@@ -40,14 +172,19 @@ function showSection(section) {
   if (section === "products") {
     document.getElementById("productsSection").style.display = "block";
     loadProducts();
+  } else if (section === "bodegas") {
+    document.getElementById("bodegasSection").style.display = "block";
+    loadBodegasTable();
+  } else if (section === "transfers") {
+    document.getElementById("transfersSection").style.display = "block";
+    loadTransfers();
   } else if (section === "movements") {
     document.getElementById("movementsSection").style.display = "block";
-    loadMovements();
+    if (typeof loadMovements === "function") loadMovements();
   } else if (section === "adjustments") {
     document.getElementById("adjustmentsSection").style.display = "block";
   } else if (section === "invoices") {
     document.getElementById("invoicesSection").style.display = "block";
-    // NUEVO: poblar filtro de proveedores antes de cargar
     populateSupplierFilter().then(() => loadInvoices());
   } else if (section === "reports") {
     document.getElementById("reportsSection").style.display = "block";
@@ -63,7 +200,8 @@ function showAddProductForm() {
   document.getElementById("productId").value = "";
   document.getElementById("productName").value = "";
   document.getElementById("productDescription").value = "";
-  document.getElementById("productUnit").value = "";
+  document.getElementById("productUnit").value = "Unidad";
+  document.getElementById("productPrice").value = "";
   document.getElementById("productStock").value = "";
   document.getElementById("productStockMin").value = "";
 }
@@ -74,6 +212,7 @@ async function saveProduct() {
     var name = document.getElementById("productName").value;
     var description = document.getElementById("productDescription").value;
     var unit = document.getElementById("productUnit").value;
+    var price = parseFloat(document.getElementById("productPrice").value) || 0;
     var stock = parseInt(document.getElementById("productStock").value) || 0;
     var stockMin = parseInt(document.getElementById("productStockMin").value) || 0;
 
@@ -86,8 +225,10 @@ async function saveProduct() {
       name: name,
       description: description,
       unit: unit,
+      price: price,
       stock: stock,
-      stockMin: stockMin
+      stockMin: stockMin,
+      bodegaId: currentBodegaId
     };
 
     if (!id) {
@@ -108,22 +249,36 @@ async function saveProduct() {
 
 async function loadProducts() {
   try {
+    if (!currentBodegaId) {
+      document.getElementById("productsTable").querySelector("tbody").innerHTML = "";
+      return;
+    }
+
     let sortOrderSelect = document.getElementById("productSortOrder");
     let order = sortOrderSelect ? sortOrderSelect.value : "desc";
 
-    let snapshot = await db.collection("inventoryProducts").orderBy("idNum", order).get();
+    let snapshot = await db.collection("inventoryProducts")
+      .orderBy("idNum", order).get();
 
     let tbody = document.getElementById("productsTable").querySelector("tbody");
     tbody.innerHTML = "";
-    snapshot.forEach(doc => {
+    snapshot.docs.forEach(doc => {
       let product = doc.data();
+      let bg = product.bodegaId;
+      if (currentBodegaId === "principal") {
+        if (bg && bg !== "principal") return;
+      } else {
+        if (bg !== currentBodegaId) return;
+      }
+
       let row = tbody.insertRow();
       row.insertCell(0).textContent = product.idNum ? product.idNum : "-";
       row.insertCell(1).textContent = product.name;
       row.insertCell(2).textContent = product.unit;
-      row.insertCell(3).textContent = product.stock;
-      row.insertCell(4).textContent = product.stockMin;
-      row.insertCell(5).innerHTML = `
+      row.insertCell(3).textContent = "Q. " + (product.price ? parseFloat(product.price).toFixed(2) : "0.00");
+      row.insertCell(4).textContent = product.stock;
+      row.insertCell(5).textContent = product.stockMin;
+      row.insertCell(6).innerHTML = `
         <button class="btn btn-sm btn-primary" onclick="editProduct('${doc.id}')">
           <i class="fa-solid fa-edit"></i> Editar
         </button>
@@ -162,6 +317,7 @@ async function editProduct(id) {
       document.getElementById("productName").value = product.name;
       document.getElementById("productDescription").value = product.description;
       document.getElementById("productUnit").value = product.unit;
+      document.getElementById("productPrice").value = product.price || 0;
       document.getElementById("productStock").value = product.stock;
       document.getElementById("productStockMin").value = product.stockMin;
 
@@ -190,20 +346,29 @@ async function deleteProduct(id) {
 
 async function populateProductSelects() {
   try {
-    let snapshot = await db.collection("inventoryProducts").get();
     let movementSelect = document.getElementById("movementProductSelect");
     let adjustmentSelect = document.getElementById("adjustmentProductSelect");
     let reportSelect = document.getElementById("reportProduct");
+
     if (movementSelect) movementSelect.innerHTML = "";
     if (adjustmentSelect) adjustmentSelect.innerHTML = "";
     if (reportSelect) reportSelect.innerHTML = "";
+
+    window.transferProductOptions = '<option value="">Seleccione producto...</option>';
+
+    if (!currentBodegaId) return;
+
+    let snapshot = await db.collection("inventoryProducts").where("bodegaId", "==", currentBodegaId).get();
+
     snapshot.forEach(doc => {
       let option = document.createElement("option");
       option.value = doc.id;
-      option.textContent = doc.data().name;
+      option.textContent = doc.data().name + ` (Stock: ${doc.data().stock})`;
       if (movementSelect) movementSelect.appendChild(option);
       if (adjustmentSelect) adjustmentSelect.appendChild(option.cloneNode(true));
       if (reportSelect) reportSelect.appendChild(option.cloneNode(true));
+
+      window.transferProductOptions += `<option value="${doc.id}">${doc.data().name} (Stock: ${doc.data().stock})</option>`;
     });
   } catch (error) {
     console.error("Error al cargar productos para selects:", error);
@@ -245,12 +410,13 @@ async function saveAdjustment() {
       date: firebase.firestore.FieldValue.serverTimestamp(),
       user: user,
       reason: reason,
-      comments: "Ajuste de inventario"
+      comments: "Ajuste de inventario",
+      bodegaId: currentBodegaId
     });
 
     closeModal("adjustmentModal");
     loadProducts();
-    loadMovements();
+    if (typeof loadMovements === "function") loadMovements();
   } catch (error) {
     console.error("Error al realizar reajuste:", error);
     alert("Error al realizar reajuste: " + error.message);
@@ -299,9 +465,21 @@ async function importProduct(productId) {
     if (!doc.exists) throw new Error("Producto no encontrado en el catálogo.");
     let prod = doc.data();
 
-    let invQuery = await db.collection("inventoryProducts").where("productRef", "==", productId).get();
-    if (!invQuery.empty) {
-      alert("El producto ya está cargado en el inventario.");
+    let invQuery = await db.collection("inventoryProducts")
+      .where("productRef", "==", productId)
+      .get();
+    let yaExiste = false;
+    invQuery.docs.forEach(d => {
+      let bg = d.data().bodegaId;
+      if (currentBodegaId === "principal") {
+        if (!bg || bg === "principal") yaExiste = true;
+      } else {
+        if (bg === currentBodegaId) yaExiste = true;
+      }
+    });
+
+    if (yaExiste) {
+      alert("El producto ya está cargado en esta bodega.");
       return;
     }
 
@@ -312,7 +490,8 @@ async function importProduct(productId) {
       stock: 0,
       stockMin: 0,
       idNum: prod.idNum ? prod.idNum : Date.now(),
-      productRef: productId
+      productRef: productId,
+      bodegaId: currentBodegaId
     };
 
     await db.collection("inventoryProducts").add(newProduct);
@@ -379,10 +558,17 @@ async function populateSupplierFilter() {
 // Opciones de productos para items de factura
 async function loadInvoiceProductOptions() {
   try {
+    if (!currentBodegaId) return;
     let snapshot = await db.collection("inventoryProducts").get();
     let options = '<option value="">Seleccione el producto</option>';
-    snapshot.forEach(doc => {
+    snapshot.docs.forEach(doc => {
       let data = doc.data();
+      let bg = data.bodegaId;
+      if (currentBodegaId === "principal") {
+        if (bg && bg !== "principal") return;
+      } else {
+        if (bg !== currentBodegaId) return;
+      }
       options += `<option value="${doc.id}">${data.name}</option>`;
     });
     window.invoiceProductOptions = options;
@@ -458,7 +644,7 @@ function addInvoiceItem() {
   btnRemove.type = "button";
   btnRemove.className = "btn btn-danger btn-sm";
   btnRemove.innerHTML = '<i class="fa-solid fa-trash"></i>';
-  btnRemove.onclick = function() {
+  btnRemove.onclick = function () {
     row.remove();
     updateInvoiceOverallTotal();
   };
@@ -466,8 +652,8 @@ function addInvoiceItem() {
   row.appendChild(tdActions);
 
   // Actualizar total de fila al cambiar cantidad o precio unitario
-  inputQuantity.oninput = function() { updateInvoiceItemTotal(row); };
-  inputUnitPrice.oninput = function() { updateInvoiceItemTotal(row); };
+  inputQuantity.oninput = function () { updateInvoiceItemTotal(row); };
+  inputUnitPrice.oninput = function () { updateInvoiceItemTotal(row); };
 
   tbody.appendChild(row);
   updateInvoiceItemTotal(row);
@@ -533,11 +719,22 @@ async function saveInvoice() {
     // Calcular total general
     let overallTotal = items.reduce((sum, item) => sum + item.total, 0);
 
-    // Duplicidad por número (solo para nueva)
+    // Duplicidad por número (solo para nueva, pero por bodega actual)
     if (!invoiceId) {
-      let duplicateQuery = await db.collection("invoices").where("invoiceNum", "==", invoiceNumber).get();
-      if (!duplicateQuery.empty) {
-        throw new Error("La factura con este número ya existe.");
+      let duplicateQuery = await db.collection("invoices")
+        .where("invoiceNum", "==", invoiceNumber)
+        .get();
+      let exists = false;
+      duplicateQuery.docs.forEach(d => {
+        let bg = d.data().bodegaId;
+        if (currentBodegaId === "principal") {
+          if (!bg || bg === "principal") exists = true;
+        } else {
+          if (bg === currentBodegaId) exists = true;
+        }
+      });
+      if (exists) {
+        throw new Error("La factura con este número ya existe en esta bodega.");
       }
     }
 
@@ -557,7 +754,9 @@ async function saveInvoice() {
           date: firebase.firestore.FieldValue.serverTimestamp(),
           user: "Factura",
           reason: "Factura de proveedor: " + invoiceSupplier,
-          comments: "Factura ingresada el " + invoiceDate
+          comments: "Factura ingresada el " + invoiceDate,
+          bodegaId: currentBodegaId,
+          invoiceId: "P" // Placeholder until invoice resolves, or not needed.
         });
       }
     }
@@ -568,19 +767,31 @@ async function saveInvoice() {
       company: invoiceCompany,
       supplier: invoiceSupplier,
       items: items,
-      overallTotal: overallTotal
+      overallTotal: overallTotal,
+      bodegaId: currentBodegaId
     };
 
     if (invoiceId) {
       await db.collection("invoices").doc(invoiceId).update(invoiceData);
       alert("Factura modificada exitosamente.");
     } else {
-      await db.collection("invoices").add(invoiceData);
+      let newInvRef = await db.collection("invoices").add(invoiceData);
+
+      // Update invoiceId tracking internally on movements if it was new
+      let movQuery = await db.collection("inventoryMovements")
+        .where("invoiceId", "==", "P")
+        .where("bodegaId", "==", currentBodegaId).get();
+      let batch = db.batch();
+      movQuery.forEach(doc => {
+        batch.update(doc.ref, { invoiceId: newInvRef.id });
+      });
+      await batch.commit();
+
       alert("Factura agregada exitosamente y entrada de productos registrada.");
     }
     closeModal("invoiceModal");
     loadProducts();
-    loadMovements();
+    if (typeof loadMovements === "function") loadMovements();
     loadInvoices();
     populateProductSelects();
   } catch (error) {
@@ -624,6 +835,11 @@ async function loadInvoices() {
     const startVal = document.getElementById("invoiceStartDate")?.value;
     const endVal = document.getElementById("invoiceEndDate")?.value;
 
+    if (!currentBodegaId) {
+      document.getElementById("invoicesTable").querySelector("tbody").innerHTML = "";
+      return;
+    }
+
     let queryRef = db.collection("invoices");
 
     if (startVal) {
@@ -647,9 +863,15 @@ async function loadInvoices() {
 
     let actionsHeader = document.getElementById("actionsHeader");
 
-    // Filtrado en cliente por empresa / proveedor / número
+    // Filtrado en cliente por empresa / proveedor / número y bodega
     const filteredDocs = snapshot.docs.filter(d => {
       const inv = d.data();
+      let bg = inv.bodegaId;
+      if (currentBodegaId === "principal") {
+        if (bg && bg !== "principal") return false;
+      } else {
+        if (bg !== currentBodegaId) return false;
+      }
       // filtro por empresa
       if (filterCompany && inv.company !== filterCompany) return false;
       // filtro por proveedor
@@ -844,15 +1066,15 @@ async function editInvoice(invoiceId) {
       btnRemove.type = "button";
       btnRemove.className = "btn btn-danger btn-sm";
       btnRemove.innerHTML = '<i class="fa-solid fa-trash"></i>';
-      btnRemove.onclick = function() {
+      btnRemove.onclick = function () {
         row.remove();
         updateInvoiceOverallTotal();
       };
       tdActions.appendChild(btnRemove);
       row.appendChild(tdActions);
 
-      inputQuantity.oninput = function() { updateInvoiceItemTotal(row); };
-      inputUnitPrice.oninput = function() { updateInvoiceItemTotal(row); };
+      inputQuantity.oninput = function () { updateInvoiceItemTotal(row); };
+      inputUnitPrice.oninput = function () { updateInvoiceItemTotal(row); };
 
       tbody.appendChild(row);
     });
@@ -1171,9 +1393,620 @@ async function exportProductsStockImage() {
 }
 
 /* =========================
+   TRASLADOS ENTRE BODEGAS
+============================*/
+async function showAddTransferForm() {
+  document.getElementById("transferUser").value = "";
+
+  let tbody = document.getElementById("transferItemsTable").querySelector("tbody");
+  tbody.innerHTML = "";
+  addTransferItem();
+
+  let destSelect = document.getElementById("transferDestination");
+  destSelect.innerHTML = "<option value=''>Seleccione sucursal o bodega destino...</option>";
+
+  try {
+    if (currentBodegaId !== "principal") {
+      let optPrincipal = document.createElement("option");
+      optPrincipal.value = "principal";
+      optPrincipal.textContent = "Bodega Principal";
+      destSelect.appendChild(optPrincipal);
+    }
+
+    let [bodegasSnap, sucursalesSnap] = await Promise.all([
+      db.collection("bodegas").orderBy("createdAt", "asc").get(),
+      db.collection("sucursales").orderBy("name", "asc").get()
+    ]);
+
+    bodegasSnap.forEach(doc => {
+      if (doc.id !== currentBodegaId) {
+        let option = document.createElement("option");
+        option.value = doc.id;
+        option.textContent = doc.data().name + " (Bodega)";
+        destSelect.appendChild(option);
+      }
+    });
+
+    sucursalesSnap.forEach(doc => {
+      if (doc.id !== currentBodegaId) {
+        let option = document.createElement("option");
+        option.value = doc.id;
+        option.textContent = doc.data().name + " (Sucursal)";
+        destSelect.appendChild(option);
+      }
+    });
+
+  } catch (error) {
+    console.error("Error cargando bodegas destino:", error);
+  }
+}
+
+async function editTransfer(transferId) {
+  if (!confirm("Para editar este traslado, primero se desharán los cambios de stock actuales y luego podrá realizar las modificaciones necesarias. ¿Desea continuar?")) return;
+
+  try {
+    let tDoc = await db.collection("transfers").doc(transferId).get();
+    if (!tDoc.exists) throw new Error("Traslado no encontrado");
+    let t = tDoc.data();
+
+    // 1. Revert stock (Reuse logic from deleteTransfer)
+    let batch = db.batch();
+    if (t.items && t.items.length > 0) {
+      for (const item of t.items) {
+        if (!item.productId || item.productId === "-") continue;
+        try {
+          let originQueryMatch = null;
+          if (item.idNum && item.idNum !== "-") {
+            let q1 = await db.collection("inventoryProducts").where("idNum", "==", item.idNum).where("bodegaId", "==", t.sourceBodegaId).get();
+            if (!q1.empty) originQueryMatch = q1.docs[0];
+          }
+          if (!originQueryMatch) {
+            let q2 = await db.collection("inventoryProducts").where("name", "==", item.productName).where("bodegaId", "==", t.sourceBodegaId).get();
+            if (!q2.empty) originQueryMatch = q2.docs[0];
+          }
+          if (originQueryMatch) batch.update(originQueryMatch.ref, { stock: originQueryMatch.data().stock + item.quantity });
+        } catch (e) { console.error("Error revirtiendo origen:", e); }
+
+        try {
+          let destQueryMatch = null;
+          if (item.idNum && item.idNum !== "-") {
+            let q1 = await db.collection("inventoryProducts").where("idNum", "==", item.idNum).where("bodegaId", "==", t.destBodegaId).get();
+            if (!q1.empty) destQueryMatch = q1.docs[0];
+          }
+          if (!destQueryMatch) {
+            let q2 = await db.collection("inventoryProducts").where("name", "==", item.productName).where("bodegaId", "==", t.destBodegaId).get();
+            if (!q2.empty) destQueryMatch = q2.docs[0];
+          }
+          if (destQueryMatch) {
+            let newDestStock = destQueryMatch.data().stock - item.quantity;
+            batch.update(destQueryMatch.ref, { stock: newDestStock < 0 ? 0 : newDestStock });
+          }
+        } catch (e) { console.error("Error revirtiendo destino:", e); }
+      }
+    } else if (t.productId && t.productName) {
+      try {
+        let originQueryMatch = await db.collection("inventoryProducts").where("name", "==", t.productName).where("bodegaId", "==", t.sourceBodegaId).get();
+        if (!originQueryMatch.empty) batch.update(originQueryMatch.docs[0].ref, { stock: originQueryMatch.docs[0].data().stock + t.quantity });
+      } catch (e) { console.error("Legacy origin revert err", e); }
+      try {
+        let destQueryMatch = await db.collection("inventoryProducts").where("name", "==", t.productName).where("bodegaId", "==", t.destBodegaId).get();
+        if (!destQueryMatch.empty) {
+          let newStock = destQueryMatch.docs[0].data().stock - t.quantity;
+          batch.update(destQueryMatch.docs[0].ref, { stock: newStock < 0 ? 0 : newStock });
+        }
+      } catch (e) { console.error("Legacy dest revert err", e); }
+    }
+
+    // Delete old transfer record
+    batch.delete(db.collection("transfers").doc(transferId));
+    await batch.commit();
+
+    // 2. Open Modal and populate data
+    await showAddTransferForm(); // This clears and sets up options
+
+    let transferModalEl = document.getElementById('transferModal');
+    let transferModal = bootstrap.Modal.getInstance(transferModalEl);
+    if (!transferModal) {
+      transferModal = new bootstrap.Modal(transferModalEl);
+    }
+    transferModal.show();
+
+    document.getElementById("transferDestination").value = t.destBodegaId;
+    document.getElementById("transferUser").value = t.user || "";
+
+    let tbody = document.getElementById("transferItemsTable").querySelector("tbody");
+    tbody.innerHTML = "";
+
+    // Repopulate rows based on previous items
+    if (t.items && t.items.length > 0) {
+      t.items.forEach(item => {
+        addTransferItem();
+        let currRow = tbody.lastElementChild;
+        // Wait briefly for select options to settle
+        setTimeout(() => {
+          let sel = currRow.querySelector(".transfer-product-select");
+          let qty = currRow.querySelector(".transfer-quantity-input");
+
+          // Trying to match via name because productId might be out of sync
+          let matchedOption = Array.from(sel.options).find(opt => opt.text === item.productName);
+          if (matchedOption) sel.value = matchedOption.value;
+
+          qty.value = item.quantity;
+        }, 100);
+      });
+    } else if (t.productId && t.productName) {
+      addTransferItem();
+      let currRow = tbody.lastElementChild;
+      setTimeout(() => {
+        let sel = currRow.querySelector(".transfer-product-select");
+        let qty = currRow.querySelector(".transfer-quantity-input");
+        let matchedOption = Array.from(sel.options).find(opt => opt.text === t.productName);
+        if (matchedOption) sel.value = matchedOption.value;
+        qty.value = t.quantity;
+      }, 100);
+    }
+
+  } catch (error) {
+    console.error("Error al editar traslado:", error);
+    alert("Error al cargar datos para editar: " + error.message);
+  }
+}
+
+function addTransferItem() {
+  let tbody = document.getElementById("transferItemsTable").querySelector("tbody");
+  let row = tbody.insertRow();
+
+  let cellSelect = row.insertCell(0);
+  let cellQuantity = row.insertCell(1);
+  let cellAction = row.insertCell(2);
+
+  cellSelect.innerHTML = `<select class="form-select transfer-product-select" required>${window.transferProductOptions || '<option value="">Cargando...</option>'}</select>`;
+  cellQuantity.innerHTML = `<input type="number" class="form-control transfer-quantity-input" min="1" required />`;
+  cellAction.innerHTML = `<button type="button" class="btn btn-danger btn-sm" onclick="removeTransferItem(this)"><i class="fa-solid fa-trash"></i></button>`;
+}
+
+function removeTransferItem(btn) {
+  let row = btn.parentNode.parentNode;
+  row.parentNode.removeChild(row);
+}
+
+async function saveTransfer() {
+  try {
+    let destBodegaId = document.getElementById("transferDestination").value;
+    let user = document.getElementById("transferUser").value.trim();
+
+    if (!destBodegaId || !user) {
+      throw new Error("Por favor complete todos los campos obligatorios.");
+    }
+
+    let tbody = document.getElementById("transferItemsTable").querySelector("tbody");
+    let rows = tbody.querySelectorAll("tr");
+    if (rows.length === 0) throw new Error("Debe agregar al menos un producto.");
+
+    let items = [];
+    for (let i = 0; i < rows.length; i++) {
+      let select = rows[i].querySelector(".transfer-product-select");
+      let input = rows[i].querySelector(".transfer-quantity-input");
+      if (!select || !input) continue;
+
+      let productId = select.value;
+      let quantity = parseFloat(input.value);
+
+      if (!productId || isNaN(quantity) || quantity <= 0) {
+        throw new Error("Asegúrese de seleccionar el producto y establecer una cantidad mayor a 0 en todas las filas.");
+      }
+      items.push({ productId, quantity });
+    }
+
+    if (items.length === 0) throw new Error("Debe agregar al menos un producto válido.");
+
+    let batch = db.batch();
+    let totalQuantity = 0;
+    let transferItemsForDoc = [];
+
+    // Loop through each item
+    for (let item of items) {
+      let sourceRef = db.collection("inventoryProducts").doc(item.productId);
+      let sourceDoc = await sourceRef.get();
+      if (!sourceDoc.exists) throw new Error("Producto origen no encontrado: " + item.productId);
+      let sourceProduct = sourceDoc.data();
+
+      if (sourceProduct.stock < item.quantity) {
+        throw new Error(`No hay suficiente stock para el producto ${sourceProduct.name}. Solicitado: ${item.quantity}, Disponible: ${sourceProduct.stock}`);
+      }
+
+      let productRefId = sourceProduct.productRef || null;
+      let destQuery = null;
+
+      if (productRefId) {
+        destQuery = await db.collection("inventoryProducts")
+          .where("productRef", "==", productRefId)
+          .get();
+      } else {
+        destQuery = await db.collection("inventoryProducts")
+          .where("name", "==", sourceProduct.name)
+          .get();
+      }
+
+      let destDocRef = null;
+      let currentDestDocData = null;
+
+      destQuery.docs.forEach(d => {
+        let bg = d.data().bodegaId;
+        if (destBodegaId === "principal") {
+          if (!bg || bg === "principal") {
+            destDocRef = d.ref;
+            currentDestDocData = d.data();
+          }
+        } else {
+          if (bg === destBodegaId) {
+            destDocRef = d.ref;
+            currentDestDocData = d.data();
+          }
+        }
+      });
+
+      if (!destDocRef) {
+        let newProduct = {
+          name: sourceProduct.name,
+          description: sourceProduct.description || "",
+          unit: sourceProduct.unit || "",
+          price: sourceProduct.price || 0,
+          stock: 0,
+          stockMin: sourceProduct.stockMin || 0,
+          idNum: Date.now() + Math.floor(Math.random() * 1000),
+          productRef: productRefId,
+          bodegaId: destBodegaId
+        };
+        destDocRef = db.collection("inventoryProducts").doc();
+        batch.set(destDocRef, newProduct);
+      } else {
+        batch.update(destDocRef, { stock: currentDestDocData.stock + item.quantity });
+      }
+
+      batch.update(sourceRef, { stock: sourceProduct.stock - item.quantity });
+
+      let movOrigenRef = db.collection("inventoryMovements").doc();
+      batch.set(movOrigenRef, {
+        productId: item.productId,
+        type: "salida",
+        quantity: item.quantity,
+        date: firebase.firestore.FieldValue.serverTimestamp(),
+        user: user,
+        reason: "Traslado a sucursal",
+        comments: "Traslado hacia sucursal " + destBodegaId.substring(0, 8),
+        bodegaId: currentBodegaId,
+        isTransfer: true
+      });
+
+      let movDestinoRef = db.collection("inventoryMovements").doc();
+      batch.set(movDestinoRef, {
+        productId: destDocRef.id,
+        type: "entrada",
+        quantity: item.quantity,
+        date: firebase.firestore.FieldValue.serverTimestamp(),
+        user: user,
+        reason: "Recepción de traslado",
+        comments: "Traslado desde sucursal " + currentBodegaId.substring(0, 8),
+        bodegaId: destBodegaId,
+        isTransfer: true
+      });
+
+      totalQuantity += item.quantity;
+      transferItemsForDoc.push({
+        productId: productRefId || sourceProduct.idNum || "-",
+        productName: sourceProduct.name,
+        quantity: item.quantity,
+        price: sourceProduct.price || 0,
+        idNum: sourceProduct.idNum || "-"
+      });
+    }
+
+    let transferRef = db.collection("transfers").doc();
+    batch.set(transferRef, {
+      sourceBodegaId: currentBodegaId,
+      destBodegaId: destBodegaId,
+      items: transferItemsForDoc,
+      totalQuantity: totalQuantity,
+      user: user,
+      date: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    await batch.commit();
+
+    alert("Traslado realizado exitosamente.");
+    closeModal("transferModal");
+    loadTransfers();
+    loadProducts();
+    if (typeof loadMovements === "function") loadMovements();
+
+  } catch (error) {
+    console.error("Error al realizar traslado:", error);
+    alert("Error al realizar traslado: " + error.message);
+  }
+}
+
+async function loadTransfers() {
+  try {
+    if (!currentBodegaId) return;
+
+    let sourceQuery = db.collection("transfers").where("sourceBodegaId", "==", currentBodegaId).get();
+    let destQuery = db.collection("transfers").where("destBodegaId", "==", currentBodegaId).get();
+
+    let [sourceSnap, destSnap] = await Promise.all([sourceQuery, destQuery]);
+
+    window.transfersMap = new Map();
+    sourceSnap.forEach(doc => window.transfersMap.set(doc.id, doc.data()));
+    destSnap.forEach(doc => window.transfersMap.set(doc.id, doc.data()));
+
+    let transfers = Array.from(window.transfersMap.values());
+    transfers.sort((a, b) => {
+      let tA = a.date ? (a.date.seconds || 0) : 0;
+      let tB = b.date ? (b.date.seconds || 0) : 0;
+      return tB - tA; // desc
+    });
+
+    let [bodegasSnap, sucursalesSnap] = await Promise.all([
+      db.collection("bodegas").get(),
+      db.collection("sucursales").get()
+    ]);
+
+    let bodegasMap = { "principal": "Bodega Principal" };
+    bodegasSnap.forEach(doc => bodegasMap[doc.id] = doc.data().name + " (Bodega)");
+    sucursalesSnap.forEach(doc => bodegasMap[doc.id] = doc.data().name + " (Sucursal)");
+
+    let tbody = document.getElementById("transfersTable").querySelector("tbody");
+    tbody.innerHTML = "";
+
+    transfers.forEach(t => {
+      let tId = "";
+      for (let [key, val] of window.transfersMap.entries()) {
+        if (val === t) { tId = key; break; }
+      }
+
+      let itemsText = "Varios Productos";
+      if (t.items && t.items.length === 1) itemsText = t.items[0].productName;
+      else if (t.productName && (!t.items || t.items.length === 0)) itemsText = t.productName;
+
+      let totalQty = t.totalQuantity || t.quantity || 0;
+
+      let row = tbody.insertRow();
+      let dateObj = t.date?.seconds ? new Date(t.date.seconds * 1000) : new Date();
+      row.insertCell(0).textContent = dateObj.toLocaleString();
+      row.insertCell(1).textContent = itemsText;
+      row.insertCell(2).textContent = totalQty;
+      row.insertCell(3).textContent = bodegasMap[t.sourceBodegaId] || t.sourceBodegaId;
+      row.insertCell(4).textContent = bodegasMap[t.destBodegaId] || t.destBodegaId;
+      row.insertCell(5).textContent = t.user;
+      row.insertCell(6).innerHTML = `
+        <button class="btn btn-sm btn-info" onclick="exportTransfer('${tId}')" title="Constancia">
+          <i class="fa-solid fa-file-pdf"></i>
+        </button>
+        <button class="btn btn-sm btn-warning ms-1" onclick="editTransfer('${tId}')" title="Editar">
+          <i class="fa-solid fa-edit"></i>
+        </button>
+        <button class="btn btn-sm btn-danger ms-1" onclick="deleteTransfer('${tId}')" title="Eliminar">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      `;
+    });
+
+  } catch (error) {
+    console.error("Error cargando historial de traslados:", error);
+  }
+}
+
+async function deleteTransfer(transferId) {
+  if (!confirm("¿Está seguro de eliminar este traslado? Los productos volverán a la bodega de origen y se eliminarán del destino si es posible.")) return;
+  try {
+    let tDoc = await db.collection("transfers").doc(transferId).get();
+    if (!tDoc.exists) throw new Error("Traslado no encontrado");
+    let t = tDoc.data();
+
+    let batch = db.batch();
+
+    // Reverse items
+    if (t.items && t.items.length > 0) {
+      for (const item of t.items) {
+        if (!item.productId || item.productId === "-") continue;
+
+        // 1. Aumentar stock en sourceBodega (si el producto existe en origen)
+        try {
+          // Buscamos el producto en la base usando el idNum o el productRef
+          let originQueryMatch = null;
+          if (item.idNum && item.idNum !== "-") {
+            let q1 = await db.collection("inventoryProducts")
+              .where("idNum", "==", item.idNum)
+              .where("bodegaId", "==", t.sourceBodegaId).get();
+            if (!q1.empty) originQueryMatch = q1.docs[0];
+          }
+          if (!originQueryMatch) {
+            let q2 = await db.collection("inventoryProducts")
+              .where("name", "==", item.productName)
+              .where("bodegaId", "==", t.sourceBodegaId).get();
+            if (!q2.empty) originQueryMatch = q2.docs[0];
+          }
+
+          if (originQueryMatch) {
+            batch.update(originQueryMatch.ref, { stock: originQueryMatch.data().stock + item.quantity });
+          }
+        } catch (e) { console.error("Error revirtiendo origen:", e); }
+
+        // 2. Disminuir stock en destBodega (si el producto existe en destino)
+        try {
+          let destQueryMatch = null;
+          if (item.idNum && item.idNum !== "-") {
+            let q1 = await db.collection("inventoryProducts")
+              .where("idNum", "==", item.idNum)
+              .where("bodegaId", "==", t.destBodegaId).get();
+            if (!q1.empty) destQueryMatch = q1.docs[0];
+          }
+          if (!destQueryMatch) {
+            let q2 = await db.collection("inventoryProducts")
+              .where("name", "==", item.productName)
+              .where("bodegaId", "==", t.destBodegaId).get();
+            if (!q2.empty) destQueryMatch = q2.docs[0];
+          }
+
+          if (destQueryMatch) {
+            let newDestStock = destQueryMatch.data().stock - item.quantity;
+            if (newDestStock < 0) newDestStock = 0;
+            batch.update(destQueryMatch.ref, { stock: newDestStock });
+          }
+        } catch (e) { console.error("Error revirtiendo destino:", e); }
+      }
+    } else if (t.productId && t.productName) {
+      // Legacy transfer compatibility
+      try {
+        let originQueryMatch = await db.collection("inventoryProducts").where("name", "==", t.productName).where("bodegaId", "==", t.sourceBodegaId).get();
+        if (!originQueryMatch.empty) batch.update(originQueryMatch.docs[0].ref, { stock: originQueryMatch.docs[0].data().stock + t.quantity });
+      } catch (e) { console.error("Legacy origin revert err", e); }
+
+      try {
+        let destQueryMatch = await db.collection("inventoryProducts").where("name", "==", t.productName).where("bodegaId", "==", t.destBodegaId).get();
+        if (!destQueryMatch.empty) {
+          let newStock = destQueryMatch.docs[0].data().stock - t.quantity;
+          batch.update(destQueryMatch.docs[0].ref, { stock: newStock < 0 ? 0 : newStock });
+        }
+      } catch (e) { console.error("Legacy dest revert err", e); }
+    }
+
+    // Delete Transfer
+    batch.delete(db.collection("transfers").doc(transferId));
+
+    await batch.commit();
+    alert("Traslado eliminado y stock revertido correctamente.");
+    loadTransfers();
+    loadProducts();
+    if (typeof loadMovements === "function") loadMovements();
+  } catch (error) {
+    console.error("Error eliminando traslado:", error);
+    alert("Error eliminando traslado: " + error.message);
+  }
+}
+
+/* =========================
+   EXPORTAR CONSTANCIA TRASLADO
+============================*/
+async function exportTransfer(transferId) {
+  try {
+    if (!window.transfersMap || !window.transfersMap.has(transferId)) {
+      alert("No se encontraron los datos del traslado.");
+      return;
+    }
+    const t = window.transfersMap.get(transferId);
+
+    let [bodegasSnap, sucursalesSnap] = await Promise.all([
+      db.collection("bodegas").get(),
+      db.collection("sucursales").get()
+    ]);
+
+    let bodegasMap = { "principal": { name: "Bodega Principal", address: "Sede Principal" } };
+    bodegasSnap.forEach(doc => bodegasMap[doc.id] = { name: doc.data().name + " (Bodega)", address: doc.data().location || "Sin dirección" });
+    sucursalesSnap.forEach(doc => bodegasMap[doc.id] = { name: doc.data().name + " (Sucursal)", address: doc.data().address || doc.data().location || "Sin dirección" });
+
+    let dateObj = t.date?.seconds ? new Date(t.date.seconds * 1000) : new Date();
+
+    document.getElementById("eTransferDate").textContent = dateObj.toLocaleString();
+    document.getElementById("eTransferSource").textContent = bodegasMap[t.sourceBodegaId] ? bodegasMap[t.sourceBodegaId].name : t.sourceBodegaId;
+    // NUEVO: Direccion Origen
+    document.getElementById("eTransferSourceAddr").textContent = bodegasMap[t.sourceBodegaId] ? bodegasMap[t.sourceBodegaId].address : "-";
+    document.getElementById("eTransferDest").textContent = bodegasMap[t.destBodegaId] ? bodegasMap[t.destBodegaId].name : t.destBodegaId;
+    document.getElementById("eTransferDestAddr").textContent = bodegasMap[t.destBodegaId] ? bodegasMap[t.destBodegaId].address : "-";
+    document.getElementById("eTransferUser").textContent = t.user;
+
+    let itemsBody = document.getElementById("eTransferItemsBody");
+    itemsBody.innerHTML = "";
+
+    let grandTotal = 0;
+
+    if (t.items && t.items.length > 0) {
+      for (const item of t.items) {
+        let p = parseFloat(item.price) || 0;
+        try {
+          if (item.productId && item.productId !== "-") {
+            let pDoc = await db.collection("inventoryProducts").doc(item.productId.toString()).get();
+            if (pDoc.exists && pDoc.data().price !== undefined) {
+              p = parseFloat(pDoc.data().price) || p;
+            }
+          }
+        } catch (e) { console.error("Error fetching price for export", e); }
+
+        let q = parseFloat(item.quantity) || 0;
+        let sub = p * q;
+        grandTotal += sub;
+
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="border-bottom: 1px solid #eee; padding: 12px 8px; color: #444;">${item.idNum || "-"}</td>
+          <td style="border-bottom: 1px solid #eee; padding: 12px 8px; color: #444;">${item.productName}</td>
+          <td style="border-bottom: 1px solid #eee; padding: 12px 8px; text-align:center; color: #444;">Q${p.toFixed(2)}</td>
+          <td style="border-bottom: 1px solid #eee; padding: 12px 8px; text-align:center; color: #444;">${q}</td>
+          <td style="border-bottom: 1px solid #eee; padding: 12px 8px; text-align:right; color: #444;">Q${sub.toFixed(2)}</td>
+        `;
+        itemsBody.appendChild(tr);
+      }
+    } else {
+      let p = parseFloat(t.price) || 0;
+      let q = parseFloat(t.quantity) || 0;
+
+      try {
+        if (t.productId && t.productId !== "-") {
+          let pDoc = await db.collection("inventoryProducts").doc(t.productId.toString()).get();
+          if (pDoc.exists && pDoc.data().price !== undefined) {
+            p = parseFloat(pDoc.data().price) || p;
+          }
+        }
+      } catch (e) { console.error("Error fetching single item price", e); }
+      let sub = p * q;
+      grandTotal += sub;
+
+      let tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="border-bottom: 1px solid #eee; padding: 12px 8px; color: #444;">-</td>
+        <td style="border-bottom: 1px solid #eee; padding: 12px 8px; color: #444;">${t.productName || "Desconocido"}</td>
+        <td style="border-bottom: 1px solid #eee; padding: 12px 8px; text-align:center; color: #444;">Q${p.toFixed(2)}</td>
+        <td style="border-bottom: 1px solid #eee; padding: 12px 8px; text-align:center; color: #444;">${q}</td>
+        <td style="border-bottom: 1px solid #eee; padding: 12px 8px; text-align:right; color: #444;">Q${sub.toFixed(2)}</td>
+      `;
+      itemsBody.appendChild(tr);
+    }
+
+    document.getElementById("eTransferTotalAmount").textContent = grandTotal.toFixed(2);
+
+    const exportContainer = document.getElementById("exportTransferContainer");
+
+    // Set base64 image to prevent tainted canvas
+    if (typeof LOGO_BASE64 !== 'undefined') {
+      document.getElementById("exportLogoImg").src = LOGO_BASE64;
+    }
+
+    exportContainer.style.display = "block";
+
+    setTimeout(() => {
+      html2canvas(exportContainer, { scale: 2, useCORS: true, allowTaint: true }).then((canvas) => {
+        const link = document.createElement("a");
+        link.download = "Constancia_Traslado_" + dateObj.toISOString().slice(0, 10) + ".png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        exportContainer.style.display = "none";
+      }).catch(err => {
+        console.error("html2canvas error:", err);
+        alert("Ocurrió un error al generar la imagen. Intente nuevamente.");
+        exportContainer.style.display = "none";
+      });
+    }, 500); // 500ms allows logo to potentially load
+  } catch (error) {
+    console.error("Error al exportar traslado:", error);
+    alert("Error al exportar traslado: " + error.message);
+  }
+}
+
+/* =========================
    INICIALIZACIÓN DE LA PÁGINA
 ============================*/
-window.onload = function() {
+window.onload = async function () {
+  await initBodegas();
   showSection("products");
   populateProductSelects();
 };

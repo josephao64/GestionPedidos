@@ -426,9 +426,23 @@ async function printAuthLetter(loanId) {
     win.document.close();
 }
 
-function printRequestForm(loanId) {
+async function printRequestForm(loanId) {
     const loan = allLoans.find(l => l.id === loanId);
     if (!loan) return;
+
+    // Fetch Letterhead
+    let letterheadImg = 'membrete vipizza.png'; // Default
+    let branchName = 'GestionPedidos';
+    try {
+        if (loan.sucursalId) {
+            const sDoc = await db.collection('sucursales').doc(loan.sucursalId).get();
+            if (sDoc.exists) {
+                const sData = sDoc.data();
+                if (sData.membrete) letterheadImg = sData.membrete;
+                if (sData.name) branchName = sData.name;
+            }
+        }
+    } catch (e) { console.error("Error fetching letterhead", e); }
 
     const win = window.open('', '_blank');
     const dateStr = loan.createdAt ? new Date(loan.createdAt.seconds * 1000).toLocaleDateString('es-GT') : new Date().toLocaleDateString('es-GT');
@@ -438,75 +452,101 @@ function printRequestForm(loanId) {
         <head>
             <title>Solicitud de ${loan.type}</title>
             <style>
-                body { font-family: 'Arial', sans-serif; padding: 50px; max-width: 800px; margin: 0 auto; line-height: 1.6; color: #333; }
-                .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-                .title { font-size: 20px; font-weight: bold; text-transform: uppercase; margin-bottom: 30px; text-align: center; background: #f3f4f6; padding: 10px; }
-                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+                @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+                
+                @page { margin: 0; size: auto; }
+                
+                body { 
+                    font-family: 'Roboto', Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 0;
+                    color: #000;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                
+                .page {
+                    width: 8.5in;
+                    height: 11in;
+                    padding: 1in;
+                    box-sizing: border-box;
+                    background-image: url('../resources/images/${letterheadImg}');
+                    background-size: 100% 100%;
+                    background-repeat: no-repeat;
+                    position: relative;
+                }
+
+                .header-date {
+                    text-align: right;
+                    margin-top: 1in;
+                    margin-bottom: 20px;
+                    font-size: 1.1em;
+                }
+
+                .title {
+                    font-size: 1.4em;
+                    font-weight: bold;
+                    text-decoration: underline;
+                    text-transform: uppercase;
+                    margin-bottom: 40px;
+                    text-align: center;
+                }
+
+                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; font-size: 1.1em; }
                 .field { margin-bottom: 15px; }
-                .label { font-weight: bold; font-size: 14px; color: #555; }
-                .value { font-size: 16px; border-bottom: 1px dotted #999; padding-bottom: 5px; }
-                .comments { margin: 30px 0; border: 1px solid #ddd; padding: 15px; background: #fafafa; }
-                .signatures { margin-top: 80px; display: flex; justify-content: space-between; gap: 40px; }
-                .sig-box { text-align: center; border-top: 1px solid #000; padding-top: 10px; flex: 1; }
+                .label { font-weight: bold; color: #333; }
+                .value { border-bottom: 1px dotted #999; padding-bottom: 5px; display:inline-block; min-width: 50%; }
+
+                .comments { margin: 30px 0; border: 1px solid #ddd; padding: 15px; background: rgba(255,255,255,0.8); }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h2>${loan.sucursalName || 'GestionPedidos'}</h2>
-                <p>SOLICITUD DE PERSONAL</p>
-                <p style="font-size: 14px; color: #666;">Fecha: ${dateStr}</p>
+            <div class="page">
+                <div class="header-date">
+                    ${branchName}<br>
+                    Fecha: ${dateStr}
+                </div>
+                
+                <div class="title">SOLICITUD DE ${loan.type.toUpperCase()}</div>
+
+                <div class="grid">
+                    <div class="field">
+                        <span class="label">Empleado Solicitante:</span><br>
+                        <span class="value">${loan.employeeName}</span>
+                    </div>
+                    <div class="field">
+                        <span class="label">Monto Solicitado:</span><br>
+                        <span class="value">Q${loan.amount.toFixed(2)}</span>
+                    </div>
+                    <div class="field">
+                        <span class="label">Tipo:</span><br>
+                        <span class="value">${loan.type === 'adelanto' ? 'Adelanto Salarial' : 'Préstamo Personal'}</span>
+                    </div>
+                    <div class="field">
+                        <span class="label">Plan de Pago:</span><br>
+                        <span class="value">${loan.installments} cuotas ${loan.frequency}es</span>
+                    </div>
+                    <div class="field">
+                        <span class="label">Cuota Aproximada:</span><br>
+                        <span class="value">Q${loan.installmentAmount.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div class="comments">
+                    <div class="label">Motivo / Comentarios:</div>
+                    <p>${loan.comments || 'Sin comentarios adicionales.'}</p>
+                </div>
+
+                <p style="font-size: 12px; text-align: center; margin-top: 50px;">
+                    Declaro que la información es correcta y autorizo el trámite de esta solicitud.
+                </p>
+                
+                <!-- Signatures removed as requested -->
             </div>
             
-            <div class="title">SOLICITUD DE ${loan.type.toUpperCase()}</div>
-
-            <div class="grid">
-                <div class="field">
-                    <div class="label">Empleado Solicitante:</div>
-                    <div class="value">${loan.employeeName}</div>
-                </div>
-                <div class="field">
-                    <div class="label">Monto Solicitado:</div>
-                    <div class="value">Q${loan.amount.toFixed(2)}</div>
-                </div>
-                <div class="field">
-                    <div class="label">Tipo:</div>
-                    <div class="value">${loan.type === 'adelanto' ? 'Adelanto Salarial' : 'Préstamo Personal'}</div>
-                </div>
-                <div class="field">
-                    <div class="label">Plan de Pago:</div>
-                    <div class="value">${loan.installments} cuotas ${loan.frequency}es</div>
-                </div>
-                <div class="field">
-                    <div class="label">Cuota Aproximada:</div>
-                    <div class="value">Q${loan.installmentAmount.toFixed(2)}</div>
-                </div>
-            </div>
-
-            <div class="comments">
-                <div class="label">Motivo / Comentarios:</div>
-                <p>${loan.comments || 'Sin comentarios adicionales.'}</p>
-            </div>
-
-            <p style="font-size: 12px; text-align: center; margin-top: 50px;">
-                Declaro que la información es correcta y autorizo el trámite de esta solicitud.
-            </p>
-
-            <div class="signatures">
-                <div class="sig-box">
-                    Firma del Empleado<br>
-                    <strong>${loan.employeeName}</strong>
-                </div>
-                <div class="sig-box">
-                    Vo.Bo. Jefe Inmediato<br>
-                    (Supervisor)
-                </div>
-                <div class="sig-box">
-                    Autorización Final<br>
-                    Gerencia / RRHH
-                </div>
-            </div>
-            
-            <script>window.print();</script>
+            <script>
+                window.onload = function() { setTimeout(function(){ window.print(); }, 500); }
+            </script>
         </body>
         </html>
     `);

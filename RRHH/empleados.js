@@ -508,6 +508,7 @@ async function openEmpleadoModal(id = null) {
             form.positionId.value = data.positionId;
             form.startDate.value = data.startDate;
             form.contractType.value = data.contractType;
+            if (form.sexo) form.sexo.value = data.sexo || '';
 
             // Sub Empresa
             if (form.subEmpresa) {
@@ -622,6 +623,7 @@ document.getElementById('empleadoForm').addEventListener('submit', async (e) => 
         dpi: form.dpi.value.trim(),
         employeeCode: empCode,
         nit: empCode,
+        sexo: form.sexo ? form.sexo.value : '',
 
         igss: form.igss.value.trim(),
         phone: form.phone.value.trim(),

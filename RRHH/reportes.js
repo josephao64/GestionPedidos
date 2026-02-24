@@ -286,6 +286,8 @@ window.reports = {
 
                 employees.push({
                     name: emp.fullName,
+                    dpi: emp.dpi,
+                    sexo: emp.sexo,
                     position: positionMap[emp.positionId] || 'Desconocido',
                     branch: branchMap[branchId] || 'Sin Asignar',
                     startDate: emp.startDate || '',
@@ -329,6 +331,8 @@ window.reports = {
                 html += `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
                         <td style="padding: 12px;"><strong>${e.name}</strong></td>
+                        <td style="padding: 12px;">${e.dpi || '-'}</td>
+                        <td style="padding: 12px;">${e.sexo || '-'}</td>
                         <td style="padding: 12px;">${e.position}</td>
                         <td style="padding: 12px;"><span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;">${e.branch}</span></td>
                         <td style="padding: 12px;">${dateStr}</td>

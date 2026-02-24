@@ -68,6 +68,7 @@ async function saveMovement() {
         user: user,
         reason: reason,
         comments: comments,
+        bodegaId: currentBodegaId
       });
     } else {
       // Registrar nuevo movimiento
@@ -90,6 +91,7 @@ async function saveMovement() {
         user: user,
         reason: reason,
         comments: comments,
+        bodegaId: currentBodegaId
       });
     }
     closeModal("movementModal");
@@ -113,6 +115,11 @@ async function loadMovements() {
     let filterProduct = filterProductElem ? filterProductElem.value : "";
 
     // Construir la consulta a Firestore
+    if (!currentBodegaId) {
+      document.getElementById("movementsTable").getElementsByTagName("tbody")[0].innerHTML = "";
+      return;
+    }
+
     let query = db.collection("inventoryMovements");
     if (filterProduct !== "") {
       query = query.where("productId", "==", filterProduct);
@@ -126,6 +133,13 @@ async function loadMovements() {
     // Recorrer documentos y aplicar filtro de responsable de forma cliente
     for (let doc of snapshot.docs) {
       let m = doc.data();
+      let bg = m.bodegaId;
+      if (currentBodegaId === "principal") {
+        if (bg && bg !== "principal") continue;
+      } else {
+        if (bg !== currentBodegaId) continue;
+      }
+
       if (filterUser !== "" && (!m.user || !m.user.toLowerCase().includes(filterUser))) {
         continue;
       }
@@ -215,10 +229,18 @@ async function deleteMovement(movementId) {
 // Función para poblar el select de filtro de producto en movimientos
 async function populateMovementFilterProduct() {
   try {
+    if (!currentBodegaId) return;
     let snapshot = await db.collection("inventoryProducts").get();
     let filterSelect = document.getElementById("movementFilterProduct");
     filterSelect.innerHTML = '<option value="">Todos los productos</option>';
-    snapshot.forEach(doc => {
+    snapshot.docs.forEach(doc => {
+      let data = doc.data();
+      let bg = data.bodegaId;
+      if (currentBodegaId === "principal") {
+        if (bg && bg !== "principal") return;
+      } else {
+        if (bg !== currentBodegaId) return;
+      }
       let option = document.createElement("option");
       option.value = doc.id;
       option.textContent = doc.data().name;
