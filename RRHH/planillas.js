@@ -10,6 +10,7 @@ async function openPersonalizedSlipModal() {
 
     // Set default date to today
     document.getElementById('customSlipDateText').value = new Date().toLocaleDateString('es-GT');
+    document.getElementById('customSlipEmissionDate').value = new Date().toISOString().split('T')[0];
 
     // Show Modal
     modal.style.display = 'flex';
@@ -52,6 +53,7 @@ async function printPersonalizedSlip() {
     const dateText = document.getElementById('customSlipDateText').value;
     const amount = parseFloat(document.getElementById('customSlipAmount').value) || 0;
     const details = document.getElementById('customSlipDetail').value;
+    const rawEmissionDate = document.getElementById('customSlipEmissionDate').value;
 
     // Logo URL from hidden input or fallback
     const logoUrl = document.getElementById('customSlipLogoUrl').value || '../Recibos/logo.png';
@@ -63,7 +65,13 @@ async function printPersonalizedSlip() {
     */
 
     const win = window.open('', '_blank');
-    const emissionDate = new Date().toLocaleDateString('es-GT');
+
+    // Format emission date
+    let emissionDate = new Date().toLocaleDateString('es-GT');
+    if (rawEmissionDate) {
+        const [year, month, day] = rawEmissionDate.split('-');
+        emissionDate = `${day}/${month}/${year}`;
+    }
 
     win.document.write(`
         <html>
@@ -349,6 +357,25 @@ async function loadPlanillaTable() {
         empSnap.forEach(doc => {
             const emp = doc.data();
 
+            // 1. FILTER: Skip if hired AFTER the payroll period
+            if (emp.startDate) {
+                // Parse date robustly (DD/MM/YYYY or YYYY-MM-DD or T-formatted)
+                let sDate = emp.startDate;
+                let hireD = null;
+                let parts = sDate.split('-');
+                if (parts.length < 3) parts = sDate.split('/');
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) hireD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    else hireD = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                } else {
+                    hireD = new Date(sDate);
+                }
+
+                if (!isNaN(hireD.getTime()) && hireD > endDate) {
+                    return; // Han't started yet as of this period's end
+                }
+            }
+
             // Filter by Sucursal (Modified for Transferred Employees)
             // Determine effective branch: if transferred, use temp branch; otherwise use origin.
             const effectiveSucursalId = emp.isTempTransfer ? emp.tempSucursalId : emp.sucursalId;
@@ -374,105 +401,112 @@ async function loadPlanillaTable() {
             // Pedidos Flash Overrides (Salary, Bonus, Overtime Rate)
             const empSettings = window.rrhhConfig.getBranchSettings(effectiveSucursalId);
 
-            // --- PROBATION CHECK ---
+            // --- PROBATION CHECK (Robust) ---
             let isProbation = false;
-            if (emp.hiringDate) {
-                // Parse YYYY-MM-DD or DD/MM/YYYY
-                let parts = emp.hiringDate.split('-');
-                if (parts.length < 3) parts = emp.hiringDate.split('/');
-
-                if (parts.length === 3) {
-                    let y, m, d;
-                    // Check if first part is Year (4 digits)
-                    if (parts[0].length === 4) {
-                        y = parseInt(parts[0]);
-                        m = parseInt(parts[1]) - 1;
-                        d = parseInt(parts[2]);
+            const effectiveStartDate = emp.startDate || emp.hiringDate || emp.fechaIngreso;
+            if (effectiveStartDate) {
+                let hireDate = null;
+                // Handle Firestore Timestamp, Date object, or String
+                if (typeof effectiveStartDate === 'object' && effectiveStartDate.toDate) {
+                    hireDate = effectiveStartDate.toDate();
+                } else if (effectiveStartDate instanceof Date) {
+                    hireDate = effectiveStartDate;
+                } else if (typeof effectiveStartDate === 'string') {
+                    let sDate = effectiveStartDate.trim();
+                    let parts = sDate.split('-');
+                    if (parts.length < 3) parts = sDate.split('/');
+                    if (parts.length === 3) {
+                        if (parts[0].length === 4) hireDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        else hireDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
                     } else {
-                        // Assume DD/MM/YYYY
-                        d = parseInt(parts[0]);
-                        m = parseInt(parts[1]) - 1;
-                        y = parseInt(parts[2]);
+                        hireDate = new Date(sDate);
                     }
-                    const hireDate = new Date(y, m, d);
-                    const today = new Date(); // Now
+                }
 
-                    // Reset times to compare dates only
+                if (hireDate && !isNaN(hireDate.getTime())) {
                     hireDate.setHours(0, 0, 0, 0);
+
+                    // Period End comparison
+                    const refDate = new Date(endDate);
+                    refDate.setHours(0, 0, 0, 0);
+                    const diffTimeP = refDate - hireDate;
+                    const diffDaysP = Math.ceil(diffTimeP / (1000 * 60 * 60 * 24));
+
+                    // Current Date comparison (consistency with Badge)
+                    const today = new Date();
                     today.setHours(0, 0, 0, 0);
+                    const diffTimeT = today - hireDate;
+                    const diffDaysT = Math.ceil(diffTimeT / (1000 * 60 * 60 * 24));
 
-                    const diffTime = today - hireDate;
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    let pDays = 60; // Default
+                    if (empSettings && empSettings.probationDays !== undefined && empSettings.probationDays !== '') {
+                        pDays = parseInt(empSettings.probationDays);
+                    } else if (window.rrhhConfig.get().probationDays) {
+                        pDays = parseInt(window.rrhhConfig.get().probationDays);
+                    }
 
-                    const pDays = parseInt(empSettings.probationDays) || 60;
-
-
-
-                    if (diffDays >= 0 && diffDays <= pDays) {
-                        // Employee is in Probation
+                    // If in probation during the period OR currently in probation
+                    if ((diffDaysP >= 0 && diffDaysP <= pDays) || (diffDaysT >= 0 && diffDaysT <= pDays)) {
                         isProbation = true;
 
-                        // 1. Salary Override
+                        // Overrides
                         if (empSettings.probationSalary && empSettings.probationSalary > 0) {
                             monthlySalary = parseFloat(empSettings.probationSalary);
                         }
-
-                        // 2. Overtime Rate Override (Request 2)
                         if (empSettings.probationOvertimeRate && empSettings.probationOvertimeRate > 0) {
                             overtimeRateOverride = parseFloat(empSettings.probationOvertimeRate);
                         }
                     }
+
+                    if (emp.fullName.toLowerCase().includes('kevin')) {
+                        console.log(`[DEBUG PROBATION] Kevin: hireDate=${hireDate.toISOString()}, diffDaysP=${diffDaysP}, diffDaysT=${diffDaysT}, pDays=${pDays}, isProbation=${isProbation}`);
+                    }
                 }
             }
-            // -----------------------
+            // --------------------------------
 
-            const subEmpresaCheck = (emp.subEmpresa || 'Propia').trim();
-            const isPedidosFlash = (subEmpresaCheck === 'Pedidos Flash' || subEmpresaCheck.toUpperCase() === 'PEDIDOS FLASH');
+            const subEmpresaRaw = (emp.subEmpresa || 'Propia').trim();
+            const isPedidosFlash = (subEmpresaRaw.toUpperCase() === 'PEDIDOS FLASH');
 
             // Initialize Bonus from Position or Global Default
             let monthlyBonus = parseFloat(pos.bonificacion || pos.bonus || (window.rrhhConfig.get().bonus) || 250);
-
-
 
             if (isPedidosFlash) {
                 if (empSettings.pedidosSalary && empSettings.pedidosSalary > 0) {
                     monthlySalary = parseFloat(empSettings.pedidosSalary);
                 }
-
-                // Allow 0 overrides for Bonus
                 if (empSettings.pedidosBonus !== undefined) {
-                    // Check if it's not null/undefined/empty string
                     const bVal = parseFloat(empSettings.pedidosBonus);
                     if (!isNaN(bVal)) monthlyBonus = bVal;
                 }
-
                 if (empSettings.pedidosOvertime && empSettings.pedidosOvertime > 0) {
                     overtimeRateOverride = parseFloat(empSettings.pedidosOvertime);
                 }
-            } else {
-                // Check defaults? No, default flow is fine.
             }
 
-            // Bonus Fallback if not overridden
-            // already handled by initial assignment of monthlyBonus
-
             // Calculations
-            // Consistent Logic with updatePlanillaDays
             let periodSalary = 0;
             let periodBonus = 0;
 
             if (daysWorked >= 15) {
-                // Full Quincena (Half Month)
                 periodSalary = monthlySalary / 2;
                 periodBonus = monthlyBonus / 2;
             } else {
-                // Proportional (< 15 days) using 365-day basis standard
                 const dailyRate = (monthlySalary * 12) / 365;
                 periodSalary = dailyRate * daysWorked;
-
                 const dailyBonus = (monthlyBonus * 12) / 365;
                 periodBonus = dailyBonus * daysWorked;
             }
+
+            const igssPct = (window.rrhhConfig && window.rrhhConfig.get().iggsPercentage ? window.rrhhConfig.get().iggsPercentage : 4.83) / 100;
+            let igss = periodSalary * igssPct;
+
+            // --- FINAL PROBATION OVERRIDE ---
+            if (isProbation) {
+                igss = 0;
+                periodBonus = 0;
+            }
+            // --------------------------------
 
             const totalSalary = periodSalary + periodBonus;
             // Dynamic IGSS from Config
@@ -535,8 +569,6 @@ async function loadPlanillaTable() {
                 });
             }
 
-            const igssPct = (window.rrhhConfig && window.rrhhConfig.get().iggsPercentage ? window.rrhhConfig.get().iggsPercentage : 4.83) / 100;
-            const igss = periodSalary * igssPct;
             const isr = 0;
 
             currentPayrollData.push({
@@ -563,7 +595,7 @@ async function loadPlanillaTable() {
                 holidayBonus: 0,
                 finalTotal: 0, // Will be calculated
                 isNew: true,
-                subEmpresa: isProbation ? 'EN PRUEBA' : (emp.subEmpresa || 'Propia').trim(),
+                subEmpresa: isProbation ? 'EN PRUEBA' : subEmpresaRaw,
                 branchName: mainBranchInfo.name,
                 branchLogo: mainBranchInfo.logo
             });
@@ -930,6 +962,15 @@ function updatePlanillaDays(index, value) {
     row.totalSalary = row.salary + row.bonus;
     const igssPct = (window.rrhhConfig && window.rrhhConfig.get().iggsPercentage ? window.rrhhConfig.get().iggsPercentage : 4.83) / 100;
     row.igss = row.salary * igssPct;
+
+    // --- PROBATION OVERRIDE ---
+    if (row.subEmpresa === 'EN PRUEBA') {
+        row.igss = 0;
+        row.bonus = 0;
+        row.totalSalary = row.salary;
+    }
+    // -------------------------
+
     renderPlanillaRows();
 }
 
@@ -1330,44 +1371,46 @@ window.populatePlanillaBranches = populatePlanillaBranches;
 window.printPaymentSlips = printPaymentSlips;
 window.processLoanPayments = processLoanPayments;
 window.closeSaveModal = closeSaveModal;
+window.savePlanilla = savePlanilla;
 window.confirmSavePlanilla = confirmSavePlanilla;
-window.deleteSavedPlanilla = deleteSavedPlanilla;
 window.closeDeleteModal = closeDeleteModal;
 window.confirmDeletePlanilla = confirmDeletePlanilla;
 window.showPayrollTotals = showPayrollTotals;
 window.closePayrollTotalsModal = closePayrollTotalsModal;
 
-function printPaymentSlips(type) {
+async function printPaymentSlips(type) {
     if (currentPayrollData.length === 0) {
         alert("No hay datos cargados para imprimir.");
         return;
     }
 
+    // Prompt for Emission Date
+    const today = new Date().toISOString().split('T')[0];
+    const { value: selectedDate } = await Swal.fire({
+        title: 'Fecha de Emisión',
+        html: '<input type="date" id="print-emission-date" class="swal2-input" value="' + today + '">',
+        focusConfirm: false,
+        preConfirm: () => {
+            return document.getElementById('print-emission-date').value;
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Imprimir',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!selectedDate) {
+        return; // User cancelled
+    }
+
+    const [eyear, emonth, eday] = selectedDate.split('-');
+    const emissionDate = `${eday}/${emonth}/${eyear}`;
+
     const m = document.getElementById('planillaMonth');
     const p = document.getElementById('planillaPeriod');
     const y = document.getElementById('planillaYear');
     const s = document.getElementById('planillaSucursal');
-    // Get Company Title - Fallback to global or derive
-    let companyTitle = "CORPORACION DE ALIMENTOS, S.A.";
-    // CAUTION: The ID in rrhh.html is 'headerCompanyTitleTemplate'
-    const headerTitleEl = document.getElementById('headerCompanyTitleTemplate');
-    if (headerTitleEl && headerTitleEl.innerText) companyTitle = headerTitleEl.innerText;
 
-    // Attempt to get Logo
-    let logoSrc = "../Recibos/logo.png";
-    const logoEl = document.getElementById('headerCompanyLogo');
-    if (logoEl && logoEl.src) logoSrc = logoEl.src;
-
-    // Get Branch Name
-    const sEl = document.getElementById('planillaSucursal');
-    let branchName = "";
-    if (sEl && sEl.selectedIndex >= 0) {
-        // If "Todas" or invalid, maybe handle? Usually "Todas" has value 'all'.
-        if (sEl.value !== 'all') {
-            branchName = sEl.options[sEl.selectedIndex].text;
-        }
-    }
-
+    // Determine Period String
     let periodStr = '';
     if (p && p.value === 'custom') {
         const sVal = document.getElementById('planillaStart').value;
@@ -1377,16 +1420,103 @@ function printPaymentSlips(type) {
             const [yy, mm, dd] = d.split('-');
             return `${dd}/${mm}/${yy}`;
         };
-        // Format: "del: <b>DD/MM/YYYY</b> al <b>DD/MM/YYYY</b>"
-        periodStr = `del: <b>${fmt(sVal)}</b> al <b>${fmt(eVal)}</b>`;
+        periodStr = `del: ${fmt(sVal)} al ${fmt(eVal)}`;
     } else {
         const mText = m ? m.options[m.selectedIndex].text : '';
         const yText = y ? y.value : '';
-        const pText = p ? (p.value == '1' ? 'Del 01 al 15' : 'Del 16 al ' + new Date(y.value, parseInt(m.value) + 1, 0).getDate()) : '';
+        const pVal = p ? p.value : '';
+        const pText = pVal == '1' ? 'Del 01 al 15' : 'Del 16 al ' + new Date(y.value, parseInt(m.value) + 1, 0).getDate();
         periodStr = `${pText} de ${mText} ${yText}`;
     }
 
-    const emissionDate = new Date().toLocaleDateString("es-GT");
+    // Determine Company Info
+    let companyTitle = "CORPORACION DE ALIMENTOS, S.A.";
+    const headerTitleEl = document.getElementById('headerCompanyTitleTemplate');
+    if (headerTitleEl && headerTitleEl.innerText) companyTitle = headerTitleEl.innerText;
+
+    let branchName = "";
+    if (s && s.selectedIndex >= 0) {
+        if (s.value !== 'all') {
+            branchName = s.options[s.selectedIndex].text;
+        } else {
+            branchName = "Todas las Sucursales";
+        }
+    }
+
+    if (type === 'individual') {
+        // Prepare a hidden container for rendering
+        let renderContainer = document.getElementById('slip-render-container');
+        if (!renderContainer) {
+            renderContainer = document.createElement('div');
+            renderContainer.id = 'slip-render-container';
+            renderContainer.style.position = 'absolute';
+            renderContainer.style.left = '-9999px';
+            renderContainer.style.top = '-9999px';
+            renderContainer.style.width = '800px'; 
+            document.body.appendChild(renderContainer);
+        }
+
+        // Show a loading indicator
+        Swal.fire({
+            title: 'Generando boletas...',
+            html: 'Procesando empleado <b id="swal-emp-name"></b> (<span id="swal-emp-count">0</span> de ' + currentPayrollData.length + ')',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const { jsPDF } = window.jspdf;
+
+        for (let i = 0; i < currentPayrollData.length; i++) {
+            const row = currentPayrollData[i];
+            
+            // Update UI
+            document.getElementById('swal-emp-name').innerText = row.name;
+            document.getElementById('swal-emp-count').innerText = (i + 1);
+
+            // Generate HTML for this specific slip (Passing all parameters now)
+            const slipHtml = generateSlipHtml(row, 'normal', companyTitle, branchName, periodStr, emissionDate);
+            renderContainer.innerHTML = slipHtml;
+
+            try {
+                const canvas = await html2canvas(renderContainer, {
+                    scale: 2, 
+                    useCORS: true,
+                    logging: false
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'letter');
+                
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                
+                const cleanName = row.name.replace(/[^a-z0-9]/gi, ' ').trim();
+                const sClean = branchName.replace(/[^a-z0-9]/gi, ' ').trim();
+                const fileName = `${cleanName}_${sClean}_${periodStr.replace(/<[^>]*>?/gm, '').replace(/[^a-z0-9]/gi, '_')}.pdf`;
+                
+                pdf.save(fileName);
+
+                if (i < currentPayrollData.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+
+            } catch (err) {
+                console.error("Error generating PDF for " + row.name, err);
+            }
+        }
+
+        Swal.close();
+        Swal.fire('Completado', 'Se han generado todas las boletas.', 'success');
+        return;
+    }
+
+    // Use already declared variables
+    // Removed redeclarations
 
     const w = window.open('', '_blank');
     w.document.write(`<html><head><title>&nbsp;</title>`);
@@ -1431,7 +1561,7 @@ function printPaymentSlips(type) {
         w.document.write('.header-text h2 { margin: 2px 0; font-size: 11px; font-weight: bold; text-transform: uppercase; }');
         w.document.write('.header-text h3 { margin: 0; font-size: 11px; font-weight: bold; }');
 
-        w.document.write('.page-break { page-break-after: always; display: block; height: 0; overflow: hidden; }');
+        w.document.write('.page-break { break-before: page; break-after: page; page-break-before: always; page-break-after: always; display: block; height: 0; line-height: 0; margin: 0; padding: 0; overflow: hidden; clear: both; }');
 
         w.document.write('</style></head><body>');
         // Add a wrapper to ensure width and force scrolling/landscape
@@ -1516,12 +1646,18 @@ function printPaymentSlips(type) {
                 if (groupRows[0].branchName) {
                     printTitle = groupRows[0].branchName;
                 }
+            } else if (groupKey === 'EN PRUEBA') {
+                printTitle = "PERSONAL EN PERIODO DE PRUEBA";
             } else {
                 printTitle = groupKey; // e.g. 'Pedidos Flash'
             }
 
+            if (groupIdx > 0) {
+                w.document.write('<div class="page-break"></div>');
+            }
+
             w.document.write(`
-                <div class="header-container">
+                <div class="header-container" style="${groupIdx > 0 ? 'margin-top: 20px;' : ''}">
                     <img src="${currentLogo}" class="logo">
                     <div class="header-text">
                         <h1>${printTitle.toUpperCase()}</h1>
@@ -1618,9 +1754,7 @@ function printPaymentSlips(type) {
             </table>
             `);
 
-            if (groupIdx < keys.length - 1) {
-                w.document.write('<div class="page-break"></div>');
-            }
+            // Removed the old page-break div from here as it's now handled before the header
         });
 
         w.document.write('</div>'); // Close Wrapper
@@ -1691,12 +1825,44 @@ function generateSlipHtml(row, type, companyName, branchName, period, emission) 
         // displayCompanyName += " (EN PRUEBA)";
     }
 
-    const showSubtitle = branchName && branchName.toUpperCase() !== displayCompanyName && branchName !== 'Todas las Sucursales';
+    const showSubtitle = branchName && displayCompanyName && branchName.toUpperCase() !== displayCompanyName.toUpperCase() && branchName !== 'Todas las Sucursales';
 
     // NOTE: 'normal' is now handled by Table view above, but we keep this just in case logic is reused or reverted.
     // Logic below handles 'extra' individual slip.
 
-    if (type === 'extra') {
+    if (type === 'normal') {
+        // NORMAL SLIP
+        totalIncome = row.salary + row.bonus;
+        incomeHtml += `<tr><td>Salario Base</td><td class="amount">Q${row.salary.toFixed(2)}</td></tr>`;
+        incomeHtml += `<tr><td>Bonificación Decreto</td><td class="amount">Q${row.bonus.toFixed(2)}</td></tr>`;
+
+        if (row.igss > 0) {
+            deductHtml += `<tr><td>IGSS</td><td class="amount">Q${row.igss.toFixed(2)}</td></tr>`;
+            totalDeduct += row.igss;
+        }
+        if (row.isr > 0) {
+            deductHtml += `<tr><td>ISR</td><td class="amount">Q${row.isr.toFixed(2)}</td></tr>`;
+            totalDeduct += row.isr;
+        }
+        if (row.judicial > 0) {
+            deductHtml += `<tr><td>Judicial</td><td class="amount">Q${row.judicial.toFixed(2)}</td></tr>`;
+            totalDeduct += row.judicial;
+        }
+        if (row.discount > 0) {
+            deductHtml += `<tr><td>Préstamos</td><td class="amount">Q${row.discount.toFixed(2)}</td></tr>`;
+            totalDeduct += row.discount;
+        }
+        if (row.advance > 0) {
+            deductHtml += `<tr><td>Anticipos</td><td class="amount">Q${row.advance.toFixed(2)}</td></tr>`;
+            totalDeduct += row.advance;
+        }
+
+        if (totalDeduct === 0) {
+            deductHtml = '<tr><td colspan="2" style="text-align:center;">-</td></tr>';
+        }
+        liquid = totalIncome - totalDeduct;
+
+    } else if (type === 'extra') {
         // EXTRA SLIP
         // Items: Asueto, Horas Extras, Otros
 
@@ -1727,7 +1893,7 @@ function generateSlipHtml(row, type, companyName, branchName, period, emission) 
                     <h2>${displayCompanyName}</h2>
                     ${showSubtitle ? `<div>${branchName.toUpperCase()}</div>` : ''}
                     <div>BOLETA DE PAGO</div>
-                    <div>${period.toLowerCase().startsWith('del:') ? 'Periodo ' + period : 'Periodo: ' + period}</div>
+                    <div>${(period || "").toLowerCase().startsWith('del:') ? 'Periodo ' + period : 'Periodo: ' + (period || "")}</div>
                 </div>
                 <div style="text-align: right;">
                     <div>EMISIÓN: ${emission}</div>
@@ -2020,6 +2186,12 @@ function updatePlanillaRowSalary(index, newVal) {
     let igssPct = (window.rrhhConfig && window.rrhhConfig.get().iggsPercentage ? window.rrhhConfig.get().iggsPercentage : 4.83) / 100;
     row.igss = row.salary * igssPct;
 
+    // --- PROBATION OVERRIDE ---
+    if (row.subEmpresa === 'EN PRUEBA') {
+        row.igss = 0;
+    }
+    // -------------------------
+
     // Recalculate Liquid
     const totalDeductions = row.igss + row.isr + row.judicial + row.discount + row.advance;
     const liquid = row.totalSalary - totalDeductions;
@@ -2212,6 +2384,12 @@ function updatePlanillaRowBonus(index, newVal) {
     if (isNaN(bonus)) return;
 
     row.bonus = bonus;
+
+    // --- PROBATION OVERRIDE ---
+    if (row.subEmpresa === 'EN PRUEBA') {
+        row.bonus = 0;
+    }
+    // -------------------------
 
     // Recalculate Total Salary
     row.totalSalary = row.salary + row.bonus;

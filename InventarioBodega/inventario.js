@@ -247,6 +247,76 @@ async function saveProduct() {
   }
 }
 
+/* =========================
+   NUEVO PRODUCTO RÁPIDO (CATAÁLOGO) DESDE FACTURA
+============================*/
+function showQuickProductModal() {
+  document.getElementById("qpName").value = "";
+  document.getElementById("qpUnit").value = "Unidad";
+  document.getElementById("qpStockMin").value = "0";
+  // Mostrar modal subyacente
+  let quickModal = new bootstrap.Modal(document.getElementById("quickProductModal"), {
+    backdrop: 'static'
+  });
+  quickModal.show();
+}
+
+function closeQuickProductModal() {
+  let modalEl = document.getElementById("quickProductModal");
+  let modalInstance = bootstrap.Modal.getInstance(modalEl);
+  if (modalInstance) {
+    modalInstance.hide();
+  }
+}
+
+async function saveQuickProduct() {
+  try {
+    let name = document.getElementById("qpName").value.trim();
+    let unit = document.getElementById("qpUnit").value;
+    let stockMin = parseInt(document.getElementById("qpStockMin").value) || 0;
+
+    if (!name) throw new Error("El nombre del producto es obligatorio.");
+
+    let productData = {
+      name: name,
+      description: "",
+      unit: unit,
+      price: 0,
+      stock: 0,
+      stockMin: stockMin,
+      bodegaId: currentBodegaId,
+      idNum: Date.now()
+    };
+
+    let docRef = await db.collection("inventoryProducts").add(productData);
+
+    // Actualizar cache de opciones de productos para factura
+    await loadInvoiceProductOptions();
+
+    // Actualizar todos los selects actuales en el modal de factura
+    let selects = document.querySelectorAll(".invoice-product");
+    selects.forEach(select => {
+      let currentValue = select.value;
+      if (window.invoiceProductOptions) {
+        select.innerHTML = window.invoiceProductOptions;
+      }
+      select.value = currentValue; // Restaurar selección o quedará en blanco
+    });
+
+    closeQuickProductModal();
+
+    // Recargar productos en el fondo si estamos en Bodega
+    loadProducts();
+    populateProductSelects();
+
+    alert("Producto creado y añadido al catálogo. Ya puedes seleccionarlo en la factura.");
+  } catch (error) {
+    console.error("Error al crear producto rápido:", error);
+    alert("Error al crear producto: " + error.message);
+  }
+}
+
+
 async function loadProducts() {
   try {
     if (!currentBodegaId) {
@@ -866,11 +936,12 @@ async function loadInvoices() {
     // Filtrado en cliente por empresa / proveedor / número y bodega
     const filteredDocs = snapshot.docs.filter(d => {
       const inv = d.data();
-      let bg = inv.bodegaId;
-      if (currentBodegaId === "principal") {
-        if (bg && bg !== "principal") return false;
-      } else {
-        if (bg !== currentBodegaId) return false;
+      let bg = inv.bodegaId || "principal"; // Treat legacy invoices as principal
+
+      console.log(`Invoice ${inv.invoiceNum}: currentBodegaId=${currentBodegaId}, inv.bodegaId=${bg}, Keep: ${currentBodegaId === bg}`);
+
+      if (currentBodegaId !== bg) {
+        return false;
       }
       // filtro por empresa
       if (filterCompany && inv.company !== filterCompany) return false;
@@ -1127,7 +1198,16 @@ async function exportInvoiceImage(invoiceId) {
     for (let item of inv.items) {
       let productDoc = await db.collection("inventoryProducts").doc(item.productId).get();
       let productName = productDoc.exists ? productDoc.data().name : "No encontrado";
-      productsHTML += `${productName} - Cantidad: ${item.quantity}, Precio Unitario: Q.${parseFloat(item.unitPrice).toFixed(2)}, Total: Q.${parseFloat(item.total).toFixed(2)}<br>`;
+      let productUnit = productDoc.exists ? (productDoc.data().unit || "-") : "-";
+      productsHTML += `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 12px 8px; color: #444;">${productName}</td>
+          <td style="padding: 12px 8px; text-align: center; color: #444;">${productUnit}</td>
+          <td style="padding: 12px 8px; text-align: center; color: #444;">${item.quantity}</td>
+          <td style="padding: 12px 8px; text-align: center; color: #444;">Q.${parseFloat(item.unitPrice).toFixed(2)}</td>
+          <td style="padding: 12px 8px; text-align: right; color: #444;">Q.${parseFloat(item.total).toFixed(2)}</td>
+        </tr>
+      `;
     }
     document.getElementById("exportInvoiceNum").textContent = inv.invoiceNum ? inv.invoiceNum : "-";
     let dateObj = inv.date?.seconds ? new Date(inv.date.seconds * 1000) : new Date(inv.date);
@@ -1135,6 +1215,12 @@ async function exportInvoiceImage(invoiceId) {
     document.getElementById("exportInvoiceSupplier").textContent = inv.supplier || "";
     document.getElementById("exportInvoiceProducts").innerHTML = productsHTML;
     document.getElementById("exportInvoiceOverallTotal").textContent = inv.overallTotal ? parseFloat(inv.overallTotal).toFixed(2) : "0.00";
+
+    // Asignar el logo dinámicamente desde el de traslado para no duplicar el base64 enorme
+    let transferLogo = document.getElementById("exportLogoImg");
+    if (transferLogo) {
+      document.getElementById("exportInvoiceLogoImg").src = transferLogo.src;
+    }
 
     let exportContainer = document.getElementById("exportInvoiceContainer");
     exportContainer.style.display = "block";
@@ -1161,6 +1247,9 @@ async function exportInvoicesImage() {
     tbody.innerHTML = "";
     for (let doc of snapshot.docs) {
       let inv = doc.data();
+      let bg = inv.bodegaId || "principal";
+      if (currentBodegaId !== bg) continue;
+
       let row = document.createElement("tr");
       let cellNum = document.createElement("td");
       cellNum.textContent = inv.invoiceNum ? inv.invoiceNum : "-";

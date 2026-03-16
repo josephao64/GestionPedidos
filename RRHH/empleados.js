@@ -259,6 +259,7 @@ async function loadEmployees() {
                         <button class="btn btn-info" style="padding: 4px 8px; font-size: 0.75rem; background: #3b82f6; border: none;" onclick="viewEmployeeDetails('${data.id}')" title="Ver Detalles"><i class="fas fa-eye"></i></button>
                         <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="editEmpleado('${data.id}')" title="Editar"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.75rem; background: #8b5cf6; border: none;" onclick="openTransferModal('${data.id}')" title="Trasladar"><i class="fas fa-exchange-alt"></i></button>
+                        <button class="btn btn-info" style="padding: 4px 8px; font-size: 0.75rem; background: #14b8a6; border: none;" onclick="printContract('${data.id}')" title="Generar Contrato"><i class="fas fa-file-signature"></i></button>
                         ${data.status !== 'inactive' ? `<button class="btn btn-warning" style="padding: 4px 8px; font-size: 0.75rem;" onclick="inactivateEmpleado('${data.id}', '${data.fullName}')" title="Dar de Baja"><i class="fas fa-user-slash"></i></button>` : ''}
                         
                         ${data.isTempTransfer ? `<button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75rem; background: #10b981; border: none;" onclick="endTempTransfer('${data.id}', '${data.fullName}', '${data.tempSucursalName}', '${data.sucursalName}')" title="Finalizar Préstamo (Regresar)"><i class="fas fa-undo-alt"></i></button>` : ''}
@@ -275,6 +276,464 @@ async function loadEmployees() {
     } catch (error) {
         console.error("Error loading employees:", error);
         container.innerHTML = '<p style="color: red;">Error al cargar datos.</p>';
+    }
+}
+
+async function printContract(id) {
+    try {
+        const doc = await db.collection('employees').doc(id).get();
+        if (!doc.exists) {
+            Swal.fire('Error', 'No se encontró el empleado', 'error');
+            return;
+        }
+        const data = doc.data();
+
+        // Constants based on the VIPIZZA template
+        const EMPRESA_NOMBRE = "VIPIZZA";
+        const EMPLEADOR_NOMBRE = "Brenda Elizabeth Hernández Rodríguez";
+        const EMPLEADOR_EDAD = "48";
+        const EMPLEADOR_SEXO = "femenina";
+        const EMPLEADOR_ESTADO_CIVIL = "casada";
+        const EMPLEADOR_NACIONALIDAD = "guatemalteca vecina de Zacapa";
+        const EMPLEADOR_DPI = "2317014382101";
+        const EMPLEADOR_DPI_LUGAR = "Guatemala";
+
+        // Calculate Employee Age
+        let empAge = "";
+        if (data.birthDate) {
+            const birthDate = new Date(data.birthDate);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            empAge = age.toString();
+        }
+
+        // Format Date for "Suscrito el día X del mes de Y del año Z"
+        const today = new Date();
+        const startD = data.startDate ? new Date(data.startDate) : today;
+        const startDay = startD.getDate();
+        const startMonthName = startD.toLocaleString('es-GT', { month: 'long' });
+        const startYear = startD.getFullYear();
+
+        let duracionContrato = data.contractType || 'INDEFINIDO';
+        if (duracionContrato !== 'INDEFINIDO' && data.contractDuration) {
+            if (!data.contractDuration.toLowerCase().includes(duracionContrato.toLowerCase())) {
+                duracionContrato = `${duracionContrato} POR ${data.contractDuration}`;
+            } else {
+                duracionContrato = data.contractDuration;
+            }
+        } else if (duracionContrato === 'INDEFINIDO' && data.contractDuration) {
+            duracionContrato = data.contractDuration;
+        }
+        duracionContrato = duracionContrato.toUpperCase();
+
+        let contractDateHtml = "";
+        if (data.startDate) {
+            const contractEndDate = new Date(startD);
+            contractEndDate.setMonth(contractEndDate.getMonth() + 1);
+            contractDateHtml = `PRIMERA: La relación de trabajo inicia el día ${startDay} de ${startMonthName} al ${contractEndDate.getDate()} de ${contractEndDate.toLocaleString('es-GT', { month: 'long' })} del ${contractEndDate.getFullYear()}.`;
+        }
+
+        let repData = {
+            fullName: '______________________',
+            age: '__',
+            sexo: '_______',
+            civilStatus: '_______',
+            nationality: 'guatemalteca, vecina de _______',
+            dpi: '________________',
+            dpiLugar: '_______'
+        };
+
+        let companyName = data.subEmpresa === 'Pedidos Flash' ? 'Pedidos Flash' : 'Corporación de Alimentos VIPIZZA, S.A.';
+        let employeeLocation = '';
+
+        try {
+            if (data.sucursalId) {
+                const sucDoc = await db.collection('sucursales').doc(data.sucursalId).get();
+                if (sucDoc.exists) {
+                    const sucData = sucDoc.data();
+                    employeeLocation = sucData.name || '';
+                    if (sucData.empresaId) {
+                        const empDoc = await db.collection('empresas').doc(sucData.empresaId).get();
+                        if (empDoc.exists) {
+                            const empData = empDoc.data();
+                            // Overwrite name with actual Empresa name
+                            companyName = empData.name || companyName;
+
+                            // Fetch representative data if assigned to Empresa
+                            if (empData.representativeId) {
+                                const repDoc = await db.collection('representantes').doc(empData.representativeId).get();
+                                if (repDoc.exists) {
+                                    const r = repDoc.data();
+                                    repData.fullName = r.fullName;
+                                    if (r.birthDate) {
+                                        const bDate = new Date(r.birthDate);
+                                        let age = today.getFullYear() - bDate.getFullYear();
+                                        const m = today.getMonth() - bDate.getMonth();
+                                        if (m < 0 || (m === 0 && today.getDate() < bDate.getDate())) { age--; }
+                                        repData.age = age.toString();
+                                    }
+                                    repData.sexo = r.sexo;
+                                    repData.civilStatus = r.civilStatus;
+                                    repData.nationality = r.nationality;
+                                    repData.dpi = r.dpi;
+                                    repData.dpiLugar = r.dpiLugar || (r.nationality && r.nationality.includes('vecina de ') ? r.nationality.split('vecina de ')[1] : '');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error loading enterprise/representative details", e);
+        }
+
+        const letterHtml = `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    @page {
+                        size: auto;
+                        margin: 0mm; /* This hides browser headers/footers */
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        font-size: 9.5pt;
+                        line-height: 1.4;
+                        color: #000;
+                        margin: 0;
+                        padding: 15mm 20mm 15mm 20mm; /* Reduced top/bottom padding slightly */
+                    }
+                    .contract-container {
+                        width: 100%;
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }
+                    .header-container {
+                        text-align: center;
+                        margin-bottom: 25px;
+                        margin-top: 20px;
+                    }
+                    .header-title {
+                        font-weight: bold;
+                        font-size: 13px;
+                        margin: 0;
+                        line-height: 1.3;
+                    }
+                    .fill-row {
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: flex-end;
+                        margin-bottom: 6px;
+                    }
+                    .input-group {
+                        display: inline-flex;
+                        flex-direction: column;
+                        align-items: center;
+                        margin: 0 4px;
+                        vertical-align: bottom;
+                    }
+                    .input-line {
+                        border-bottom: 1px solid black;
+                        text-align: center;
+                        padding: 0 4px;
+                        min-height: 16px;
+                        width: 100%;
+                        box-sizing: border-box;
+                    }
+                    .input-label {
+                        font-size: 7pt;
+                        margin-top: 1px;
+                        color: #333;
+                    }
+                    .text-node {
+                        display: inline-block;
+                        margin-bottom: 2px;
+                        white-space: nowrap;
+                    }
+                    .clause {
+                        margin-top: 12px;
+                        text-align: justify;
+                        page-break-inside: avoid;
+                    }
+                    .signatures {
+                        margin-top: 40px;
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 0 40px;
+                        position: relative;
+                        page-break-inside: avoid;
+                    }
+                    .sign-box {
+                        width: 35%;
+                        text-align: center;
+                    }
+                    .sign-line {
+                        border-bottom: 1px solid black;
+                        margin-bottom: 5px;
+                        height: 15px;
+                    }
+                    .sign-label {
+                        font-size: 9pt;
+                    }
+                    .footer-text {
+                        margin-top: 30px;
+                        font-size: 9pt;
+                        text-align: justify;
+                        line-height: 1.3;
+                        page-break-inside: avoid;
+                    }
+                    .page-break {
+                        page-break-before: auto; /* Removed forced page break */
+                        page-break-inside: avoid;
+                    }
+                    .page-break-new {
+                        page-break-before: always;
+                        padding-top: 40px; /* Extra margin for the new page */
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="contract-container">
+                    <div class="header-container">
+                        <p class="header-title">
+                            CONTRATO INDIVIDUAL DE TRABAJO
+                        </p>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <div class="input-group" style="width: 80%;">
+                            <div class="input-line">${repData.fullName}</div>
+                            <div class="input-label">Nombres y apellidos del empleador o Representante Legal</div>
+                        </div>
+                        <span class="text-node">de</span>
+                    </div>
+
+                    <div class="fill-row" style="justify-content: space-between; margin-top: 10px;">
+                        <div class="input-group" style="width: 15%;">
+                            <div class="input-line">${repData.age}</div>
+                            <div class="input-label">edad</div>
+                        </div>
+                        <div class="input-group" style="width: 25%;">
+                            <div class="input-line">${repData.sexo}</div>
+                            <div class="input-label">sexo</div>
+                        </div>
+                        <div class="input-group" style="width: 25%;">
+                            <div class="input-line">${repData.civilStatus}</div>
+                            <div class="input-label">estado civil</div>
+                        </div>
+                        <div class="input-group" style="width: 30%;">
+                            <div class="input-line">${repData.nationality}</div>
+                            <div class="input-label">nacionalidad</div>
+                        </div>
+                    </div>
+
+                    <div class="fill-row">
+                        <span class="text-node">con Documento Personal de Identificación número</span>
+                        <div class="input-group" style="width: 25%;">
+                            <div class="input-line">${repData.dpi}</div>
+                        </div>
+                        <span class="text-node">extendido por el Registro</span>
+                    </div>
+
+                    <div class="fill-row">
+                        <span class="text-node">Nacional de las Personas de</span>
+                        <div class="input-group" style="width: 30%;">
+                            <div class="input-line">${repData.dpiLugar}</div>
+                        </div>
+                        <span class="text-node" style="margin-left:auto;">actuando como representante legal de</span>
+                    </div>
+
+                    <div class="fill-row" style="margin-top: 15px; text-align: center; justify-content: center;">
+                        <div class="input-group" style="width: 45%;">
+                            <div class="input-line">${companyName}</div>
+                            <div class="input-label">Nombres de la empresa</div>
+                        </div>
+                        <span class="text-node" style="margin: 0 15px;">y</span>
+                        <div class="input-group" style="width: 45%;">
+                            <div class="input-line">${data.fullName}</div>
+                            <div class="input-label">Nombres y apellidos del Trabajador</div>
+                        </div>
+                    </div>
+
+                    <div class="fill-row" style="justify-content: space-between; margin-top: 10px;">
+                        <div class="input-group" style="width: 15%;">
+                            <div class="input-line">${empAge}</div>
+                            <div class="input-label">edad</div>
+                        </div>
+                        <div class="input-group" style="width: 25%;">
+                            <div class="input-line">${data.sexo || '__________'}</div>
+                            <div class="input-label">sexo</div>
+                        </div>
+                        <div class="input-group" style="width: 25%;">
+                            <div class="input-line">${data.civilStatus || '__________'}</div>
+                            <div class="input-label">estado civil</div>
+                        </div>
+                        <div class="input-group" style="width: 30%;">
+                            <div class="input-line">${data.nationality || 'guatemalteca'}, vecina de</div>
+                            <div class="input-label">nacionalidad</div>
+                        </div>
+                    </div>
+
+                    <div class="fill-row">
+                        <div class="input-group" style="width: 15%;">
+                            <div class="input-line">${employeeLocation || '_________'}</div>
+                        </div>
+                        <span class="text-node">, con Documento Personal de Identificación número</span>
+                        <div class="input-group" style="width: 20%;">
+                            <div class="input-line">${data.dpi}</div>
+                        </div>
+                        <span class="text-node">extendido por el Registro Nacional de</span>
+                    </div>
+
+                    <div class="fill-row">
+                        <span class="text-node">las Personas de </span>
+                        <div class="input-group" style="width: 35%;">
+                            <div class="input-line">${data.dpiIssuedAt || '_________'}</div>
+                        </div>
+                        <span class="text-node">, con residencia en:</span>
+                    </div>
+                    <div class="fill-row">
+                        <div class="input-group" style="width: 100%;">
+                            <div class="input-line">${data.address}</div>
+                            <div class="input-label">dirección completa</div>
+                        </div>
+                    </div>
+
+                    <div class="clause">
+                        Quienes en lo sucesivo nos denominaremos EMPLEADOR Y TRABAJADOR, respectivamente, consentimos en
+                        celebrar el presente CONTRATO INDIVIDUAL DE TRABAJO, contenido en las siguientes cláusulas:
+                    </div>
+
+                    <div class="clause fill-row">
+                        <span class="text-node"><strong>PRIMERA:</strong> La relación de trabajo inicia el día</span>
+                        <div class="input-group" style="width: 60%;">
+                            <div class="input-line">${startDay} de ${startMonthName} del año ${startYear}</div>
+                        </div><span class="text-node">.</span>
+                    </div>
+
+                    <div class="clause">
+                        <div class="fill-row">
+                            <span class="text-node"><strong>SEGUNDA:</strong> El trabajador prestará los servicios siguientes:</span>
+                            <div class="input-group" style="width: 48%;">
+                                <div class="input-line">${data.positionName}</div>
+                                <div class="input-label">Indicar los servicios que el trabajador</div>
+                            </div>
+                        </div>
+                        <div class="fill-row">
+                            <div class="input-group" style="width: 100%;">
+                                <div class="input-line">se obliga a prestar, o la naturaleza de la obra a ejecutar, especificando en lo posible las características y condiciones de trabajo.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="clause fill-row">
+                        <span class="text-node"><strong>TERCERA:</strong> Los servicios serán prestados en</span>
+                        <div class="input-group" style="width: 68%;">
+                            <div class="input-line">${data.sucursalName}</div>
+                            <div class="input-label">Indicar dirección exacta donde se ejecutará el servicio</div>
+                        </div>
+                    </div>
+
+                    <div class="clause fill-row">
+                        <span class="text-node"><strong>CUARTA:</strong> La duración del presente contrato es: </span>
+                        <span class="text-node" style="margin-left: 5px;">${duracionContrato}.</span>
+                    </div>
+
+                    <div class="clause" style="line-height:2;">
+                        <strong>QUINTA:</strong> La jornada ordinaria de trabajo será en diurna y mixta las que se realizaran en turnos, de
+                        <div class="input-group" style="width: 3%;"><div class="input-line" style="min-height:12px;">8</div></div> horas que será en <strong>Diurna:</strong> de las
+                        <div class="input-group" style="width: 5%;"><div class="input-line" style="min-height:12px;">8:00</div></div> a las
+                        <div class="input-group" style="width: 5%;"><div class="input-line" style="min-height:12px;">16:00</div></div> horas, excepto el día sábado que será de las
+                        <div class="input-group" style="width: 3%;"><div class="input-line" style="min-height:12px;">8</div></div> a las
+                        <div class="input-group" style="width: 4%;"><div class="input-line" style="min-height:12px;">12</div></div> horas para completar las
+                        <div class="input-group" style="width: 4%;"><div class="input-line" style="min-height:12px;">44</div></div> horas a la semana y de
+                        <div class="input-group" style="width: 5%;"><div class="input-line" style="min-height:12px;">7:00</div></div> horas que será <strong>Mixta:</strong> de
+                        <div class="input-group" style="width: 4%;"><div class="input-line" style="min-height:12px;">15</div></div> horas a las
+                        <div class="input-group" style="width: 5%;"><div class="input-line" style="min-height:12px;">9:00</div></div> horas, para completar las
+                        <div class="input-group" style="width: 4%;"><div class="input-line" style="min-height:12px;">42</div></div> horas de la semana.
+                    </div>
+
+                    <div class="clause fill-row">
+                        <span class="text-node"><strong>SEXTA:</strong> el salario será de</span>
+                        <div class="input-group" style="width: 35%;">
+                            <div class="input-line">Q4,002.28</div>
+                        </div>
+                        <span class="text-node">más Bonificación Incentivo de</span>
+                        <div class="input-group" style="width: 20%;">
+                            <div class="input-line">Q250.00</div>
+                        </div>
+                    </div>
+                    <div class="fill-row">
+                        <span class="text-node">y le será pagado en efectivo el cincuenta por ciento cada</span>
+                        <div class="input-group" style="width: 25%;">
+                            <div class="input-line">quincena</div>
+                            <div class="input-label">semana, quincena, o mes.</div>
+                        </div>
+                        <span class="text-node">en</span>
+                    </div>
+                    <div class="fill-row" style="justify-content: center;">
+                        <div class="input-group" style="width: 60%; margin-top: 5px;">
+                            <div class="input-line">${companyName}</div>
+                            <div class="input-label">Lugar de pago</div>
+                        </div>
+                    </div>
+
+                    <div class="clause page-break-new">
+                        <strong>SEPTIMA:</strong> Las horas extras, el séptimo y los días de asueto, le serán pagados de conformidad con los artículos 121, 126, 127 del Código de Trabajo.
+                    </div>
+
+                    <div class="clause">
+                        <strong>OCTAVA:</strong> Es entendido que de conformidad con el artículo 122 del Código de Trabajo, la jornada ordinaria y extraordinaria no puede exceder de una suma total de 12 horas diarias.
+                    </div>
+
+                    <div class="clause fill-row">
+                        <span class="text-node"><strong>NOVENA:</strong> El presente contrato se suscribe en</span>
+                        <div class="input-group" style="width: 15%;"><div class="input-line">${employeeLocation || '__________________'}</div></div> <span class="text-node">el día</span>
+                        <div class="input-group" style="width: 5%;"><div class="input-line">${today.getDate()}</div></div> <span class="text-node">del mes de</span>
+                        <div class="input-group" style="width: 15%;"><div class="input-line">${today.toLocaleString('es-GT', { month: 'long' })}</div></div> <span class="text-node">del año</span>
+                        <div class="input-group" style="width: 8%;"><div class="input-line">${today.getFullYear()}</div></div><span class="text-node">.</span>
+                    </div>
+
+                    <div class="signatures page-break">
+                        <div class="sign-box">
+                            <div class="sign-line"></div>
+                            <div class="sign-label">Firma o impresión digital del trabajador</div>
+                        </div>
+                        <div class="sign-box" style="position: relative;">
+                            <div class="sign-line"></div>
+                            <div class="sign-label">Firma del Empleador</div>
+                        </div>
+                    </div>
+
+                    <div class="footer-text">
+                        En tres ejemplares, uno para cada una de las partes, el tercero que debe ser archivado por
+                        el Departamento de Registro Laboral. El contrato Individual de Trabajo debe ser remitido dentro
+                        de los 15 días siguientes a su suscripción.
+                    </div>
+
+                </div>
+            </body>
+            </html>
+        `;
+
+        const printWindow = window.open('', '_blank', 'width=900,height=700');
+        printWindow.document.write(letterHtml);
+        printWindow.document.close();
+
+        // Wait a tiny bit for the styles to apply before printing
+        setTimeout(() => {
+            printWindow.print();
+        }, 300);
+
+    } catch (e) {
+        console.error("Error generating contract:", e);
+        Swal.fire('Error', 'No se pudo generar el contrato', 'error');
     }
 }
 
@@ -299,29 +758,29 @@ async function viewEmployeeDetails(id) {
 
             // Build Termination Info for Standard View
             terminationInfo = `
-                <tr><td colspan="2" style="padding:10px; background:#fee2e2; font-weight:bold; color:#b91c1c; text-align:center;">InformaciÃ³n de Baja</td></tr>
+            < tr > <td colspan="2" style="padding:10px; background:#fee2e2; font-weight:bold; color:#b91c1c; text-align:center;">InformaciÃ³n de Baja</td></tr >
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Fecha Baja:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${endDateFormatted}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Motivo:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.terminationReason || 'N/A'}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>CalificaciÃ³n:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.terminationJustification || 'N/A'}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Comentarios:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.terminationComments || 'N/A'}</td></tr>
-            `;
+        `;
 
             // If settlement data exists, add the breakdown
             if (data.settlementData) {
                 terminationInfo += `
-                    <tr><td colspan="2" style="padding:10px; background:#e0f2fe; font-weight:bold; color:#0369a1; text-align:center; border-top: 2px solid #fff;">CÃ¡lculo de LiquidaciÃ³n</td></tr>
+            < tr > <td colspan="2" style="padding:10px; background:#e0f2fe; font-weight:bold; color:#0369a1; text-align:center; border-top: 2px solid #fff;">CÃ¡lculo de LiquidaciÃ³n</td></tr >
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">Aguinaldo:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.aguinaldo || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">Bono 14:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.bono14 || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">Vacaciones:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.vacations || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">Salario Pendiente:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.pendingSalary || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee;">IndemnizaciÃ³n:</td><td style="padding:8px; border-bottom:1px solid #eee;">Q${(sData.indemnization || 0).toFixed(2)}</td></tr>
                     <tr><td style="padding:8px; border-bottom:1px solid #eee; font-weight:bold; font-size:1.1em;">TOTAL:</td><td style="padding:8px; border-bottom:1px solid #eee; font-weight:bold; font-size:1.1em; color:#16a34a;">Q${(sData.total || 0).toFixed(2)}</td></tr>
-                `;
+        `;
 
                 // Prepare Letter HTML for Printing
                 const total = (sData.total || 0).toFixed(2);
                 letterHtml = `
-                    <div style="font-family: 'Times New Roman', serif; text-align: left; padding: 40px; line-height: 1.5; color: #000;">
+            < div style = "font-family: 'Times New Roman', serif; text-align: left; padding: 40px; line-height: 1.5; color: #000;" >
                         <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
                             <h2 style="margin: 0; text-transform: uppercase;">${data.subEmpresa || 'EMPRESA PROPIA'}</h2>
                             <p style="margin: 5px 0;">LIQUIDACIÃ“N LABORAL Y FINIQUITO</p>
@@ -418,7 +877,7 @@ async function viewEmployeeDetails(id) {
 
         // Standard Active/Inactive View
         const html = `
-            <table style="width:100%; text-align:left; border-collapse: collapse;">
+            < table style = "width:100%; text-align:left; border-collapse: collapse;" >
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Nombre:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.fullName}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>CÃ³digo:</strong></td><td style="padding:8px; border-bottom:1px solid #eee; font-weight:bold;">${data.employeeCode || data.nit || 'N/A'}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>DPI:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.dpi}</td></tr>
@@ -431,7 +890,7 @@ async function viewEmployeeDetails(id) {
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Fecha Inicio:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.startDate}</td></tr>
                 <tr><td style="padding:8px; border-bottom:1px solid #eee;"><strong>Estado:</strong></td><td style="padding:8px; border-bottom:1px solid #eee;">${data.status === 'active' ? 'Activo' : 'Inactivo'}</td></tr>
                 ${terminationInfo}
-            </table>
+            </table >
             ${historyHtml}
         `;
 
@@ -467,6 +926,11 @@ async function openEmpleadoModal(id = null) {
     const form = document.getElementById('empleadoForm');
     form.reset();
     document.getElementById('empleadoModalTitle').textContent = id ? 'Editar Empleado' : 'Registrar Nuevo Empleado';
+
+    // Reset defaults for added fields
+    form.nationality.value = 'guatemalteca';
+    form.civilStatus.value = '';
+    form.workShift.value = '';
 
     // Hide Termination Section by default
     document.getElementById('terminationSection').style.display = 'none';
@@ -507,7 +971,15 @@ async function openEmpleadoModal(id = null) {
             form.sucursalId.value = data.sucursalId;
             form.positionId.value = data.positionId;
             form.startDate.value = data.startDate;
-            form.contractType.value = data.contractType;
+            form.contractType.value = data.contractType || 'Indefinido';
+
+            // New Contract Fields
+            if (form.birthDate) form.birthDate.value = data.birthDate || '';
+            if (form.civilStatus) form.civilStatus.value = data.civilStatus || '';
+            if (form.dpiIssuedAt) form.dpiIssuedAt.value = data.dpiIssuedAt || '';
+            if (form.nationality) form.nationality.value = data.nationality || 'guatemalteca';
+            if (form.workShift) form.workShift.value = data.workShift || '';
+            if (form.contractDuration) form.contractDuration.value = data.contractDuration || '';
             if (form.sexo) form.sexo.value = data.sexo || '';
 
             // Sub Empresa
@@ -593,9 +1065,6 @@ async function loadPositionsSelect() {
     });
 }
 
-
-
-
 // ------ Updated openEmpleadoModal ------
 
 
@@ -636,7 +1105,16 @@ document.getElementById('empleadoForm').addEventListener('submit', async (e) => 
         subEmpresa: form.subEmpresa ? form.subEmpresa.value : 'Propia',
 
         startDate: form.startDate.value,
-        contractType: form.contractType.value,
+        contractType: form.contractType.value || 'Indefinido',
+
+        // New Contract Fields
+        birthDate: form.birthDate ? form.birthDate.value : '',
+        civilStatus: form.civilStatus ? form.civilStatus.value : '',
+        dpiIssuedAt: form.dpiIssuedAt ? form.dpiIssuedAt.value : '',
+        nationality: form.nationality ? form.nationality.value : 'guatemalteca',
+        workShift: form.workShift ? form.workShift.value : '',
+        contractDuration: form.contractDuration ? form.contractDuration.value : '',
+
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -669,7 +1147,7 @@ document.getElementById('empleadoForm').addEventListener('submit', async (e) => 
             data.status = 'active';
             data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             await db.collection('employees').add(data);
-            Swal.fire('Registrado', `Empleado registrado. CÃ³digo: ${empCode}`, 'success');
+            Swal.fire('Registrado', `Empleado registrado.CÃ³digo: ${empCode} `, 'success');
         }
 
         closeEmpleadoModal();
@@ -721,7 +1199,7 @@ async function inactivateEmpleado(id, name) {
     const { value: formValues } = await Swal.fire({
         title: 'Procesar Baja y LiquidaciÃ³n',
         html: `
-            <div style="text-align:left; font-size: 0.9rem;">
+            < div style = "text-align:left; font-size: 0.9rem;" >
                 <div style="background:#f3f4f6; padding:8px; border-radius:8px; margin-bottom:12px;">
                     <strong>Salario Base + Boni (Mes):</strong> Q${defaultSalary.toFixed(2)}
                 </div>
@@ -759,8 +1237,8 @@ async function inactivateEmpleado(id, name) {
 
                 <label style="margin-top:10px; display:block;">Comentarios:</label>
                 <textarea id="swal-comments" class="swal2-textarea" placeholder="Observaciones..." style="resize:none; height:60px;"></textarea>
-            </div>
-        `,
+            </div >
+            `,
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Calcular',
@@ -806,7 +1284,7 @@ async function inactivateEmpleado(id, name) {
     const { isConfirmed } = await Swal.fire({
         title: 'Confirmar LiquidaciÃ³n',
         html: `
-            <div style="text-align:left; font-size:0.95rem;">
+            < div style = "text-align:left; font-size:0.95rem;" >
                 <p><strong>Total a Pagar:</strong> <span style="color:green; font-size:1.2rem;">Q${calc.total.toFixed(2)}</span></p>
                 <hr>
                 <table style="width:100%; border-collapse:collapse;">
@@ -1132,7 +1610,7 @@ async function processImport() {
 async function endTempTransfer(empId, empName, currentTempBranch, originBranch) {
     const result = await Swal.fire({
         title: '¿Finalizar Préstamo?',
-        html: `El empleado <strong>${empName}</strong> regresará oficialmente a <strong>${originBranch}</strong>.<br><br>Se eliminará su asignación temporal en ${currentTempBranch}.`,
+        html: `El empleado < strong > ${empName}</strong > regresará oficialmente a < strong > ${originBranch}</strong >.< br > <br>Se eliminará su asignación temporal en ${currentTempBranch}.`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Sí, finalizar préstamo',

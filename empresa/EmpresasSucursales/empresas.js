@@ -40,6 +40,7 @@ function switchTab(tabId) {
 async function initDashboard() {
     await Promise.all([
         loadEmpresasSelectOptions(), // For modals
+        loadRepresentativesSelectOptions(),
         loadDashboardMetrics()
     ]);
 }
@@ -228,7 +229,8 @@ async function addEmpresa() {
         email: document.getElementById('empresaEmail').value,
         creationDate: document.getElementById('empresaCreationDate').value,
         description: document.getElementById('empresaDescription').value,
-        status: document.getElementById('empresaStatus').value
+        status: document.getElementById('empresaStatus').value,
+        representativeId: document.getElementById('empresaRepresentativeId').value
     };
 
     if (!data.name) return Swal.fire('Error', 'Nombre requerido', 'error');
@@ -287,6 +289,7 @@ async function openEditEmpresaModal(id) {
     document.getElementById('editEmpresaCreationDate').value = data.creationDate;
     document.getElementById('editEmpresaDescription').value = data.description;
     document.getElementById('editEmpresaStatus').value = data.status;
+    document.getElementById('editEmpresaRepresentativeId').value = data.representativeId || '';
 
     openModal('editEmpresaModal');
 }
@@ -319,7 +322,8 @@ async function updateEmpresa() {
         email: document.getElementById('editEmpresaEmail').value,
         creationDate: document.getElementById('editEmpresaCreationDate').value,
         description: document.getElementById('editEmpresaDescription').value,
-        status: document.getElementById('editEmpresaStatus').value
+        status: document.getElementById('editEmpresaStatus').value,
+        representativeId: document.getElementById('editEmpresaRepresentativeId').value
     };
 
     try {
@@ -409,6 +413,76 @@ async function loadEmpresasSelectOptions() {
         console.error(e);
     }
 }
+
+async function loadRepresentativesSelectOptions() {
+    try {
+        const snap = await db.collection('representantes').get();
+        const selects = [document.getElementById('empresaRepresentativeId'), document.getElementById('editEmpresaRepresentativeId')];
+
+        selects[0].innerHTML = '<option value="">Seleccione...</option>';
+        if (selects[1]) selects[1].innerHTML = '<option value="">Seleccione...</option>';
+
+        snap.forEach(doc => {
+            const opt = document.createElement('option');
+            opt.value = doc.id;
+            opt.textContent = doc.data().fullName;
+            selects[0].appendChild(opt.cloneNode(true));
+            if (selects[1]) selects[1].appendChild(opt.cloneNode(true));
+        });
+    } catch (e) {
+        console.error("Error loading representatives", e);
+    }
+}
+
+// Representante Modal Logic
+function openRepresentativeModal() {
+    document.getElementById('representativeForm')?.reset();
+    const modal = document.getElementById('representativeModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    setTimeout(() => { modal.style.opacity = '1'; modal.style.pointerEvents = 'auto'; }, 10);
+}
+
+function closeRepresentativeModal() {
+    const modal = document.getElementById('representativeModal');
+    if (!modal) return;
+    modal.style.opacity = '0';
+    modal.style.pointerEvents = 'none';
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+document.getElementById('representativeForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+        fullName: form.repFullName.value.trim(),
+        dpi: form.repDpi.value.trim(),
+        dpiLugar: form.repDpiLugar.value.trim(),
+        birthDate: form.repBirthDate.value,
+        sexo: form.repSexo.value,
+        civilStatus: form.repCivilStatus.value,
+        nationality: form.repNationality.value.trim(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    try {
+        Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+        const docRef = await db.collection('representantes').add(data);
+        closeRepresentativeModal();
+        await loadRepresentativesSelectOptions();
+
+        // Auto-select in both modals if they are open
+        const repSelectAdd = document.getElementById('empresaRepresentativeId');
+        const repSelectEdit = document.getElementById('editEmpresaRepresentativeId');
+        if (repSelectAdd) repSelectAdd.value = docRef.id;
+        if (repSelectEdit) repSelectEdit.value = docRef.id;
+
+        Swal.fire('Registrado', 'Representante guardado correctamente.', 'success');
+    } catch (e) {
+        console.error("Error saving rep:", e);
+        Swal.fire('Error', 'No se pudo guardar el representante.', 'error');
+    }
+});
 
 // Quota Logic Reuse (Simplified for Card View)
 async function openQuotaModal(sucursalId, sucursalName) {

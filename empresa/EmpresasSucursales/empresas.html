@@ -429,11 +429,24 @@
       <div class="form-group"><label>Email</label><input type="email" id="empresaEmail" class="form-control"></div>
       <div class="form-group"><label>Descripción</label><input type="text" id="empresaDescription" class="form-control">
       </div>
-      <div class="form-group"><label>Estado</label>
-        <select id="empresaStatus" class="form-control">
-          <option value="activo">Activo</option>
-          <option value="inactivo">Inactivo</option>
-        </select>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group"><label>Estado</label>
+          <select id="empresaStatus" class="form-control">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Representante Legal</label>
+          <div style="display: flex; gap: 8px;">
+            <select id="empresaRepresentativeId" class="form-control">
+              <option value="">Seleccione...</option>
+            </select>
+            <button class="btn btn-secondary" onclick="openRepresentativeModal()" style="padding: 10px;"
+              title="Nuevo Representante">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+        </div>
       </div>
       <div style="text-align: right; margin-top: 20px;">
         <button class="btn btn-secondary" onclick="closeModal('addEmpresaModal')">Cancelar</button>
@@ -462,11 +475,24 @@
       <div class="form-group"><label>Email</label><input type="email" id="editEmpresaEmail" class="form-control"></div>
       <div class="form-group"><label>Descripción</label><input type="text" id="editEmpresaDescription"
           class="form-control"></div>
-      <div class="form-group"><label>Estado</label>
-        <select id="editEmpresaStatus" class="form-control">
-          <option value="activo">Activo</option>
-          <option value="inactivo">Inactivo</option>
-        </select>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="form-group"><label>Estado</label>
+          <select id="editEmpresaStatus" class="form-control">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Representante Legal</label>
+          <div style="display: flex; gap: 8px;">
+            <select id="editEmpresaRepresentativeId" class="form-control">
+              <option value="">Seleccione...</option>
+            </select>
+            <button class="btn btn-secondary" onclick="openRepresentativeModal()" style="padding: 10px;"
+              title="Nuevo Representante">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+        </div>
       </div>
       <div style="text-align: right; margin-top: 20px;">
         <button class="btn btn-secondary" onclick="closeModal('editEmpresaModal')">Cancelar</button>
@@ -586,7 +612,62 @@
     </div>
   </div>
 
-  <script defer src="empresas.js"></script>
+  <!-- Modal for Representatives -->
+  <div id="representativeModal" class="modal" style="z-index: 1050;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
+        <h2 style="margin: 0; font-size: 1.5rem; color: var(--text-main);">Registrar Representante</h2>
+        <i class="fas fa-times" style="cursor: pointer; font-size: 1.25rem; color: var(--text-muted);"
+          onclick="closeRepresentativeModal()"></i>
+      </div>
+      <form id="representativeForm">
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" id="repFullName" required class="form-control">
+        </div>
+        <div class="form-group">
+          <label>DPI</label>
+          <input type="text" id="repDpi" required placeholder="13 dígitos" maxlength="13" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Lugar Extensión DPI</label>
+          <input type="text" id="repDpiLugar" required placeholder="Ej. Guatemala" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Fecha de Nacimiento</label>
+          <input type="date" id="repBirthDate" required class="form-control">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label>Sexo</label>
+            <select id="repSexo" required class="form-control">
+              <option value="femenina">Femenina</option>
+              <option value="masculino">Masculino</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estado Civil</label>
+            <select id="repCivilStatus" required class="form-control">
+              <option value="casada">Casada</option>
+              <option value="soltera">Soltera</option>
+              <option value="casado">Casado</option>
+              <option value="soltero">Soltero</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Nacionalidad (y Vecindad)</label>
+          <input type="text" id="repNationality" value="guatemalteca vecina de Zacapa" required class="form-control">
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeRepresentativeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script defer src="empresas.js?v=2"></script>
 </body>
 
 </html>
