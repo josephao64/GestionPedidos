@@ -379,6 +379,10 @@
                 <i class="fas fa-calendar-check"></i>
                 <span>Días de Descanso</span>
             </a>
+            <a href="horarios.html" class="nav-item">
+                <i class="fas fa-clock"></i>
+                <span>Horarios y Cobertura</span>
+            </a>
             <li class="nav-item" onclick="switchSection('config', this)">
                 <i class="fas fa-cog"></i>
                 <span>Configuración</span>
@@ -740,6 +744,12 @@
                                 style="padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
                                 <option value="all">Todas las Sucursales</option>
                             </select>
+                            <select id="dashVacStatus" onchange="window.vacations.loadDashboard()"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
+                                <option value="active">Activos</option>
+                                <option value="inactive">Inactivos</option>
+                                <option value="all">Todos</option>
+                            </select>
                             <input type="text" id="dashVacSearch" placeholder="Buscar empleado..."
                                 oninput="window.vacations.filterDashboardTable()"
                                 style="padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
@@ -776,6 +786,12 @@
                         <select id="vacBranchFilter" onchange="loadVacationEmployeesSelect()"
                             style="flex: 1; min-width: 150px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
                             <option value="">Todas las Sucursales</option>
+                        </select>
+                        <select id="vacStatusFilter" onchange="loadVacationEmployeesSelect()"
+                            style="flex: 1; min-width: 120px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                            <option value="active">Activos</option>
+                            <option value="inactive">Inactivos</option>
+                            <option value="all">Todos</option>
                         </select>
                         <select id="vacationEmployeeSearch"
                             style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">

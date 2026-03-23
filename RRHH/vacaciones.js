@@ -29,8 +29,15 @@ window.vacations = {
 
         try {
             // 1. Fetch Metadata (Employees & Vacations & Sucursales)
+            const statusFilter = document.getElementById('dashVacStatus') ? document.getElementById('dashVacStatus').value : 'active';
+            
+            let empQuery = db.collection('employees');
+            if (statusFilter !== 'all') {
+                empQuery = empQuery.where('status', '==', statusFilter);
+            }
+
             const [empSnap, vacSnap, sucSnap] = await Promise.all([
-                db.collection('employees').where('status', '==', 'active').get(),
+                empQuery.get(),
                 db.collection('vacations').get(),
                 db.collection('sucursales').get()
             ]);
@@ -434,8 +441,22 @@ window.vacations = {
 function setVacationEmployee(id) {
     const select = document.getElementById('vacationEmployeeSearch');
     if (select) {
+        // Verificar si el empleado existe en la lista desplegable actual
+        const exists = Array.from(select.options).some(opt => opt.value === id);
+        if (!exists) {
+            // Si está inactivo o en otra sucursal, lo agregamos temporalmente para poder seleccionarlo
+            const empData = vacationDashboardData.find(d => d.id === id);
+            if (empData) {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = `${empData.name} (Seleccionado del Dashboard)`;
+                select.appendChild(opt);
+            }
+        }
+
         select.value = id;
         selectVacationEmployee();
+        
         // Scroll down to processing area
         document.getElementById('vacationEmployeeInfo').scrollIntoView({ behavior: 'smooth' });
     }
@@ -463,13 +484,19 @@ async function loadVacationBranchFilter() {
 async function loadVacationEmployeesSelect() {
     const searchSelect = document.getElementById('vacationEmployeeSearch');
     const branchFilter = document.getElementById('vacBranchFilter');
+    const statusFilterEl = document.getElementById('vacStatusFilter');
     if (!searchSelect) return;
 
     searchSelect.innerHTML = '<option value="">Buscar empleado...</option>';
     const branchId = branchFilter ? branchFilter.value : '';
+    const statusVal = statusFilterEl ? statusFilterEl.value : 'active';
 
     try {
-        let query = db.collection('employees').where('status', '==', 'active');
+        let query = db.collection('employees');
+
+        if (statusVal !== 'all') {
+            query = query.where('status', '==', statusVal);
+        }
 
         if (branchId) {
             query = query.where('sucursalId', '==', branchId);
