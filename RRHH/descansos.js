@@ -112,9 +112,10 @@ window.descansos = {
         let html = '';
         filteredEmployees.forEach(emp => {
             let ruleLabel = 'Sin Asignar';
-            if (emp.tipo_descanso === 'A') ruleLabel = 'Regla A (1/sem)';
-            if (emp.tipo_descanso === 'B') ruleLabel = 'Regla B (2/3sem)';
-            if (emp.tipo_descanso === 'C') ruleLabel = 'Regla C (4 seg/mes)';
+            if (emp.tipo_descanso === '1') ruleLabel = '1 día/sem';
+            else if (emp.tipo_descanso === '2') ruleLabel = '2 días/2sem';
+            else if (emp.tipo_descanso === '3') ruleLabel = '3 días/3sem';
+            else if (emp.tipo_descanso === '4') ruleLabel = '4 días/mes';
 
             const bName = this.getBranchName(emp.sucursalId);
 
@@ -185,7 +186,10 @@ window.descansos = {
                 const statusClass = isValid ? 'status-ok' : 'status-error';
                 
                 badgesHtml += `
-                    <div class="descanso-badge ${statusClass}" title="${empName} - Regla: ${emp?.tipo_descanso || 'Sin regla'}">
+                    <div class="descanso-badge ${statusClass}" title="${empName} - Regla: ${emp?.tipo_descanso || 'Sin regla'}"
+                         draggable="true" 
+                         ondragstart="window.descansos.handleDragStart(event, '${r.id}', '${r.empleadoId}')"
+                         style="cursor: grab;">
                         <span>${empName.substring(0, 15)}...</span>
                         <button class="delete-btn" onclick="window.descansos.deleteRecord('${r.id}', event)"><i class="fas fa-times"></i></button>
                     </div>
@@ -193,7 +197,9 @@ window.descansos = {
             });
 
             grid.innerHTML += `
-                <div class="calendar-day-cell ${isToday ? 'today' : ''}" data-date="${dateStr}">
+                <div class="calendar-day-cell ${isToday ? 'today' : ''}" data-date="${dateStr}"
+                     ondragover="window.descansos.handleDragOver(event)"
+                     ondrop="window.descansos.handleDrop(event, '${dateStr}')">
                     <div class="calendar-date-label">${d}</div>
                     <div class="day-records" id="day-records-${dateStr}">
                         ${badgesHtml}
@@ -224,9 +230,10 @@ window.descansos = {
             const dates = empRecords.map(r => r.fecha).sort();
             
             let ruleLabel = 'Sin Asignar';
-            if (emp.tipo_descanso === 'A') ruleLabel = 'Regla A (1/sem)';
-            if (emp.tipo_descanso === 'B') ruleLabel = 'Regla B (2/3sem)';
-            if (emp.tipo_descanso === 'C') ruleLabel = 'Regla C (4 seg/mes)';
+            if (emp.tipo_descanso === '1') ruleLabel = '1 día/sem';
+            else if (emp.tipo_descanso === '2') ruleLabel = '2 días/2sem';
+            else if (emp.tipo_descanso === '3') ruleLabel = '3 días/3sem';
+            else if (emp.tipo_descanso === '4') ruleLabel = '4 días/mes';
 
             const isCompliant = this.validateMonthCompliance(emp.id, year, this.currentMonth.getMonth());
             const statusLabel = isCompliant 
@@ -271,68 +278,26 @@ window.descansos = {
         if (!emp || !emp.tipo_descanso) return false;
 
         const targetDate = new Date(dateStr + 'T12:00:00');
+        const ruleVal = parseInt(emp.tipo_descanso);
         
-        if (emp.tipo_descanso === 'A') {
-            const startOfWeek = new Date(targetDate);
-            const day = startOfWeek.getDay();
-            const diff = startOfWeek.getDate() - day + (day === 0 ? -6:1);
-            startOfWeek.setDate(diff);
-            
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(endOfWeek.getDate() + 6);
-            
-            let count = 0;
-            for (let d = new Date(startOfWeek); d <= endOfWeek; d.setDate(d.getDate() + 1)) {
-                const dStr = d.toISOString().split('T')[0];
-                if (this.registros.some(r => r.empleadoId === empleadoId && r.fecha === dStr)) {
-                    count++;
-                }
-            }
-            return count <= 1; // Green if <=1 for single date validation
-        }
+        if (isNaN(ruleVal)) return false;
+
+        const jan1 = new Date(targetDate.getFullYear(), 0, 1);
+        const daysSinceJan1 = Math.floor((targetDate - jan1) / (24 * 60 * 60 * 1000));
+        const weekNum = Math.ceil((targetDate.getDay() + 1 + daysSinceJan1) / 7);
+        const blockNum = Math.floor((weekNum - 1) / ruleVal);
         
-        if (emp.tipo_descanso === 'B') {
-            const jan1 = new Date(targetDate.getFullYear(), 0, 1);
-            const daysSinceJan1 = Math.floor((targetDate - jan1) / (24 * 60 * 60 * 1000));
-            const weekNum = Math.ceil((targetDate.getDay() + 1 + daysSinceJan1) / 7);
-            const blockNum = Math.floor((weekNum - 1) / 3);
-            
-            const count = this.registros.filter(r => {
-                if (r.empleadoId !== empleadoId) return false;
-                const rDate = new Date(r.fecha + 'T12:00:00');
-                if (rDate.getFullYear() !== targetDate.getFullYear()) return false;
-                const rDaysSince = Math.floor((rDate - jan1) / (24 * 60 * 60 * 1000));
-                const rWeekNum = Math.ceil((rDate.getDay() + 1 + rDaysSince) / 7);
-                const rBlockNum = Math.floor((rWeekNum - 1) / 3);
-                return rBlockNum === blockNum;
-            }).length;
-            
-            return count <= 2 && count > 0;
-        }
-
-        if (emp.tipo_descanso === 'C') {
-            const year = targetDate.getFullYear();
-            const month = targetDate.getMonth();
-            const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
-            
-            const monthRecords = this.registros.filter(r => r.empleadoId === empleadoId && r.fecha.startsWith(monthPrefix))
-                .map(r => r.fecha).sort();
-            
-            if (monthRecords.length > 4) return false;
-            
-            let isConsecutive = true;
-            for (let i = 1; i < monthRecords.length; i++) {
-                const prev = new Date(monthRecords[i-1] + 'T12:00:00');
-                const curr = new Date(monthRecords[i] + 'T12:00:00');
-                const diffTime = Math.abs(curr - prev);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                if (diffDays !== 1) isConsecutive = false;
-            }
-            
-            return isConsecutive; 
-        }
-
-        return true;
+        const count = this.registros.filter(r => {
+            if (r.empleadoId !== empleadoId) return false;
+            const rDate = new Date(r.fecha + 'T12:00:00');
+            if (rDate.getFullYear() !== targetDate.getFullYear()) return false;
+            const rDaysSince = Math.floor((rDate - jan1) / (24 * 60 * 60 * 1000));
+            const rWeekNum = Math.ceil((rDate.getDay() + 1 + rDaysSince) / 7);
+            const rBlockNum = Math.floor((rWeekNum - 1) / ruleVal);
+            return rBlockNum === blockNum;
+        }).length;
+        
+        return count <= ruleVal;
     },
 
     validateMonthCompliance(empleadoId, year, month) {
@@ -342,17 +307,7 @@ window.descansos = {
         const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
         const monthRecords = this.registros.filter(r => r.empleadoId === empleadoId && r.fecha.startsWith(monthPrefix));
         
-        if (emp.tipo_descanso === 'A') {
-            return monthRecords.length >= 4 && monthRecords.every(r => this.validateDescansoRule(empleadoId, r.fecha));
-        }
-        if (emp.tipo_descanso === 'B') {
-            return monthRecords.length > 0 && monthRecords.every(r => this.validateDescansoRule(empleadoId, r.fecha));
-        }
-        if (emp.tipo_descanso === 'C') {
-            return monthRecords.length === 4 && this.validateDescansoRule(empleadoId, monthRecords[0].fecha);
-        }
-        
-        return false;
+        return monthRecords.length >= 4 && monthRecords.every(r => this.validateDescansoRule(empleadoId, r.fecha));
     },
 
     checkCoverageLimits() {
@@ -447,11 +402,12 @@ window.descansos = {
     async executeAddRecord(empleadoId, dateStr) {
         const emp = this.empleados.find(e => e.id === empleadoId);
         const datesToAdd = [dateStr];
+        const ruleVal = parseInt(emp.tipo_descanso);
 
-        if (emp && emp.tipo_descanso === 'C') {
+        if (emp && !isNaN(ruleVal) && ruleVal > 1) {
             const result = await Swal.fire({
                 title: 'Autocompletar',
-                text: `Este empleado (Regla C) requiere 4 días seguidos. ¿Deseas asignar automáticamente los 3 días siguientes empezando el ${dateStr}?`,
+                text: `Este empleado puede acumular hasta ${ruleVal} días. ¿Deseas asignar automáticamente los ${ruleVal} días consecutivos empezando el ${dateStr}?`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, autocompletar',
@@ -460,7 +416,7 @@ window.descansos = {
             
             if (result.isConfirmed) {
                 const start = new Date(dateStr + 'T12:00:00');
-                for (let i = 1; i <= 3; i++) {
+                for (let i = 1; i < ruleVal; i++) {
                     const nextDate = new Date(start);
                     nextDate.setDate(start.getDate() + i);
                     const nStr = nextDate.toISOString().split('T')[0];
@@ -501,9 +457,90 @@ window.descansos = {
                 showConfirmButton: false,
                 timer: 3000
             });
+
+            // Programación Inteligente Encadenada (Auto-schedule next cycle)
+            if (emp && !isNaN(ruleVal) && ruleVal >= 1) {
+                const nextDate = new Date(dateStr + 'T12:00:00');
+                nextDate.setDate(nextDate.getDate() + (ruleVal * 7));
+                const nextStr = nextDate.toISOString().split('T')[0];
+                
+                const nextExists = this.registros.some(r => r.empleadoId === empleadoId && r.fecha === nextStr);
+                
+                if (!nextExists) {
+                    const confirmNext = await Swal.fire({
+                        title: 'Programar Próximo Ciclo',
+                        text: `El siguiente descanso de ${emp.fullName} sería el ${nextStr}. ¿Deseas dejarlo programado desde ahora?`,
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, programar',
+                        cancelButtonText: 'No, gracias'
+                    });
+
+                    if (confirmNext.isConfirmed) {
+                        this.executeAddRecord(empleadoId, nextStr);
+                    }
+                }
+            }
         } catch (e) {
             console.error("Error validando descansos:", e);
             Swal.fire('Error', 'Hubo un error al guardar los registros.', 'error');
+        }
+    },
+
+    // --- Drag and Drop ---
+    
+    handleDragStart(event, recordId, empId) {
+        event.dataTransfer.setData('recordId', recordId);
+        event.dataTransfer.setData('empId', empId);
+        event.dataTransfer.effectAllowed = 'move';
+        // Añadir efecto visual al elemento en arrastre
+        setTimeout(() => event.target.style.opacity = '0.5', 0);
+    },
+
+    handleDragOver(event) {
+        event.preventDefault(); // Permitir soltar
+        event.dataTransfer.dropEffect = 'move';
+        
+        // Efecto visual en la celda del calendario
+        const cell = event.currentTarget;
+        if (!cell.classList.contains('drag-over')) {
+            document.querySelectorAll('.calendar-day-cell').forEach(c => c.classList.remove('drag-over'));
+            cell.classList.add('drag-over');
+        }
+    },
+
+    async handleDrop(event, newDateStr) {
+        event.preventDefault();
+        document.querySelectorAll('.calendar-day-cell').forEach(c => c.classList.remove('drag-over'));
+        
+        const recordId = event.dataTransfer.getData('recordId');
+        if (!recordId) return;
+
+        const empId = event.dataTransfer.getData('empId');
+        const exists = this.registros.some(r => r.empleadoId === empId && r.fecha === newDateStr && r.id !== recordId);
+        
+        if (exists) {
+            Swal.fire('Atención', 'El empleado ya tiene asignado un descanso el ' + newDateStr + '.', 'warning');
+            this.render(); // Reset opacity
+            return;
+        }
+
+        try {
+            await db.collection('descansos').doc(recordId).update({
+                fecha: newDateStr
+            });
+
+            const record = this.registros.find(r => r.id === recordId);
+            if (record) {
+                record.fecha = newDateStr;
+            }
+            
+            this.render();
+            Swal.fire({ icon: 'success', title: 'Descanso movido', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        } catch (e) {
+            console.error(e);
+            Swal.fire('Error', 'No se pudo mover el descanso.', 'error');
+            this.render();
         }
     },
 

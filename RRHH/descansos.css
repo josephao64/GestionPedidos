@@ -178,3 +178,10 @@
     background: var(--primary);
     color: white;
 }
+
+.calendar-day-cell.drag-over {
+    background: #f1f5f9;
+    border: 2px dashed var(--primary);
+    transform: scale(1.02);
+    box-shadow: 0 0 10px rgba(111, 66, 193, 0.2);
+}

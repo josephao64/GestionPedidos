@@ -284,12 +284,13 @@
                 </div>
                 <div style="flex: 1; min-width: 200px;">
                     <label style="display: block; font-size: 0.8em; color: var(--text-muted); margin-bottom: 4px;">Regla</label>
-                    <select id="filterDescansoRegla" onchange="window.descansos.loadData()" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
-                        <option value="all">Todas</option>
-                        <option value="A">Regla A (1 día/semana)</option>
-                        <option value="B">Regla B (2 días c/3 semanas)</option>
-                        <option value="C">Regla C (4 días seguidos/mes)</option>
-                    </select>
+                <select id="filterDescansoRegla" onchange="window.descansos.loadData()" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+                    <option value="all">Todas</option>
+                    <option value="1">1 día/sem</option>
+                    <option value="2">2 días/2sem</option>
+                    <option value="3">3 días/3sem</option>
+                    <option value="4">4 días/mes</option>
+                </select>
                 </div>
                 <div style="flex: 1; min-width: 200px;">
                     <label style="display: block; font-size: 0.8em; color: var(--text-muted); margin-bottom: 4px;">Mes</label>
@@ -346,12 +347,13 @@
                 <input type="text" id="descansoRuleEmpName" class="form-control" disabled style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #f8fafc;">
             </div>
             <div style="margin-bottom: 24px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 6px;">Patrón de Descanso</label>
+                <label style="display: block; font-weight: 600; margin-bottom: 6px;">Patrón de Descanso (Acumulación)</label>
                 <select id="descansoRuleSelect" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
                     <option value="">(Sin asignar)</option>
-                    <option value="A">Regla A (1 día/semana)</option>
-                    <option value="B">Regla B (2 días c/3 semanas)</option>
-                    <option value="C">Regla C (4 días seguidos/mes)</option>
+                    <option value="1">1 día por semana</option>
+                    <option value="2">2 días cada 2 semanas</option>
+                    <option value="3">3 días cada 3 semanas</option>
+                    <option value="4">4 días al mes</option>
                 </select>
             </div>
             <div style="display: flex; gap: 12px; justify-content: flex-end;">
