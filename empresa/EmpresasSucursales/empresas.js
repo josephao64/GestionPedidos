@@ -436,6 +436,17 @@ async function loadRepresentativesSelectOptions() {
 
 // Representante Modal Logic
 function openRepresentativeModal() {
+    document.getElementById('modalRepTitle').textContent = 'Registrar Representante';
+    document.getElementById('repId').value = '';
+    const previewContainer = document.getElementById('repFirmaPreviewContainer');
+    if (previewContainer) previewContainer.style.display = 'none';
+    const previewImg = document.getElementById('repFirmaPreview');
+    if (previewImg) previewImg.src = '';
+    const b64Input = document.getElementById('repFirmaBase64');
+    if (b64Input) b64Input.value = '';
+    const firmaInput = document.getElementById('repFirma');
+    if (firmaInput) firmaInput.value = '';
+
     document.getElementById('representativeForm')?.reset();
     const modal = document.getElementById('representativeModal');
     if (!modal) return;
@@ -454,6 +465,8 @@ function closeRepresentativeModal() {
 document.getElementById('representativeForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
+    const repId = document.getElementById('repId').value;
+    
     const data = {
         fullName: form.repFullName.value.trim(),
         dpi: form.repDpi.value.trim(),
@@ -462,27 +475,111 @@ document.getElementById('representativeForm')?.addEventListener('submit', async 
         sexo: form.repSexo.value,
         civilStatus: form.repCivilStatus.value,
         nationality: form.repNationality.value.trim(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        firmaBase64: document.getElementById('repFirmaBase64').value || null
     };
 
     try {
         Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
-        const docRef = await db.collection('representantes').add(data);
+        
+        let docRefId = repId;
+        if (repId) {
+            await db.collection('representantes').doc(repId).update(data);
+        } else {
+            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            const docRef = await db.collection('representantes').add(data);
+            docRefId = docRef.id;
+        }
+
         closeRepresentativeModal();
         await loadRepresentativesSelectOptions();
 
         // Auto-select in both modals if they are open
         const repSelectAdd = document.getElementById('empresaRepresentativeId');
         const repSelectEdit = document.getElementById('editEmpresaRepresentativeId');
-        if (repSelectAdd) repSelectAdd.value = docRef.id;
-        if (repSelectEdit) repSelectEdit.value = docRef.id;
+        if (repSelectAdd) repSelectAdd.value = docRefId;
+        if (repSelectEdit) repSelectEdit.value = docRefId;
 
-        Swal.fire('Registrado', 'Representante guardado correctamente.', 'success');
+        Swal.fire('Guardado', 'Representante guardado correctamente.', 'success');
     } catch (e) {
         console.error("Error saving rep:", e);
         Swal.fire('Error', 'No se pudo guardar el representante.', 'error');
     }
 });
+
+// Firma a Base64
+document.getElementById('repFirma')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const previewContainer = document.getElementById('repFirmaPreviewContainer');
+            const previewImg = document.getElementById('repFirmaPreview');
+            const b64Input = document.getElementById('repFirmaBase64');
+            if (previewImg) previewImg.src = event.target.result;
+            if (previewContainer) previewContainer.style.display = 'block';
+            if (b64Input) b64Input.value = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('repFirmaPreviewContainer').style.display = 'none';
+        document.getElementById('repFirmaPreview').src = '';
+        document.getElementById('repFirmaBase64').value = '';
+    }
+});
+
+// Edit Representante desde select
+async function editRepresentativeFromSelect(selectId) {
+    const id = document.getElementById(selectId).value;
+    if (!id) {
+        Swal.fire('Atención', 'Seleccione un representante primero para editarlo.', 'warning');
+        return;
+    }
+    try {
+        Swal.fire({ title: 'Cargando...', didOpen: () => Swal.showLoading() });
+        const doc = await db.collection('representantes').doc(id).get();
+        if (!doc.exists) throw new Error('No existe');
+        const data = doc.data();
+        
+        document.getElementById('modalRepTitle').textContent = 'Editar Representante';
+        const form = document.getElementById('representativeForm');
+        form.reset();
+        
+        document.getElementById('repId').value = id;
+        form.repFullName.value = data.fullName || '';
+        form.repDpi.value = data.dpi || '';
+        form.repDpiLugar.value = data.dpiLugar || '';
+        form.repBirthDate.value = data.birthDate || '';
+        form.repSexo.value = data.sexo || '';
+        form.repCivilStatus.value = data.civilStatus || '';
+        form.repNationality.value = data.nationality || '';
+        
+        const previewContainer = document.getElementById('repFirmaPreviewContainer');
+        const previewImg = document.getElementById('repFirmaPreview');
+        const b64Input = document.getElementById('repFirmaBase64');
+
+        if (data.firmaBase64) {
+             if (b64Input) b64Input.value = data.firmaBase64;
+             if (previewImg) previewImg.src = data.firmaBase64;
+             if (previewContainer) previewContainer.style.display = 'block';
+        } else {
+             if (b64Input) b64Input.value = '';
+             if (previewImg) previewImg.src = '';
+             if (previewContainer) previewContainer.style.display = 'none';
+        }
+        
+        const firmaInput = document.getElementById('repFirma');
+        if (firmaInput) firmaInput.value = '';
+        
+        Swal.close();
+        
+        const modal = document.getElementById('representativeModal');
+        modal.style.display = 'flex';
+        setTimeout(() => { modal.style.opacity = '1'; modal.style.pointerEvents = 'auto'; }, 10);
+    } catch(e) {
+        console.error(e);
+        Swal.fire('Error', 'No se pudo cargar el representante', 'error');
+    }
+}
 
 // Quota Logic Reuse (Simplified for Card View)
 async function openQuotaModal(sucursalId, sucursalName) {

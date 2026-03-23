@@ -375,6 +375,10 @@
                 <i class="fas fa-umbrella-beach"></i>
                 <span>Vacaciones</span>
             </li>
+            <a href="descansos.html" class="nav-item">
+                <i class="fas fa-calendar-check"></i>
+                <span>Días de Descanso</span>
+            </a>
             <li class="nav-item" onclick="switchSection('config', this)">
                 <i class="fas fa-cog"></i>
                 <span>Configuración</span>
@@ -1941,6 +1945,16 @@
                     <option value="collaborators">Reporte de Colaboradores</option>
                 </select>
 
+                <select id="reportStatusFilter"
+                    onchange="window.reports.renderCollaboratorsReport();"
+                    style="padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                    <option value="all">Todos los Estados</option>
+                    <option value="active">Activos</option>
+                    <option value="inactive">Inactivos</option>
+                    <option value="probation">Período de Prueba</option>
+                    <option value="no_probation">Sin Período de Prueba</option>
+                </select>
+
                 <select id="reportBranchFilter"
                     onchange="window.reports.renderOrgChart(); window.reports.renderCollaboratorsReport();"
                     style="padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
@@ -1985,6 +1999,7 @@
                         <th style="padding: 12px; text-align: left; color: #475569;">Sexo</th>
                         <th style="padding: 12px; text-align: left; color: #475569;">Puesto</th>
                         <th style="padding: 12px; text-align: left; color: #475569;">Sucursal</th>
+                        <th style="padding: 12px; text-align: left; color: #475569;">Dirección</th>
                         <th style="padding: 12px; text-align: left; color: #475569;">Fecha Ingreso</th>
                         <th style="padding: 12px; text-align: center; color: #475569;">Tiempo Laborado</th>
                     </tr>
@@ -2197,8 +2212,21 @@
             <form id="loanForm" style="display: flex; flex-direction: column; gap: 15px;">
                 <input type="hidden" id="loan_id">
 
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 5px;">
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Filtrar Sucursal</label>
+                        <select id="loan_branch_filter" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;" onchange="filterLoanEmployees()">
+                            <option value="">Todas las Sucursales</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:5px; font-weight:600;">Buscar Empleado</label>
+                        <input type="text" id="loan_employee_search" placeholder="Escriba nombre o código..." style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;" oninput="filterLoanEmployees()">
+                    </div>
+                </div>
+
                 <div>
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Empleado</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Empleado Solicitante</label>
                     <select id="loan_employee" required
                         style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
                         <option value="">Cargando empleados...</option>
@@ -2364,6 +2392,8 @@
         </div>
     </div>
 
+
+
     <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
@@ -2432,6 +2462,8 @@
     <script src="prestamos.js"></script>
     <script src="reportes.js"></script>
     <script src="dashboard.js?v=20240107_debug"></script>
+    <!-- Descansos section moved up before Scripts -->
+
     <!-- VACATION RECEIPT TEMPLATE (Hidden) -->
     <div id="vacationReceiptTemplate" style="display: none;">
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">

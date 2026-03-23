@@ -1,0 +1,180 @@
+/* descansos.css */
+
+.descansos-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.calendar-header-cell {
+    text-align: center;
+    font-weight: bold;
+    color: var(--text-muted);
+    padding: 10px;
+    background: var(--background);
+    border-radius: 8px;
+}
+
+.calendar-day-cell {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-height: 120px;
+    padding: 8px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s;
+}
+
+.calendar-day-cell:hover {
+    border-color: var(--primary);
+}
+
+.calendar-day-cell.inactive {
+    background: var(--background);
+    opacity: 0.6;
+}
+
+.calendar-date-label {
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    color: var(--text-muted);
+    text-align: right;
+}
+
+.calendar-day-cell.today .calendar-date-label {
+    color: var(--primary);
+    background: var(--primary-light);
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    align-self: flex-end;
+}
+
+.descanso-badge {
+    font-size: 0.8em;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.descanso-badge:hover {
+    opacity: 0.9;
+}
+
+.descanso-badge.status-ok {
+    background: var(--success);
+}
+
+.descanso-badge.status-error {
+    background: var(--danger);
+}
+
+.descanso-badge .delete-btn {
+    background: rgba(0,0,0,0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.descanso-badge .delete-btn:hover {
+    background: rgba(0,0,0,0.4);
+}
+
+.add-descanso-btn {
+    margin-top: auto;
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.add-descanso-btn:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* New Sidebar Styles */
+.employee-side-item {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.employee-side-item:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+}
+
+.employee-side-item .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.employee-side-item .emp-name {
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.95em;
+    margin-bottom: 2px;
+}
+
+.employee-side-item .emp-branch {
+    font-size: 0.8em;
+    color: var(--text-muted);
+}
+
+.employee-side-item .rule-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 0.75em;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.employee-side-item .config-btn {
+    background: var(--primary-light);
+    color: var(--primary);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8em;
+    font-weight: 600;
+    transition: all 0.2s;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.employee-side-item .config-btn:hover {
+    background: var(--primary);
+    color: white;
+}

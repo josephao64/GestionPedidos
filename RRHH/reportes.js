@@ -249,15 +249,16 @@ window.reports = {
         const tbody = document.getElementById('collaboratorsTableBody');
         const filterBranch = document.getElementById('reportBranchFilter');
         const selectedBranchId = filterBranch ? filterBranch.value : 'all';
+        const filterStatus = document.getElementById('reportStatusFilter') ? document.getElementById('reportStatusFilter').value : 'all';
 
         if (!tbody) return;
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Cargando colaboradores...</td></tr>';
 
         try {
             // Reusing the same data source for consistency, though we could optimize.
-            // Fetching active employees
+            // Fetching all employees to support inactive
             const [empSnap, posSnap, branchSnap] = await Promise.all([
-                db.collection('employees').where('status', '==', 'active').get(),
+                db.collection('employees').get(),
                 db.collection('positions').get(),
                 db.collection('sucursales').get()
             ]);
@@ -268,7 +269,11 @@ window.reports = {
             }
 
             const branchMap = {};
-            branchSnap.forEach(d => branchMap[d.id] = d.data().name || 'Sucursal Desconocida');
+            const branchAddressMap = {};
+            branchSnap.forEach(d => {
+                branchMap[d.id] = d.data().name || 'Sucursal Desconocida';
+                branchAddressMap[d.id] = d.data().address || 'Sin Dirección';
+            });
 
             const positionMap = {};
             posSnap.forEach(d => positionMap[d.id] = d.data().name || 'Sin Puesto');
@@ -284,12 +289,38 @@ window.reports = {
 
                 if (selectedBranchId !== 'all' && branchId !== selectedBranchId) return;
 
+                let includeEmp = false;
+                if (filterStatus === 'all') {
+                    includeEmp = true;
+                } else if (filterStatus === 'inactive') {
+                    if (emp.status === 'inactive') includeEmp = true;
+                } else if (emp.status !== 'inactive') {
+                    if (filterStatus === 'active') {
+                        includeEmp = true;
+                    } else {
+                        // Probation Logic
+                        let isProbation = false;
+                        if (emp.startDate) {
+                            const settings = window.rrhhConfig ? window.rrhhConfig.getBranchSettings(emp.sucursalId) : { probationDays: 60 };
+                            const probationMs = settings.probationDays * 24 * 60 * 60 * 1000;
+                            const start = new Date(emp.startDate).getTime();
+                            if (Date.now() - start < probationMs) isProbation = true;
+                        }
+
+                        if (filterStatus === 'probation' && isProbation) includeEmp = true;
+                        else if (filterStatus === 'no_probation' && !isProbation) includeEmp = true;
+                    }
+                }
+
+                if (!includeEmp) return;
+
                 employees.push({
                     name: emp.fullName,
                     dpi: emp.dpi,
                     sexo: emp.sexo,
                     position: positionMap[emp.positionId] || 'Desconocido',
                     branch: branchMap[branchId] || 'Sin Asignar',
+                    address: branchAddressMap[branchId] || 'Sin Dirección',
                     startDate: emp.startDate || '',
                     originalDate: emp.startDate ? new Date(emp.startDate) : null
                 });
@@ -304,7 +335,8 @@ window.reports = {
             });
 
             if (employees.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No se encontraron colaboradores con el filtro seleccionado.</td></tr>';
+                // Adjust colspan to 8 to cover the new Dirección column
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">No se encontraron colaboradores con el filtro seleccionado.</td></tr>';
                 return;
             }
 
@@ -335,6 +367,7 @@ window.reports = {
                         <td style="padding: 12px;">${e.sexo || '-'}</td>
                         <td style="padding: 12px;">${e.position}</td>
                         <td style="padding: 12px;"><span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;">${e.branch}</span></td>
+                        <td style="padding: 12px;"><span style="font-size: 0.85em;">${e.address}</span></td>
                         <td style="padding: 12px;">${dateStr}</td>
                         <td style="padding: 12px; text-align: center;">${seniority}</td>
                     </tr>

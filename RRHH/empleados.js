@@ -1,4 +1,4 @@
-﻿
+
 // empleados.js
 let currentEmpleadoId = null;
 
@@ -260,6 +260,7 @@ async function loadEmployees() {
                         <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="editEmpleado('${data.id}')" title="Editar"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.75rem; background: #8b5cf6; border: none;" onclick="openTransferModal('${data.id}')" title="Trasladar"><i class="fas fa-exchange-alt"></i></button>
                         <button class="btn btn-info" style="padding: 4px 8px; font-size: 0.75rem; background: #14b8a6; border: none;" onclick="printContract('${data.id}')" title="Generar Contrato"><i class="fas fa-file-signature"></i></button>
+                        <button class="btn btn-info" style="padding: 4px 8px; font-size: 0.75rem; background: #f59e0b; border: none;" onclick="printConstanciaLaboral('${data.id}')" title="Generar Constancia"><i class="fas fa-file-invoice"></i></button>
                         ${data.status !== 'inactive' ? `<button class="btn btn-warning" style="padding: 4px 8px; font-size: 0.75rem;" onclick="inactivateEmpleado('${data.id}', '${data.fullName}')" title="Dar de Baja"><i class="fas fa-user-slash"></i></button>` : ''}
                         
                         ${data.isTempTransfer ? `<button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75rem; background: #10b981; border: none;" onclick="endTempTransfer('${data.id}', '${data.fullName}', '${data.tempSucursalName}', '${data.sucursalName}')" title="Finalizar Préstamo (Regresar)"><i class="fas fa-undo-alt"></i></button>` : ''}
@@ -349,6 +350,7 @@ async function printContract(id) {
 
         let companyName = data.subEmpresa === 'Pedidos Flash' ? 'Pedidos Flash' : 'Corporación de Alimentos VIPIZZA, S.A.';
         let employeeLocation = '';
+        let branchAddress = '';
 
         try {
             if (data.sucursalId) {
@@ -356,6 +358,7 @@ async function printContract(id) {
                 if (sucDoc.exists) {
                     const sucData = sucDoc.data();
                     employeeLocation = sucData.name || '';
+                    branchAddress = sucData.address || '';
                     if (sucData.empresaId) {
                         const empDoc = await db.collection('empresas').doc(sucData.empresaId).get();
                         if (empDoc.exists) {
@@ -635,7 +638,7 @@ async function printContract(id) {
                     <div class="clause fill-row">
                         <span class="text-node"><strong>TERCERA:</strong> Los servicios serán prestados en</span>
                         <div class="input-group" style="width: 68%;">
-                            <div class="input-line">${data.sucursalName}</div>
+                            <div class="input-line">${branchAddress || data.sucursalName}</div>
                             <div class="input-label">Indicar dirección exacta donde se ejecutará el servicio</div>
                         </div>
                     </div>
@@ -662,7 +665,7 @@ async function printContract(id) {
                     <div class="clause fill-row">
                         <span class="text-node"><strong>SEXTA:</strong> el salario será de</span>
                         <div class="input-group" style="width: 35%;">
-                            <div class="input-line">Q4,002.28</div>
+                            <div class="input-line">Q3,816.90</div>
                         </div>
                         <span class="text-node">más Bonificación Incentivo de</span>
                         <div class="input-group" style="width: 20%;">
@@ -734,6 +737,214 @@ async function printContract(id) {
     } catch (e) {
         console.error("Error generating contract:", e);
         Swal.fire('Error', 'No se pudo generar el contrato', 'error');
+    }
+}
+
+async function printConstanciaLaboral(id) {
+    try {
+        const doc = await db.collection('employees').doc(id).get();
+        if (!doc.exists) {
+            Swal.fire('Error', 'No se encontró el empleado', 'error');
+            return;
+        }
+        const data = doc.data();
+
+        let branchAddress = '';
+        let repFullName = '';
+        let firmaBase64 = '';
+        let repPhone = ''; // To show in the footer
+        let empresaName = '';
+
+        try {
+            if (data.sucursalId) {
+                const sucDoc = await db.collection('sucursales').doc(data.sucursalId).get();
+                if (sucDoc.exists) {
+                    const sucData = sucDoc.data();
+                    // Concat sucursal location string
+                    branchAddress = sucData.address || sucData.name || '';
+                    if (sucData.empresaId) {
+                        const empDoc = await db.collection('empresas').doc(sucData.empresaId).get();
+                        if (empDoc.exists) {
+                            const empData = empDoc.data();
+                            repPhone = empData.phone || '';
+                            empresaName = empData.name || '';
+
+                            if (empData.representativeId) {
+                                const repDoc = await db.collection('representantes').doc(empData.representativeId).get();
+                                if (repDoc.exists) {
+                                    const r = repDoc.data();
+                                    repFullName = r.fullName || '';
+                                    firmaBase64 = r.firmaBase64 || '';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error loading enterprise/representative details", e);
+        }
+
+        const today = new Date();
+        const startD = data.startDate ? new Date(data.startDate) : today;
+        const startDay = startD.getDate();
+        const startMonthName = startD.toLocaleString('es-GT', { month: 'long' });
+        const startYear = startD.getFullYear();
+        
+        // Format current date
+        const printDay = today.getDate();
+        const printMonth = today.toLocaleString('es-GT', { month: 'long' });
+        const printYear = today.getFullYear();
+        
+        // Convert numbers to words for the date, simplified:
+        const n2w = {
+            1: "un", 2: "dos", 3: "tres", 4: "cuatro", 5: "cinco", 6: "seis", 7: "siete", 8: "ocho", 9: "nueve", 10: "diez",
+            11: "once", 12: "doce", 13: "trece", 14: "catorce", 15: "quince", 16: "dieciséis", 17: "diecisiete", 18: "dieciocho", 19: "diecinueve", 20: "veinte",
+            21: "veintiuno", 22: "veintidós", 23: "veintitrés", 24: "veinticuatro", 25: "veinticinco", 26: "veintiséis", 27: "veintisiete", 28: "veintiocho", 29: "veintinueve", 30: "treinta", 31: "treinta y uno"
+        };
+        const dayWord = n2w[printDay] || printDay.toString();
+        
+        let yearWord = printYear.toString();
+        if (printYear === 2024) yearWord = "dos mil veinticuatro";
+        else if (printYear === 2025) yearWord = "dos mil veinticinco";
+        else if (printYear === 2026) yearWord = "dos mil veintiséis";
+        else if (printYear === 2027) yearWord = "dos mil veintisiete";
+
+        const laboroText = data.status === 'active' ? 'labora' : 'laboró';
+
+        let endDateText = 'la fecha';
+        if (data.status === 'inactive' && data.endDate) {
+            const endD = new Date(data.endDate);
+            endDateText = `el ${endD.getDate()} de ${endD.toLocaleString('es-GT', { month: 'long' })} de ${endD.getFullYear()}`;
+        }
+
+        let letterheadImg = '../resources/images/membrete corporacion.png';
+        const empNameUpper = empresaName.toUpperCase();
+        if (empNameUpper.includes('VIPIZZA')) {
+            letterheadImg = '../resources/images/membrete vipizza.png';
+        } else if (empNameUpper.includes('AMERICAN') || empNameUpper.includes('PEDIDO') || empNameUpper.includes('FLASH')) {
+            letterheadImg = '../resources/images/membrete american pizza.png';
+        }
+
+        const finalFirma = firmaBase64 ? firmaBase64 : '../resources/images/firma rp.png';
+        const firmaImgHtml = `<img src="${finalFirma}" alt="Firma" style="max-width: 200px; max-height: 100px; display: block; margin: 0 auto 5px;">`;
+
+        const letterHtml = `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    /* Remove Browser Headers/Footers */
+                    @page {
+                        margin: 0;
+                        size: auto;
+                    }
+                    body {
+                        font-family: "Times New Roman", Times, serif;
+                        font-size: 13pt;
+                        line-height: 1.5;
+                        margin: 0;
+                        padding: 0;
+                        background: #fff;
+                        color: #000;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .page {
+                        width: 8.5in;
+                        height: 11in;
+                        padding: 2.2in 1.2in 1.2in 1.2in; /* Added padding to push text below upper letterhead */
+                        box-sizing: border-box;
+                        position: relative;
+                        margin: 0 auto;
+                        background-image: url('${letterheadImg}');
+                        background-size: 100% 100%;
+                        background-repeat: no-repeat;
+                    }
+                    .content-container {
+                        text-align: justify;
+                    }
+                    .title {
+                        text-align: center;
+                        font-weight: bold;
+                        font-size: 14pt;
+                        text-decoration: underline;
+                        margin-bottom: 50px;
+                    }
+                    .paragraph {
+                        margin-bottom: 25px;
+                    }
+                    .signature-area {
+                        margin-top: 80px;
+                        text-align: center;
+                    }
+                    .sign-line {
+                        border-top: 1px solid black;
+                        width: 350px;
+                        margin: 0 auto;
+                        margin-top: 5px;
+                    }
+                    .sign-name {
+                        font-weight: bold;
+                        margin-top: 5px;
+                        font-size: 12pt;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="page">
+                    <div class="content-container">
+                        <div class="title">A QUIEN INTERESE</div>
+
+                    <div class="paragraph">
+                        Por medio de la presente hacemos constar que el(la) joven, <strong>${data.fullName ? data.fullName.toUpperCase() : ''}</strong>, 
+                        que se identifica con DPI # <strong>${data.dpi || 'N/A'}</strong>, quien ${laboroText} en nuestra empresa, ubicada en 
+                        ${branchAddress}; desde el periodo del ${startDay} de ${startMonthName} de ${startYear} hasta 
+                        ${endDateText}, devengando el sueldo mínimo establecido por la ley, más la bonificación decreto 76-78.
+                    </div>
+
+                    <div class="paragraph">
+                        Para los usos legales que al interesado convengan se extiende la presente a los ${dayWord} días del mes de ${printMonth} del año ${yearWord}.
+                    </div>
+
+                    <div class="paragraph">
+                        Quedo a sus órdenes en caso de que requieran alguna información adicional.
+                    </div>
+
+                    <div class="paragraph" style="text-align: center; margin-top: 40px;">
+                        Atentamente,
+                    </div>
+
+                    <div class="signature-area">
+                        ${firmaImgHtml}
+                        <div class="sign-line"></div>
+                        <div class="sign-name">${repFullName ? repFullName.toUpperCase() : 'REPRESENTANTE LEGAL'}</div>
+                        <div style="font-size: 11pt;">Representante Legal</div>
+                        
+                        <div style="margin-top: 40px; font-size: 11pt; line-height: 1.4;">
+                            <strong>José Marroquín</strong><br>
+                            Administración<br>
+                            Tel: 5865 3966
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const printWindow = window.open('', '_blank', 'width=900,height=700');
+        printWindow.document.write(letterHtml);
+        printWindow.document.close();
+
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
+
+    } catch (e) {
+        console.error("Error generating constancia:", e);
+        Swal.fire('Error', 'No se pudo generar la constancia', 'error');
     }
 }
 

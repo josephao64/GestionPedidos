@@ -3,6 +3,7 @@
 
 let allLoans = [];
 let loanSubsCheck = false;
+let allActiveEmployeesForLoans = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     // Optional init
@@ -44,18 +45,12 @@ function renderLoansTable() {
     // Populate Branch Filter if needed
     const branchSelect = document.getElementById('loanFilterBranch');
     if (branchSelect.options.length === 1) {
-        const branches = new Set(allLoans.map(l => l.sucursalName).filter(Boolean));
-        branches.forEach(b => {
-            // We'd need ID to be precise but Name is OK for simple filter
-            // Ideally we load sucursales properly, but let's just infer from data for speed or use loaded sucursales
-        });
-
-        // Better: Usage of global cache if available or fetch
-        if (typeof orgData !== 'undefined' && orgData.branches) {
-            orgData.branches.forEach(s => {
-                branchSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        db.collection('sucursales').orderBy('name').get().then(snap => {
+            snap.forEach(doc => {
+                const s = doc.data();
+                branchSelect.innerHTML += `<option value="${doc.id}">${s.name}</option>`;
             });
-        }
+        }).catch(e => console.error("Error loading branches for filter:", e));
     }
 
     let filtered = allLoans.filter(l => {
@@ -153,27 +148,50 @@ async function openLoanModal() {
     empSelect.innerHTML = '<option value="">Cargando...</option>';
     try {
         const snap = await db.collection('employees').where('status', '==', 'active').get();
-        empSelect.innerHTML = '<option value="">Seleccione Empleado...</option>';
+        allActiveEmployeesForLoans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        allActiveEmployeesForLoans.sort((a, b) => a.fullName.localeCompare(b.fullName));
 
-        const employees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        employees.sort((a, b) => a.fullName.localeCompare(b.fullName));
-
-        employees.forEach(e => {
-            const branch = (e.isTempTransfer && e.tempSucursalName) ? e.tempSucursalName : e.sucursalName;
-            const option = document.createElement('option');
-            option.value = e.id;
-            option.dataset.name = e.fullName;
-            option.dataset.code = e.employeeCode || '';
-            option.dataset.sucursalId = (e.isTempTransfer && e.tempSucursalId) ? e.tempSucursalId : e.sucursalId;
-            option.dataset.sucursalName = branch;
-            option.textContent = `${e.fullName} (${branch})`;
-            empSelect.appendChild(option);
+        // Populate branches filter
+        const branchSelect = document.getElementById('loan_branch_filter');
+        const branches = new Set(allActiveEmployeesForLoans.map(e => (e.isTempTransfer && e.tempSucursalName) ? e.tempSucursalName : e.sucursalName).filter(Boolean));
+        branchSelect.innerHTML = '<option value="">Todas las Sucursales</option>';
+        [...branches].sort().forEach(b => {
+             branchSelect.innerHTML += `<option value="${b}">${b}</option>`;
         });
+
+        document.getElementById('loan_employee_search').value = '';
+        document.getElementById('loan_branch_filter').value = '';
+
+        filterLoanEmployees();
 
     } catch (e) {
         console.error(e);
         empSelect.innerHTML = '<option value="">Error al cargar</option>';
     }
+}
+
+function filterLoanEmployees() {
+    const search = document.getElementById('loan_employee_search').value.toLowerCase();
+    const branchFilter = document.getElementById('loan_branch_filter').value;
+    const empSelect = document.getElementById('loan_employee');
+    
+    empSelect.innerHTML = '<option value="">Seleccione Empleado...</option>';
+    
+    allActiveEmployeesForLoans.forEach(e => {
+        const branch = (e.isTempTransfer && e.tempSucursalName) ? e.tempSucursalName : e.sucursalName;
+        
+        if (branchFilter && branch !== branchFilter) return;
+        if (search && !(e.fullName.toLowerCase().includes(search) || (e.dpi && e.dpi.includes(search)) || (e.employeeCode && (e.employeeCode+'').toLowerCase().includes(search)))) return;
+        
+        const option = document.createElement('option');
+        option.value = e.id;
+        option.dataset.name = e.fullName;
+        option.dataset.code = e.employeeCode || '';
+        option.dataset.sucursalId = (e.isTempTransfer && e.tempSucursalId) ? e.tempSucursalId : e.sucursalId;
+        option.dataset.sucursalName = branch;
+        option.textContent = `${e.fullName} (${branch})`;
+        empSelect.appendChild(option);
+    });
 }
 
 function closeLoanModal() {
