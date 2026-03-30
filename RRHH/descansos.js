@@ -182,11 +182,11 @@ window.descansos = {
                 const emp = filteredEmployees.find(e => e.id === r.empleadoId);
                 const empName = emp ? emp.fullName : 'Desconocido';
                 
-                const isValid = this.validateDescansoRule(r.empleadoId, dateStr);
-                const statusClass = isValid ? 'status-ok' : 'status-error';
+                const validation = this.validateDescansoRule(r.empleadoId, dateStr);
+                const statusClass = validation.isValid ? 'status-ok' : 'status-error';
                 
                 badgesHtml += `
-                    <div class="descanso-badge ${statusClass}" title="${empName} - Regla: ${emp?.tipo_descanso || 'Sin regla'}"
+                    <div class="descanso-badge ${statusClass}" title="${empName} | ${validation.message}"
                          draggable="true" 
                          ondragstart="window.descansos.handleDragStart(event, '${r.id}', '${r.empleadoId}')"
                          style="cursor: grab;">
@@ -238,7 +238,7 @@ window.descansos = {
             const isCompliant = this.validateMonthCompliance(emp.id, year, this.currentMonth.getMonth());
             const statusLabel = isCompliant 
                 ? '<span style="color:var(--success); font-weight:bold;"><i class="fas fa-check-circle"></i> Cumple</span>' 
-                : '<span style="color:var(--danger); font-weight:bold;"><i class="fas fa-exclamation-circle"></i> Conflicto/Incompleto</span>';
+                : '<span style="color:var(--danger); font-weight:bold;"><i class="fas fa-exclamation-circle"></i> Conflicto</span>';
 
             html += `
                 <tr style="border-bottom: 1px solid var(--border);">
@@ -275,29 +275,112 @@ window.descansos = {
     
     validateDescansoRule(empleadoId, dateStr) {
         const emp = this.empleados.find(e => e.id === empleadoId);
-        if (!emp || !emp.tipo_descanso) return false;
+        if (!emp || !emp.tipo_descanso) return { isValid: true, message: 'Sin regla asignada' };
 
         const targetDate = new Date(dateStr + 'T12:00:00');
         const ruleVal = parseInt(emp.tipo_descanso);
         
-        if (isNaN(ruleVal)) return false;
+        if (isNaN(ruleVal)) return { isValid: true, message: 'Sin regla asignada' };
 
-        const jan1 = new Date(targetDate.getFullYear(), 0, 1);
-        const daysSinceJan1 = Math.floor((targetDate - jan1) / (24 * 60 * 60 * 1000));
-        const weekNum = Math.ceil((targetDate.getDay() + 1 + daysSinceJan1) / 7);
-        const blockNum = Math.floor((weekNum - 1) / ruleVal);
+        let ruleText = '';
+        if (emp.tipo_descanso === '1') ruleText = '1 día/sem';
+        else if (emp.tipo_descanso === '2') ruleText = '2 días/2sem';
+        else if (emp.tipo_descanso === '3') ruleText = '3 días/3sem';
+        else if (emp.tipo_descanso === '4') ruleText = '4 días/mes';
+
+        // Caso Especial: Regla 4 (4 días al mes calendario)
+        if (emp.tipo_descanso === '4') {
+            const uniqueMonthDates = new Set();
+            this.registros.forEach(r => {
+                if (r.empleadoId !== empleadoId) return;
+                const rDate = new Date(r.fecha + 'T12:00:00');
+                if (rDate.getMonth() === targetDate.getMonth() && rDate.getFullYear() === targetDate.getFullYear()) {
+                    uniqueMonthDates.add(r.fecha);
+                }
+            });
+            const valid = uniqueMonthDates.size <= 4;
+            return { 
+                isValid: valid, 
+                message: valid ? `Regla: ${ruleText} (${uniqueMonthDates.size}/4 usados)` : `Conflicto: Excede 4 días al mes (${uniqueMonthDates.size}/4)` 
+            };
+        }
+
+        const windowDays = ruleVal * 7;
+        const employeeRecords = Array.from(new Set(
+            this.registros
+                .filter(r => r.empleadoId === empleadoId)
+                .map(r => r.fecha)
+        )).sort();
         
-        const count = this.registros.filter(r => {
-            if (r.empleadoId !== empleadoId) return false;
-            const rDate = new Date(r.fecha + 'T12:00:00');
-            if (rDate.getFullYear() !== targetDate.getFullYear()) return false;
-            const rDaysSince = Math.floor((rDate - jan1) / (24 * 60 * 60 * 1000));
-            const rWeekNum = Math.ceil((rDate.getDay() + 1 + rDaysSince) / 7);
-            const rBlockNum = Math.floor((rWeekNum - 1) / ruleVal);
-            return rBlockNum === blockNum;
-        }).length;
+        // --- Nueva Lógica: Ciclos Fijos o Semanas Calendario ---
         
-        return count <= ruleVal;
+        if (emp.tipo_descanso === '1') {
+            // Regla 1 día/sem: Usar SEMANA CALENDARIO (Lunes a Domingo)
+            const d = new Date(targetDate);
+            const day = d.getDay(); // 0=Dom, 1=Lun...
+            const diffToMonday = day === 0 ? -6 : 1 - day;
+            
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + diffToMonday);
+            monday.setHours(0,0,0,0);
+            
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            sunday.setHours(23,59,59,999);
+
+            const weekRecords = employeeRecords.filter(f => {
+                const fDate = new Date(f.trim() + 'T12:00:00');
+                return fDate >= monday && fDate <= sunday;
+            });
+
+            if (weekRecords.length > 1) {
+                const datesFormatted = weekRecords.map(d => d.split('-').reverse().join('/')).join(', ');
+                return { 
+                    isValid: false, 
+                    message: `Conflicto: ${weekRecords.length} descansos en la misma semana calendario (${datesFormatted}). (Regla: ${ruleText})` 
+                };
+            }
+        } else {
+            // Reglas multi-semana (2/2, 3/3): Usar CICLOS desde FECHA DE REFERENCIA
+            if (!emp.fecha_referencia) {
+                return { isValid: true, message: `Aviso: Define una 'Fecha de Referencia' para validar ciclos de ${ruleVal} semanas.` };
+            }
+
+            const refDate = new Date(emp.fecha_referencia + 'T00:00:00');
+            const targetTime = targetDate.getTime();
+            const refTime = refDate.getTime();
+            
+            const diffMs = targetTime - refTime;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            // Calcular en qué ciclo de N días cae la fecha
+            // Ciclo = Math.floor(dias_desde_ref / (ruleVal * 7))
+            const cycleDays = ruleVal * 7;
+            const cycleIndex = Math.floor(diffDays / cycleDays);
+            
+            const cycleStart = new Date(refDate);
+            cycleStart.setDate(refDate.getDate() + (cycleIndex * cycleDays));
+            cycleStart.setHours(0,0,0,0);
+            
+            const cycleEnd = new Date(cycleStart);
+            cycleEnd.setDate(cycleStart.getDate() + cycleDays - 1);
+            cycleEnd.setHours(23,59,59,999);
+
+            const cycleRecords = employeeRecords.filter(f => {
+                const fDate = new Date(f.trim() + 'T12:00:00');
+                return fDate >= cycleStart && fDate <= cycleEnd;
+            });
+
+            if (cycleRecords.length > ruleVal) {
+                const datesFormatted = cycleRecords.map(d => d.split('-').reverse().join('/')).join(', ');
+                return { 
+                    isValid: false, 
+                    message: `Conflicto: ${cycleRecords.length} descansos en el ciclo de ${ruleVal} semanas [${cycleStart.toLocaleDateString()} - ${cycleEnd.toLocaleDateString()}] (${datesFormatted}).` 
+                };
+            }
+        }
+        
+        return { isValid: true, message: `Regla: ${ruleText}` };
     },
 
     validateMonthCompliance(empleadoId, year, month) {
@@ -307,7 +390,8 @@ window.descansos = {
         const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
         const monthRecords = this.registros.filter(r => r.empleadoId === empleadoId && r.fecha.startsWith(monthPrefix));
         
-        return monthRecords.length >= 4 && monthRecords.every(r => this.validateDescansoRule(empleadoId, r.fecha));
+        // Un mes se considera completo si tiene al menos 4 días (aprox) y todos son válidos
+        return monthRecords.length >= 4 && monthRecords.every(r => this.validateDescansoRule(empleadoId, r.fecha).isValid);
     },
 
     checkCoverageLimits() {
@@ -609,9 +693,11 @@ window.descansos = {
     // --- Rule Validation Modal ---
 
     openRuleModal(empId, empName, currentRule) {
+        const emp = this.empleados.find(e => e.id === empId);
         document.getElementById('descansoRuleEmpId').value = empId;
         document.getElementById('descansoRuleEmpName').value = empName;
         document.getElementById('descansoRuleSelect').value = currentRule || '';
+        document.getElementById('descansoRuleRefDate').value = emp?.fecha_referencia || '';
         document.getElementById('descansoRuleModal').style.display = 'flex';
     },
 
@@ -622,6 +708,7 @@ window.descansos = {
     async saveRule() {
         const empId = document.getElementById('descansoRuleEmpId').value;
         const newRule = document.getElementById('descansoRuleSelect').value;
+        const refDate = document.getElementById('descansoRuleRefDate').value;
 
         if (!newRule) {
             Swal.fire('Aviso', 'Por favor selecciona una regla.', 'warning');
@@ -630,11 +717,15 @@ window.descansos = {
 
         try {
             await db.collection('employees').doc(empId).update({
-                tipo_descanso: newRule
+                tipo_descanso: newRule,
+                fecha_referencia: refDate
             });
             
             const emp = this.empleados.find(e => e.id === empId);
-            if (emp) emp.tipo_descanso = newRule;
+            if (emp) {
+                emp.tipo_descanso = newRule;
+                emp.fecha_referencia = refDate;
+            }
 
             this.closeRuleModal();
             this.render();

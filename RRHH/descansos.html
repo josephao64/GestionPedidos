@@ -303,8 +303,8 @@
             </div>
 
             <!-- Coverage Alert -->
-            <div id="descansos-coverage-alert" style="display: none; background: #fef2f2; border: 1px solid #f87171; color: #b91c1c; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
-                <i class="fas fa-exclamation-triangle"></i> <strong>Alerta de Cobertura:</strong> <span id="descansos-coverage-msg"></span>
+            <div id="descansos-coverage-alert" style="display: none; background: #fffbeeb3; border: 1px solid #fcd34d; color: #92400e; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9em;">
+                <i class="fas fa-info-circle"></i> <strong>Aviso de Cobertura (Informativo):</strong> <br><span id="descansos-coverage-msg"></span>
             </div>
 
             <!-- Split View -->
@@ -350,7 +350,7 @@
                 <label style="display: block; font-weight: 600; margin-bottom: 6px;">Empleado</label>
                 <input type="text" id="descansoRuleEmpName" class="form-control" disabled style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: #f8fafc;">
             </div>
-            <div style="margin-bottom: 24px;">
+            <div style="margin-bottom: 20px;">
                 <label style="display: block; font-weight: 600; margin-bottom: 6px;">Patrón de Descanso (Acumulación)</label>
                 <select id="descansoRuleSelect" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
                     <option value="">(Sin asignar)</option>
@@ -359,6 +359,11 @@
                     <option value="3">3 días cada 3 semanas</option>
                     <option value="4">4 días al mes</option>
                 </select>
+            </div>
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 6px;">Fecha de Referencia (Inicio de Ciclo)</label>
+                <input type="date" id="descansoRuleRefDate" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                <p style="font-size: 0.75em; color: var(--text-muted); margin-top: 4px;">Define el primer día de descanso para calcular los ciclos de 2 o 3 semanas.</p>
             </div>
             <div style="display: flex; gap: 12px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="window.descansos.closeRuleModal()">Cancelar</button>

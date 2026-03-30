@@ -88,7 +88,16 @@
         <option value="delivery">Recibidos</option>
       </select>
 
-      <label><i class="fas fa-calendar"></i> Fecha:</label>
+      <label><i class="fas fa-calendar-alt"></i> Año:</label>
+      <select id="yearFilter">
+        <option value="all">Todos</option>
+        <option value="2024">2024</option>
+        <option value="2025">2025</option>
+        <option value="2026">2026</option>
+        <option value="2027">2027</option>
+      </select>
+
+      <label><i class="fas fa-calendar"></i> Fecha Exacta:</label>
       <input type="date" id="dateSearchInput">
 
       <label><i class="fas fa-hashtag"></i> ID:</label>
@@ -109,6 +118,17 @@
       </button>
       <button class="tab-btn" data-tab-target="completedOrdersContainer">
         <i class="fas fa-check-double"></i> Completados
+      </button>
+    </div>
+
+    <!-- Mass Actions Bar -->
+    <div class="mass-actions-bar" style="display: flex; gap: 10px; padding: 10px 20px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin: 0 20px 15px 20px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <span style="font-weight: 600; font-size: 0.9em; color: var(--text-muted);"><i class="fas fa-tasks"></i> Selección Múltiple:</span>
+      <button class="btn" onclick="window.selectAllOrders(true)" style="padding: 6px 12px; font-size: 0.85em; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;"><i class="fas fa-check-square"></i> Todos</button>
+      <button class="btn" onclick="window.selectAllOrders(false)" style="padding: 6px 12px; font-size: 0.85em; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;"><i class="far fa-square"></i> Ninguno</button>
+      <div style="flex: 1;"></div>
+      <button class="btn" onclick="window.deleteSelectedOrders()" style="background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; padding: 6px 16px; font-size: 0.9em; display: flex; gap: 8px; align-items: center; font-weight: bold; cursor: pointer;">
+        <i class="fas fa-trash-alt"></i> Borrar Registros
       </button>
     </div>
 

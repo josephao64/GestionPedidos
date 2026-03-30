@@ -27,6 +27,7 @@ const state = {
     provider: "all",
     sucursal: "all",
     date: null,
+    year: "all",
     sort: "masReciente",
   },
 };
@@ -211,6 +212,9 @@ function wireFilters() {
       ? new Date($("#dateSearchInput").value)
       : null;
 
+    // Filtro por Año
+    state.filters.year = $("#yearFilter")?.value || "all";
+
     // Re-suscribimos con los nuevos filtros
     attachInProcessListener();
     attachCompletedListener();
@@ -224,6 +228,7 @@ function wireFilters() {
     "sortOrder",
     "idSearchInput",
     "dateSearchInput",
+    "yearFilter"
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -234,18 +239,27 @@ function wireFilters() {
 
 function loadLogo() {
   const img = new Image();
+  // Evitar forzar Anonymous en esquemas de archivos estáticos (file://)
+  if (window.location.protocol.startsWith("http")) {
+      img.crossOrigin = "Anonymous";
+  }
   img.src = "../resources/images/logo.png";
-  img.crossOrigin = "Anonymous";
+  
   img.onload = function () {
-    const canvas = document.createElement("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    logoBase64 = canvas.toDataURL("image/png");
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      logoBase64 = canvas.toDataURL("image/png");
+    } catch(e) {
+      console.warn("Seguridad Tainted Canvas bloqueó Base64 (estás usando file://). Fallback visual activado pero logo omitido en exportación rápida.");
+      logoBase64 = img.src; 
+    }
   };
   img.onerror = function () {
-    console.error("No se pudo cargar ../resources/images/logo.png");
+    console.warn("No se pudo cargar visualmente ../resources/images/logo.png para exportación.");
   };
 }
 
@@ -328,6 +342,12 @@ function buildOrdersBaseQuery() {
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
     q = q.where("timestamp", ">=", start).where("timestamp", "<", end);
+  } else if (state.filters.year && state.filters.year !== "all") {
+    // Si no hay filtro de día exacto, pero sí de Año
+    const year = parseInt(state.filters.year);
+    const startObj = new Date(`${year}-01-01T00:00:00`);
+    const endObj = new Date(`${year + 1}-01-01T00:00:00`);
+    q = q.where("timestamp", ">=", startObj).where("timestamp", "<", endObj);
   }
 
   // Filtro por ESTADO: si se elige uno específico, lo aplicamos aquí
@@ -451,8 +471,11 @@ function renderOrderCard(orderDocId, order) {
   }
 
   card.innerHTML = `
-    <div class="card-header">
-        <span class="card-id">#${order.orderId}</span>
+    <div class="card-header" style="position: relative;">
+        <!-- Checkbox Masivo -->
+        <input type="checkbox" class="order-select-checkbox" data-id="${orderDocId}" style="position: absolute; left: 10px; top: 18px; transform: scale(1.3); cursor: pointer;" onclick="event.stopPropagation()">
+        
+        <span class="card-id" style="margin-left: 25px;">#${order.orderId}</span>
         <span class="card-date">${order.orderDate}</span>
     </div>
     <div class="card-body">
@@ -1317,7 +1340,7 @@ function exportAsImageTicket(order, fileName) {
     html2canvas(ticket, {
       scale: 1,
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
       logging: false
     })
       .then((canvas) => {
@@ -1934,7 +1957,12 @@ function exportAsReceptionImageNoPreview(order, fileName) {
   hiddenDiv.style.top = "50%";
   hiddenDiv.style.transform = "translate(-50%, -50%)";
 
-  html2canvas(hiddenDiv, { scale: 3 })
+  html2canvas(hiddenDiv, { 
+    scale: 3, 
+    useCORS: true, 
+    allowTaint: false,
+    logging: false
+  })
     .then((canvas) => {
       const link = document.createElement("a");
       link.href = canvas.toDataURL("image/png");
@@ -2008,7 +2036,12 @@ function generateReceiptImage(order) {
   // Show and Export
   container.style.display = "block";
 
-  html2canvas(container, { scale: 2 }).then(canvas => {
+  html2canvas(container, { 
+    scale: 2,
+    useCORS: true,
+    allowTaint: false,
+    logging: false
+  }).then(canvas => {
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
     link.download = `Constancia_Recepcion_${order.orderId}.png`;
@@ -2198,3 +2231,90 @@ async function saveUsageAverages() {
     Swal.fire({ icon: 'error', title: 'Error', text: 'Error al guardar promedios: ' + e.message });
   }
 }
+
+/**********************************************************
+ * SELECCIÓN MASIVA Y BORRADO EN LOTE (BATCH)
+ **********************************************************/
+window.selectAllOrders = function(forceCheck) {
+  const checkboxes = document.querySelectorAll('.order-select-checkbox');
+  checkboxes.forEach(chk => {
+    // Solo seleccionar los que están visibles en el tab actual (En Proceso / Completados)
+    if (chk.closest('.tab-view').style.display !== 'none') {
+      chk.checked = forceCheck;
+    }
+  });
+};
+
+window.deleteSelectedOrders = async function() {
+  const checkboxes = document.querySelectorAll('.order-select-checkbox:checked');
+  const ids = Array.from(checkboxes).map(c => c.getAttribute('data-id'));
+  
+  if (ids.length === 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Atención',
+      text: 'Selecciona al menos un pedido marcando la casilla de su tarjeta.',
+      toast: true,
+      position: 'top-end',
+      timer: 3000,
+      showConfirmButton: false
+    });
+    return;
+  }
+  
+  const result = await Swal.fire({
+    title: '¿Confirmar Borrado Masivo?',
+    html: `Estás a punto de <b>ELIMINAR PERMANENTEMENTE ${ids.length} pedidos</b>.<br>Esta acción no se puede deshacer y los datos se perderán para siempre.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: '<i class="fas fa-trash"></i> Sí, Borrar Definitivamente',
+    cancelButtonText: 'Cancelar'
+  });
+  
+  if (result.isConfirmed) {
+    Swal.fire({
+      title: 'Eliminando pedidos...',
+      text: 'Por favor no cierres la ventana',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+      // Firebase Batch update (Límite: 500 ops por batch)
+      let batch = db.batch();
+      let count = 0;
+      let totalDeleted = 0;
+      
+      for(let i = 0; i < ids.length; i++) {
+        const ref = db.collection('orders').doc(ids[i]);
+        batch.delete(ref);
+        count++;
+        totalDeleted++;
+        
+        // Comitear batch si llegamos a ~490 (límite realista)
+        if (count === 490) {
+           await batch.commit();
+           batch = db.batch(); // Iniciar nuevo lote
+           count = 0;
+        }
+      }
+      
+      // Comitear el remanente
+      if(count > 0) {
+        await batch.commit();
+      }
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Borrado Exitoso',
+        text: `Se eliminaron ${totalDeleted} registros de Firebase.`,
+      });
+      
+    } catch(e) {
+      console.error(e);
+      Swal.fire('Error Grave', 'La operación batch falló: ' + e.message, 'error');
+    }
+  }
+};

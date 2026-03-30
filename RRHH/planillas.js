@@ -1434,6 +1434,10 @@ async function printPaymentSlips(type) {
     const headerTitleEl = document.getElementById('headerCompanyTitleTemplate');
     if (headerTitleEl && headerTitleEl.innerText) companyTitle = headerTitleEl.innerText;
 
+    let logoSrc = "../Recibos/logo.png";
+    const headerLogoEl = document.getElementById('headerCompanyLogoTemplate');
+    if (headerLogoEl && headerLogoEl.src) logoSrc = headerLogoEl.src;
+
     let branchName = "";
     if (s && s.selectedIndex >= 0) {
         if (s.value !== 'all') {
