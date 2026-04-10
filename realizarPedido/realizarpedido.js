@@ -13,6 +13,7 @@ let isSaving = false; // NUEVO: evita doble guardado
 
 // Variable global para almacenar el ID generado y evitar que cambie
 let generatedOrderId = null;
+let generatedBulkOrderId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await obtenerSucursalDelUsuario();
@@ -59,9 +60,11 @@ async function obtenerSucursalDelUsuario() {
         document.getElementById('orderDateText').style.display = 'none';
         document.getElementById('orderId').style.display = 'inline-block';
         document.getElementById('orderIdText').style.display = 'none';
+        document.getElementById('btnConfigAverages').style.display = ''; // Visible default
         cargarSucursalesSelectParaAdmin();
         document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
       } else {
+        document.getElementById('btnConfigAverages').style.display = 'none';
         document.getElementById('newOrderSucursalSelect').style.display = 'none';
         document.getElementById('newOrderSucursalText').style.display = 'none';
         document.getElementById('orderDate').style.display = 'none';
@@ -316,10 +319,52 @@ function formatDateTime(date) {
 }
 
 /**
- * Genera el ID de pedido UNA SOLA VEZ por sesión con transacción atómica formato INV.
+ * Genera el ID de pedido UNA SOLA VEZ por sesión con transacción atómica (Número para pedidos).
  */
 async function generateOrderIdOnce() {
   if (generatedOrderId !== null) return generatedOrderId;
+  try {
+    const configRef = db.collection('config').doc('orderCounter');
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(configRef);
+      let newId;
+      if (!doc.exists) {
+        newId = 1;
+        transaction.set(configRef, { lastOrderId: newId });
+      } else {
+        newId = doc.data().lastOrderId + 1;
+        transaction.update(configRef, { lastOrderId: newId });
+      }
+      generatedOrderId = newId;
+    });
+    if (userRole === 'administrador') {
+      const oid = document.getElementById('orderId');
+      if (oid) oid.value = generatedOrderId;
+    } else {
+      const otxt = document.getElementById('orderIdText');
+      if (otxt) otxt.textContent = generatedOrderId;
+    }
+    return generatedOrderId;
+  } catch (error) {
+    console.warn("Failed to generate global ID.", error);
+    generatedOrderId = 'TEMP-' + Math.floor(Math.random() * 100000);
+
+    if (userRole === 'administrador') {
+      const idField = document.getElementById('orderId');
+      if (idField) idField.value = generatedOrderId;
+    } else {
+      const idText = document.getElementById('orderIdText');
+      if (idText) idText.textContent = generatedOrderId;
+    }
+    return generatedOrderId;
+  }
+}
+
+/**
+ * Genera el ID de pedido UNA SOLA VEZ formato INV exclusivo para Bulk.
+ */
+async function generateBulkOrderIdOnce() {
+  if (generatedBulkOrderId !== null) return generatedBulkOrderId;
   try {
     const configRef = db.collection('config').doc('orderCounterINV');
     await db.runTransaction(async (transaction) => {
@@ -332,36 +377,28 @@ async function generateOrderIdOnce() {
         newId = doc.data().lastOrderId + 1;
         transaction.update(configRef, { lastOrderId: newId });
       }
-      generatedOrderId = 'INV' + newId;
+      generatedBulkOrderId = 'INV' + newId;
     });
     if (userRole === 'administrador') {
-      const oid = document.getElementById('orderId');
-      if (oid) oid.value = generatedOrderId;
+      const oid = document.getElementById('bulkOrderId');
+      if (oid) oid.value = generatedBulkOrderId;
     } else {
-      const otxt = document.getElementById('orderIdText');
-      if (otxt) otxt.textContent = generatedOrderId;
+      const otxt = document.getElementById('bulkOrderIdText');
+      if (otxt) otxt.textContent = generatedBulkOrderId;
     }
-    return generatedOrderId;
+    return generatedBulkOrderId;
   } catch (error) {
-    console.warn("Failed to generate global ID (likely quota exceeded). Using temporary ID.", error);
-    // Fallback: Generate a local temporary ID
-    generatedOrderId = 'INV-TEMP-' + Math.floor(Math.random() * 10000);
+    console.warn("Failed to generate global Bulk ID.", error);
+    generatedBulkOrderId = 'INV-TEMP-' + Math.floor(Math.random() * 10000);
 
     if (userRole === 'administrador') {
-      const idField = document.getElementById('orderId');
-      if (idField) idField.value = generatedOrderId;
+      const idField = document.getElementById('bulkOrderId');
+      if (idField) idField.value = generatedBulkOrderId;
     } else {
-      const idText = document.getElementById('orderIdText');
-      if (idText) idText.textContent = generatedOrderId;
+      const idText = document.getElementById('bulkOrderIdText');
+      if (idText) idText.textContent = generatedBulkOrderId;
     }
-
-    Swal.fire({
-      icon: 'warning',
-      title: 'Modo Offline / Cuota Excedida',
-      text: 'No se pudo generar un ID global. Se usará un ID temporal: ' + generatedOrderId,
-      timer: 3000
-    });
-    return generatedOrderId;
+    return generatedBulkOrderId;
   }
 }
 
@@ -1048,14 +1085,14 @@ async function showBulkOrderForm() {
     `;
   }
 
-  if (generatedOrderId === null) {
-    await generateOrderIdOnce();
+  if (generatedBulkOrderId === null) {
+    await generateBulkOrderIdOnce();
   }
   // Sync ID display
   if (userRole === 'administrador') {
-    document.getElementById('bulkOrderId').value = generatedOrderId;
+    document.getElementById('bulkOrderId').value = generatedBulkOrderId;
   } else {
-    document.getElementById('bulkOrderIdText').textContent = generatedOrderId;
+    document.getElementById('bulkOrderIdText').textContent = generatedBulkOrderId;
   }
 }
 
@@ -1298,7 +1335,7 @@ async function saveBulkOrder() {
 
   if (!initialOrderId) {
     try {
-      await generateOrderIdOnce();
+      await generateBulkOrderIdOnce();
       initialOrderId = (userRole === 'administrador') ? document.getElementById('bulkOrderId').value : document.getElementById('bulkOrderIdText').textContent;
     } catch {
       isSaving = false; return;

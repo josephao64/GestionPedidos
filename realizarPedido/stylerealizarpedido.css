@@ -65,6 +65,29 @@ h2 { font-size: 1.4rem; margin-bottom: 20px; text-align: center; }
   color: var(--primary-color);
 }
 
+.buttons .btn-icon {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px !important;
+  min-width: 65px !important;
+  max-width: 75px !important;
+  background-color: #64748b !important;
+  color: #fff !important;
+  gap: 2px;
+}
+
+.buttons .btn-icon i {
+  margin: 0 !important;
+}
+
+.buttons .btn-icon:hover {
+  background-color: #ef4444 !important;
+  color: #fff !important;
+  border-color: #ef4444 !important;
+}
+
 /* Contenedores */
 .container {
   display: none; /* Asegura que no se vea hasta que JS lo muestre */

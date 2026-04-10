@@ -36,8 +36,11 @@
   <div class="buttons">
     <button onclick="showNewOrderForm()">Realizar Nuevo Pedido</button>
     <button onclick="showBulkOrderForm()">Pedido por formulario</button>
-    <button onclick="showUsageAverageModal()">Configurar Promedios</button>
-    <button class="right" onclick="window.location.href='../index.html'">Volver a Principal</button>
+    <button id="btnConfigAverages" onclick="showUsageAverageModal()">Configurar Promedios</button>
+    <button class="btn-icon right" onclick="window.location.href='../index.html'">
+      <i class="fas fa-home" style="display:block; font-size: 1.5rem; margin-bottom: 2px;"></i>
+      <span style="font-size: 0.70rem;">Volver</span>
+    </button>
   </div>
 
   <!-- Contenedor principal de creación de pedidos -->
