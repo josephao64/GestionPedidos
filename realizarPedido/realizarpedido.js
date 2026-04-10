@@ -316,34 +316,36 @@ function formatDateTime(date) {
 }
 
 /**
- * Genera el ID de pedido UNA SOLA VEZ por sesiÃ³n con transacciÃ³n atÃ³mica.
+ * Genera el ID de pedido UNA SOLA VEZ por sesión con transacción atómica formato INV.
  */
 async function generateOrderIdOnce() {
   if (generatedOrderId !== null) return generatedOrderId;
   try {
-    const configRef = db.collection('config').doc('orderCounter');
+    const configRef = db.collection('config').doc('orderCounterINV');
     await db.runTransaction(async (transaction) => {
       const doc = await transaction.get(configRef);
       let newId;
       if (!doc.exists) {
-        newId = 1;
+        newId = 0;
         transaction.set(configRef, { lastOrderId: newId });
       } else {
         newId = doc.data().lastOrderId + 1;
         transaction.update(configRef, { lastOrderId: newId });
       }
-      generatedOrderId = newId;
+      generatedOrderId = 'INV' + newId;
     });
     if (userRole === 'administrador') {
-      document.getElementById('orderId').value = generatedOrderId;
+      const oid = document.getElementById('orderId');
+      if (oid) oid.value = generatedOrderId;
     } else {
-      document.getElementById('orderIdText').textContent = generatedOrderId;
+      const otxt = document.getElementById('orderIdText');
+      if (otxt) otxt.textContent = generatedOrderId;
     }
     return generatedOrderId;
   } catch (error) {
     console.warn("Failed to generate global ID (likely quota exceeded). Using temporary ID.", error);
     // Fallback: Generate a local temporary ID
-    generatedOrderId = 'TEMP-' + Math.floor(Math.random() * 100000);
+    generatedOrderId = 'INV-TEMP-' + Math.floor(Math.random() * 10000);
 
     if (userRole === 'administrador') {
       const idField = document.getElementById('orderId');
@@ -596,6 +598,26 @@ async function saveNewOrder() {
           status: 'pending',
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+
+        // REGISTRO GENERAL DE INVENTARIOS
+        try {
+          await db.collection('inventarios').add({
+            orderId: orderIdValue,
+            sucursalId,
+            sucursalName,
+            providerName,
+            savedDate: saveDate,
+            products: products.map(p => ({
+              id: p.id,
+              name: p.name,
+              presentation: p.presentation,
+              inventory: p.inventory || 0
+            })),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (invErr) {
+          console.error("Error al guardar registro de inventario: ", invErr);
+        }
 
         generatedOrderId = null;
         orderAlreadySaved = true;
@@ -1429,13 +1451,13 @@ async function saveBulkOrder() {
       // Generate NEW ID for subsequent orders
       if (i > 0) {
         // We need a strictly new ID.
-        const configRef = db.collection('config').doc('orderCounter');
+        const configRef = db.collection('config').doc('orderCounterINV');
         await db.runTransaction(async (t) => {
           const doc = await t.get(configRef);
-          let seq = doc.exists ? doc.data().sequence : 0;
+          let seq = doc.exists ? doc.data().lastOrderId : 0;
           seq++;
-          t.set(configRef, { sequence: seq }, { merge: true });
-          currentOrderId = String(seq).padStart(6, '0');
+          t.set(configRef, { lastOrderId: seq }, { merge: true });
+          currentOrderId = 'INV' + seq;
         });
       }
 
@@ -1458,6 +1480,27 @@ async function saveBulkOrder() {
         status: 'pending',
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
+      
+      // REGISTRO GENERAL DE INVENTARIOS POR PROVEEDOR (EN MASA)
+      try {
+        await db.collection('inventarios').add({
+          orderId: currentOrderId,
+          sucursalId,
+          sucursalName,
+          providerName: pData.providerName,
+          savedDate: savedDate,
+          products: pData.products.map(p => ({
+            id: p.id,
+            name: p.name,
+            presentation: p.presentation,
+            inventory: p.inventory || 0
+          })),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (invErr) {
+        console.error("Error guardando inventarios (bulk):", invErr);
+      }
+
       ordersCreated++;
     }
 
