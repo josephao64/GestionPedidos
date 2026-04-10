@@ -22,6 +22,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initUsageAverageModalControls();
 });
 
+function hasUnsavedData() {
+  if (orderAlreadySaved) return false;
+  
+  const isOrderView = document.getElementById('orderCreationContainer').style.display === 'block';
+  if (isOrderView) {
+    const tbody = document.getElementById('newOrderTable').querySelector('tbody');
+    if (tbody && tbody.rows.length > 0) return true;
+  }
+  
+  const isBulkView = document.getElementById('bulkOrderContainer').style.display === 'block';
+  if (isBulkView) {
+    const inputs = document.getElementById('bulkOrderTable').querySelectorAll('.bulk-qty-input, .bulk-inventory-input');
+    for (let input of inputs) {
+      if (input.value.trim() !== '') return true;
+    }
+  }
+  return false;
+}
+
+async function requestNavigation(callback) {
+  if (hasUnsavedData()) {
+    const res = await Swal.fire({
+      title: 'Datos sin guardar',
+      text: 'Tienes progresos en tu pedido. ¿Seguro que quieres salir y borrar todo?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, salir',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!res.isConfirmed) return;
+  }
+  callback();
+}
+
 function hideAllViews() {
   const containers = document.querySelectorAll('.container');
   containers.forEach(c => c.style.display = 'none');
@@ -109,7 +143,9 @@ async function showNewOrderForm() {
     document.getElementById('orderDateText').textContent = new Date().toISOString().split('T')[0];
   }
   if (generatedOrderId === null) {
+    Swal.fire({ title: 'Generando ID', text: 'Por favor, espere...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     await generateOrderIdOnce();
+    Swal.close();
   }
   setupInitialProductTable();
 }
@@ -1086,7 +1122,9 @@ async function showBulkOrderForm() {
   }
 
   if (generatedBulkOrderId === null) {
+    Swal.fire({ title: 'Generando ID', text: 'Por favor, espere...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     await generateBulkOrderIdOnce();
+    Swal.close();
   }
   // Sync ID display
   if (userRole === 'administrador') {
@@ -1740,11 +1778,7 @@ async function saveBulkConfig() {
 // PREVENCIÓN DE PÉRDIDA DE DATOS
 // ============================================
 window.addEventListener('beforeunload', function (e) {
-  const isOrderView = document.getElementById('orderCreationContainer').style.display === 'block';
-  const isBulkView = document.getElementById('bulkOrderContainer').style.display === 'block';
-  
-  // Si hay una vista activa y no se ha guardado, lanzar advertencia
-  if ((isOrderView || isBulkView) && !orderAlreadySaved) {
+  if (hasUnsavedData()) {
     e.preventDefault();
     e.returnValue = ''; // Retorna string vacio para que Chrome arroje su popup nativo 'Abandonar sitio'.
   }
