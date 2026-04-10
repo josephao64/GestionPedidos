@@ -1655,3 +1655,17 @@ async function saveBulkConfig() {
     btn.disabled = false;
   }
 }
+
+// ============================================
+// PREVENCIÓN DE PÉRDIDA DE DATOS
+// ============================================
+window.addEventListener('beforeunload', function (e) {
+  const isOrderView = document.getElementById('orderCreationContainer').style.display === 'block';
+  const isBulkView = document.getElementById('bulkOrderContainer').style.display === 'block';
+  
+  // Si hay una vista activa y no se ha guardado, lanzar advertencia
+  if ((isOrderView || isBulkView) && !orderAlreadySaved) {
+    e.preventDefault();
+    e.returnValue = ''; // Retorna string vacio para que Chrome arroje su popup nativo 'Abandonar sitio'.
+  }
+});
