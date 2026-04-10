@@ -1064,73 +1064,85 @@ async function showBulkOrderForm() {
   hideAllViews();
   document.getElementById('bulkOrderContainer').style.display = 'block';
 
-  // Limpiar tabla por si acaso hay basura de una carga anterior
-  document.getElementById('bulkOrderTable').querySelector('tbody').innerHTML = '';
+  // Mostrar spinner desde el inicio hasta terminar de cargar inventario e ID
+  Swal.fire({
+    title: 'Cargando Formulario...',
+    text: 'Preparando inventario e ID, por favor espere...',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
 
-  // Logic for Admin vs User
-  if (userRole === 'administrador') {
-    document.getElementById('bulkOrderSucursalSelect').style.display = 'inline-block';
-    document.getElementById('bulkOrderSucursalText').style.display = 'none';
-    document.getElementById('bulkOrderDate').style.display = 'inline-block';
-    document.getElementById('bulkOrderDateText').style.display = 'none';
-    document.getElementById('bulkOrderId').style.display = 'inline-block';
-    document.getElementById('bulkOrderIdText').style.display = 'none';
+  try {
+    // Limpiar tabla por si acaso hay basura de una carga anterior
+    document.getElementById('bulkOrderTable').querySelector('tbody').innerHTML = '';
 
-    await cargarSucursalesSelectParaBulk();
-    document.getElementById('bulkOrderDate').value = new Date().toISOString().split('T')[0];
+    // Logic for Admin vs User
+    if (userRole === 'administrador') {
+      document.getElementById('bulkOrderSucursalSelect').style.display = 'inline-block';
+      document.getElementById('bulkOrderSucursalText').style.display = 'none';
+      document.getElementById('bulkOrderDate').style.display = 'inline-block';
+      document.getElementById('bulkOrderDateText').style.display = 'none';
+      document.getElementById('bulkOrderId').style.display = 'inline-block';
+      document.getElementById('bulkOrderIdText').style.display = 'none';
 
-    // Show Config Button for Admin
-    const btnConfig = document.getElementById('btnConfigBulk');
-    if (btnConfig) btnConfig.style.display = 'inline-block';
+      await cargarSucursalesSelectParaBulk();
+      document.getElementById('bulkOrderDate').value = new Date().toISOString().split('T')[0];
 
-    // IMPORTANTE: No cargamos productos hasta que el admin elija sucursal
-    // loadAllProvidersAndProducts(); se llamará desde el onchange del select
-  } else {
-    document.getElementById('bulkOrderSucursalSelect').style.display = 'none';
-    document.getElementById('bulkOrderSucursalText').style.display = 'none';
-    document.getElementById('bulkOrderDate').style.display = 'none';
-    document.getElementById('bulkOrderDateText').style.display = 'inline-block';
-    document.getElementById('bulkOrderId').style.display = 'none';
-    document.getElementById('bulkOrderIdText').style.display = 'inline-block';
+      // Show Config Button for Admin
+      const btnConfig = document.getElementById('btnConfigBulk');
+      if (btnConfig) btnConfig.style.display = 'inline-block';
 
-    document.getElementById('bulkOrderDateText').textContent = new Date().toISOString().split('T')[0];
+      // IMPORTANTE: No cargamos productos hasta que el admin elija sucursal
+    } else {
+      document.getElementById('bulkOrderSucursalSelect').style.display = 'none';
+      document.getElementById('bulkOrderSucursalText').style.display = 'none';
+      document.getElementById('bulkOrderDate').style.display = 'none';
+      document.getElementById('bulkOrderDateText').style.display = 'inline-block';
+      document.getElementById('bulkOrderId').style.display = 'none';
+      document.getElementById('bulkOrderIdText').style.display = 'inline-block';
+
+      document.getElementById('bulkOrderDateText').textContent = new Date().toISOString().split('T')[0];
+      
+      // Para usuario normal, cargamos directamente ya que su sucursal es fija
+      await loadAllProvidersAndProducts();
+    }
+
+    // Crear cabeceras dinámicamente según el rol
+    const thead = document.getElementById('bulkOrderThead');
+    if (userRole === 'administrador') {
+      thead.innerHTML = `
+        <tr>
+          <th>Producto</th>
+          <th>Presentación</th>
+          <th>Inventario</th>
+          <th>Cantidad Pedido</th>
+          <th>Advertencia</th>
+        </tr>
+      `;
+    } else {
+      thead.innerHTML = `
+        <tr>
+          <th>Producto</th>
+          <th>Inventario</th>
+          <th>Cantidad Pedido</th>
+        </tr>
+      `;
+    }
+
+    if (generatedBulkOrderId === null) {
+      await generateBulkOrderIdOnce();
+    }
     
-    // Para usuario normal, cargamos directamente ya que su sucursal es fija
-    await loadAllProvidersAndProducts();
-  }
-
-  // Crear cabeceras dinámicamente según el rol
-  const thead = document.getElementById('bulkOrderThead');
-  if (userRole === 'administrador') {
-    thead.innerHTML = `
-      <tr>
-        <th>Producto</th>
-        <th>Presentación</th>
-        <th>Inventario</th>
-        <th>Cantidad Pedido</th>
-        <th>Advertencia</th>
-      </tr>
-    `;
-  } else {
-    thead.innerHTML = `
-      <tr>
-        <th>Producto</th>
-        <th>Inventario</th>
-        <th>Cantidad Pedido</th>
-      </tr>
-    `;
-  }
-
-  if (generatedBulkOrderId === null) {
-    Swal.fire({ title: 'Generando ID', text: 'Por favor, espere...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-    await generateBulkOrderIdOnce();
+    // Sync ID display
+    if (userRole === 'administrador') {
+      document.getElementById('bulkOrderId').value = generatedBulkOrderId;
+    } else {
+      document.getElementById('bulkOrderIdText').textContent = generatedBulkOrderId;
+    }
+  } catch (err) {
+    console.error("Error al cargar bulk form:", err);
+  } finally {
     Swal.close();
-  }
-  // Sync ID display
-  if (userRole === 'administrador') {
-    document.getElementById('bulkOrderId').value = generatedBulkOrderId;
-  } else {
-    document.getElementById('bulkOrderIdText').textContent = generatedBulkOrderId;
   }
 }
 
