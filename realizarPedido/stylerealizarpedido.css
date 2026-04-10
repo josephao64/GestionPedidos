@@ -268,7 +268,7 @@ td {
 @media (max-width: 768px) {
   body {
     font-size: 14px;
-    padding: 10px;
+    padding: 0;
   }
 
   h1 { font-size: 1.5rem; margin: 15px 0; }
@@ -278,6 +278,7 @@ td {
     flex-direction: column;
     padding: 5px;
     width: 100%;
+    box-sizing: border-box;
   }
   
   .buttons button {
@@ -287,9 +288,11 @@ td {
   }
 
   .container {
-    margin: 10px auto;
-    padding: 15px;
+    margin: 0;
+    padding: 10px 5px;
     width: 100%;
+    border: none;
+    border-radius: 0;
   }
 
   .order-form {
@@ -303,25 +306,45 @@ td {
   }
 
   .table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
     width: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
   }
 
   table {
-    min-width: 500px; /* Asegura que se agregue scroll horizontal si es muy chico */
+    min-width: 100%;
+    width: 100%;
+    table-layout: fixed;
+  }
+  
+  th, td {
+    padding: 8px 4px;
+    font-size: 0.85rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .bulk-qty-input, .bulk-inventory-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 5px !important;
+    font-size: 0.9rem;
   }
 
   .save-order-button, .btn-primary, .btn-secondary {
     width: 100%;
     padding: 15px;
     font-size: 1.1rem;
+    margin-top: 10px;
   }
 
   .modal-content {
     width: 95%;
-    padding: 20px;
-    margin: 10% auto;
+    padding: 15px;
+    margin: 5% auto;
   }
 }
 

@@ -1004,14 +1004,26 @@ async function showBulkOrderForm() {
     await loadAllProvidersAndProducts();
   }
 
-  // Ocultar cabeceras en usuario normal
-  const ths = document.getElementById('bulkOrderTable').querySelectorAll('th');
-  if (userRole !== 'administrador') {
-    ths[1].style.display = 'none'; // Presentacion
-    ths[4].style.display = 'none'; // Advertencia
+  // Crear cabeceras dinámicamente según el rol
+  const thead = document.getElementById('bulkOrderThead');
+  if (userRole === 'administrador') {
+    thead.innerHTML = `
+      <tr>
+        <th>Producto</th>
+        <th>Presentación</th>
+        <th>Inventario</th>
+        <th>Cantidad Pedido</th>
+        <th>Advertencia</th>
+      </tr>
+    `;
   } else {
-    ths[1].style.display = '';
-    ths[4].style.display = '';
+    thead.innerHTML = `
+      <tr>
+        <th>Producto</th>
+        <th>Inventario</th>
+        <th>Cantidad Pedido</th>
+      </tr>
+    `;
   }
 
   if (generatedOrderId === null) {
