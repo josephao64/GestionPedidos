@@ -1004,6 +1004,16 @@ async function showBulkOrderForm() {
     await loadAllProvidersAndProducts();
   }
 
+  // Ocultar cabeceras en usuario normal
+  const ths = document.getElementById('bulkOrderTable').querySelectorAll('th');
+  if (userRole !== 'administrador') {
+    ths[1].style.display = 'none'; // Presentacion
+    ths[4].style.display = 'none'; // Advertencia
+  } else {
+    ths[1].style.display = '';
+    ths[4].style.display = '';
+  }
+
   if (generatedOrderId === null) {
     await generateOrderIdOnce();
   }
@@ -1064,13 +1074,14 @@ async function loadAllProvidersAndProducts() {
       const productsSnap = await db.collection('products').where('providerId', '==', providerId).get();
 
       if (!productsSnap.empty) {
-        // Render Provider Header (Colspan 5 for new warning column)
+        // Render Provider Header (Colspan depende del rol)
+        const colsToSpan = userRole === 'administrador' ? 5 : 3;
         const headerRow = tbody.insertRow();
         headerRow.classList.add('provider-header-row');
         headerRow.style.backgroundColor = '#f0f0f0';
         headerRow.style.fontWeight = 'bold';
         headerRow.innerHTML = `
-                    <td colspan="5" style="text-align: center; text-transform: uppercase; padding: 10px;">
+                    <td colspan="${colsToSpan}" style="text-align: center; text-transform: uppercase; padding: 10px;">
                         ${escapeHtml(providerName)}
                     </td>
                 `;
@@ -1118,15 +1129,18 @@ async function loadAllProvidersAndProducts() {
           row.setAttribute('data-provider-name', providerName);
           row.setAttribute('data-avg', avgVal); // Store average
 
+          const presentacionTd = userRole === 'administrador' ? `<td>${escapeHtml(prod.presentation)}</td>` : '';
+          const advertenciaTd = userRole === 'administrador' ? `<td class="bulk-warning-cell" style="font-size: 0.9em; font-weight: bold;"></td>` : '';
+
           row.innerHTML = `
                       <td>${escapeHtml(prod.name)}</td>
-                      <td>${escapeHtml(prod.presentation)}</td>
+                      ${presentacionTd}
                       <td><input type="number" min="0" step="1" class="bulk-inventory-input" placeholder="Inv" oninput="onBulkInventoryChange(this)" /></td>
                       <td>
                           <input type="number" min="1" step="1" class="bulk-qty-input" placeholder="Cant" oninput="onBulkQuantityChange(this)" />
                           <div class="bulk-suggestion-text" style="font-size: 0.85em; color: #666; margin-top: 2px; font-style: italic;"></div>
                       </td>
-                      <td class="bulk-warning-cell" style="font-size: 0.9em; font-weight: bold;"></td>
+                      ${advertenciaTd}
                     `;
         });
       }
@@ -1176,6 +1190,8 @@ function updateWarning(row) {
   const invInput = row.querySelector('.bulk-inventory-input');
   const qtyInput = row.querySelector('.bulk-qty-input');
   const warnCell = row.querySelector('.bulk-warning-cell');
+
+  if (!warnCell) return; // Si no hay celda de advertencia (usuario normal), salir
 
   const avg = Number(row.getAttribute('data-avg')) || 0;
   const invVal = invInput.value;
