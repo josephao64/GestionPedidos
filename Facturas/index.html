@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Facturas - Categorías</title>
+  <link rel="stylesheet" href="facturas-style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../database/connection.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <button class="btn-back" onclick="window.location.href='../INDEX.HTML'">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h1>Gestión de Facturas</h1>
+    </div>
+    <div class="header-right">
+      <button class="btn-primary" onclick="openCategoryModal()">
+        <i class="fas fa-plus"></i> Nueva Categoría
+      </button>
+      <div class="user-info" id="user-display"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="welcome-section">
+      <h2>Categorías de Facturación</h2>
+      <p>Selecciona una categoría para gestionar proveedores, facturas y reportes.</p>
+    </section>
+
+    <div id="categories-grid" class="categories-grid">
+      <!-- Las categorías se cargarán aquí -->
+      <div class="loading-spinner">Cargando categorías...</div>
+    </div>
+  </main>
+
+  <!-- Modal para Agregar/Editar Categoría -->
+  <div id="modal-category" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="category-modal-title">Nueva Categoría</h2>
+        <span class="close-modal" onclick="closeCategoryModal()">&times;</span>
+      </div>
+      <form id="form-category">
+        <input type="hidden" id="category-id">
+        <div class="form-body">
+          <div class="form-group">
+            <label for="category-name">Nombre de la Categoría *</label>
+            <input type="text" id="category-name" required class="form-control" placeholder="Ej: Insumos, Mantenimiento...">
+          </div>
+          <div class="form-group">
+            <label for="category-icon">Icono (FontAwesome class)</label>
+            <input type="text" id="category-icon" class="form-control" placeholder="fas fa-box" value="fas fa-folder">
+          </div>
+          <div class="form-group">
+            <label for="category-color">Color Identificador</label>
+            <input type="color" id="category-color" class="form-control-color" value="#2563eb">
+          </div>
+          <div class="form-group">
+            <label for="category-description">Descripción</label>
+            <textarea id="category-description" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button type="button" class="btn-danger" id="btn-delete-category" style="display:none;" onclick="deleteCategory()">Eliminar</button>
+          <div class="footer-right">
+            <button type="button" class="btn-secondary" onclick="closeCategoryModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar Categoría</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="categories.js"></script>
+</body>
+</html>

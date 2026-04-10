@@ -1,4 +1,4 @@
-﻿// Archivo: realizarpedido.js
+// Archivo: realizarpedido.js
 
 // Importar jsPDF desde el objeto global
 const { jsPDF } = window.jspdf;
@@ -16,11 +16,15 @@ let generatedOrderId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await obtenerSucursalDelUsuario();
-  document.getElementById('orderCreationContainer').style.display = 'none';
   setupInitialProductTable();
   // Cargar selects del modal de promedios
   await initUsageAverageModalControls();
 });
+
+function hideAllViews() {
+  const containers = document.querySelectorAll('.container');
+  containers.forEach(c => c.style.display = 'none');
+}
 
 async function obtenerSucursalDelUsuario() {
   const usuarioLogueado = localStorage.getItem('usuarioLogueado');
@@ -93,6 +97,7 @@ function setupInitialProductTable() {
 }
 
 async function showNewOrderForm() {
+  hideAllViews();
   document.getElementById('orderCreationContainer').style.display = 'block';
   await loadNewOrderProviders();
   if (userRole === 'administrador') {
@@ -961,8 +966,11 @@ async function buildAverageWarnings(details, sucursalId, providerId, inventoryBy
 // ============================================
 
 async function showBulkOrderForm() {
-  document.getElementById('orderCreationContainer').style.display = 'none';
+  hideAllViews();
   document.getElementById('bulkOrderContainer').style.display = 'block';
+
+  // Limpiar tabla por si acaso hay basura de una carga anterior
+  document.getElementById('bulkOrderTable').querySelector('tbody').innerHTML = '';
 
   // Logic for Admin vs User
   if (userRole === 'administrador') {
@@ -979,6 +987,9 @@ async function showBulkOrderForm() {
     // Show Config Button for Admin
     const btnConfig = document.getElementById('btnConfigBulk');
     if (btnConfig) btnConfig.style.display = 'inline-block';
+
+    // IMPORTANTE: No cargamos productos hasta que el admin elija sucursal
+    // loadAllProvidersAndProducts(); se llamará desde el onchange del select
   } else {
     document.getElementById('bulkOrderSucursalSelect').style.display = 'none';
     document.getElementById('bulkOrderSucursalText').style.display = 'none';
@@ -988,12 +999,10 @@ async function showBulkOrderForm() {
     document.getElementById('bulkOrderIdText').style.display = 'inline-block';
 
     document.getElementById('bulkOrderDateText').textContent = new Date().toISOString().split('T')[0];
+    
+    // Para usuario normal, cargamos directamente ya que su sucursal es fija
+    await loadAllProvidersAndProducts();
   }
-
-  // Load all providers and products NOW (after sucursales loaded for admin)
-  // Note: For admin, sucursal might still be unselected ("-- Selecciona --"). 
-  // loadAllProvidersAndProducts handles empty sucursalId by defaulting averages to 0 or null.
-  await loadAllProvidersAndProducts();
 
   if (generatedOrderId === null) {
     await generateOrderIdOnce();

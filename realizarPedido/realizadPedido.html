@@ -42,10 +42,9 @@
 
   <!-- Contenedor principal de creación de pedidos -->
   <div id="orderCreationContainer" class="container" style="display: none;">
-    <div class="order-form"
-      style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+    <div class="order-form">
       <!-- Parte Izquierda: Proveedor, Fecha, ID -->
-      <div style="flex: 1; min-width: 250px;">
+      <div class="form-inputs">
         <div class="form-group">
           <label for="newOrderProviderSelect">Seleccione Proveedor</label>
           <select id="newOrderProviderSelect"></select>
@@ -98,7 +97,9 @@
     </div>
 
     <div class="save-order-container">
-      <button class="save-order-button" onclick="saveNewOrder()">Guardar Pedido</button>
+      <button class="save-order-button" onclick="saveNewOrder()">
+        <i class="fas fa-save"></i> Guardar Pedido
+      </button>
     </div>
   </div>
 
@@ -145,12 +146,11 @@
 
   <!-- Contenedor Pedido por Formulario -->
   <div id="bulkOrderContainer" class="container" style="display: none;">
-    <div class="order-form"
-      style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+    <div class="order-form">
       <!-- Parte Izquierda -->
-      <div style="flex: 1; min-width: 250px;">
+      <div class="form-inputs">
         <!-- Botón de Configuración (Solo Admin) -->
-        <div style="text-align: right; margin-bottom: 10px;">
+        <div class="config-btn-wrapper">
           <button type="button" id="btnConfigBulk" class="btn-secondary" style="display: none;"
             onclick="openBulkConfigModal()">
             <i class="fas fa-cog"></i> Configurar Proveedores
@@ -202,7 +202,9 @@
     </div>
 
     <div class="save-order-container">
-      <button class="save-order-button" onclick="saveBulkOrder()">Guardar Pedido</button>
+      <button class="save-order-button" onclick="saveBulkOrder()">
+        <i class="fas fa-check-double"></i> Guardar Pedido
+      </button>
     </div>
   </div>
 

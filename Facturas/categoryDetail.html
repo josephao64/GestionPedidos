@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle de Categoría - Facturas</title>
+  <link rel="stylesheet" href="facturas-style.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../database/connection.js"></script>
+
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <button class="btn-back" onclick="window.location.href='index.html'">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h1 id="category-title">Cargando...</h1>
+    </div>
+    <div class="header-right">
+      <div id="category-badge" class="category-badge"></div>
+      <div class="user-info" id="user-display"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="showTab('providers')"><i class="fas fa-truck"></i> Proveedores</button>
+      <button class="tab-btn" onclick="showTab('invoices')"><i class="fas fa-file-invoice-dollar"></i> Facturas</button>
+      <button class="tab-btn" onclick="showTab('stats')"><i class="fas fa-chart-line"></i> Estadísticas</button>
+    </div>
+
+    <!-- Tab Contents -->
+    <div id="providers-tab" class="tab-content active">
+      <div class="section-header">
+        <h2>Proveedores Registrados</h2>
+        <button class="btn-primary" onclick="openProviderModal()">
+          <i class="fas fa-user-plus"></i> Nuevo Proveedor
+        </button>
+      </div>
+      <div id="providers-list" class="data-grid">
+        <!-- Lista de proveedores -->
+      </div>
+    </div>
+
+    <!-- Global Filters -->
+    <div class="global-filters">
+      <div class="filter-group">
+        <label><i class="fas fa-calendar-alt"></i> Periodo:</label>
+        <select id="filter-month" class="form-control" onchange="applyFilters()">
+          <option value="0">Enero</option>
+          <option value="1">Febrero</option>
+          <option value="2">Marzo</option>
+          <option value="3">Abril</option>
+          <option value="4">Mayo</option>
+          <option value="5">Junio</option>
+          <option value="6">Julio</option>
+          <option value="7">Agosto</option>
+          <option value="8">Septiembre</option>
+          <option value="9">Octubre</option>
+          <option value="10">Noviembre</option>
+          <option value="11">Diciembre</option>
+        </select>
+        <select id="filter-year" class="form-control" onchange="applyFilters()"></select>
+      </div>
+      <div class="filter-group">
+        <label><i class="fas fa-store"></i> Sucursal:</label>
+        <select id="filter-sucursal" class="form-control" onchange="applyFilters()">
+          <option value="">Todas las sucursales</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="invoices-tab" class="tab-content">
+      <div class="section-header">
+        <h2>Listado de Facturas</h2>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-secondary" onclick="openQuickAddModal()">
+            <i class="fas fa-magic"></i> Carga Rápida
+          </button>
+          <button class="btn-primary" onclick="openInvoiceModal()">
+            <i class="fas fa-file-alt"></i> Nueva Factura
+          </button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Proveedor</th>
+              <th>N. Factura</th>
+              <th>Sucursal</th>
+              <th>Producto</th>
+              <th>Cant.</th>
+              <th>Precio Unidad</th>
+              <th>Total</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="invoices-table-body">
+            <!-- Facturas cargadas aquí -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="stats-tab" class="tab-content">
+      <div class="section-header">
+        <h2>Dashboard de Rendimiento</h2>
+        <button class="btn-primary" style="background-color: #dc2626;" onclick="exportToPDF()">
+          <i class="fas fa-file-pdf"></i> Exportar Reporte
+        </button>
+      </div>
+      <div class="stats-overview">
+
+        <div class="stat-card">
+          <span class="stat-label">Gasto Total</span>
+          <span class="stat-value" id="stat-total-global">Q 0.00</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total Pendiente</span>
+          <span class="stat-value" id="stat-total-pending">Q 0.00</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Facturas este Mes</span>
+          <span class="stat-value" id="stat-count-month">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Promedio por Factura</span>
+          <span class="stat-value" id="stat-avg-invoice">Q 0.00</span>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="dashboard-item">
+          <h3>Gasto por Proveedor</h3>
+          <div class="chart-box">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+        <div class="dashboard-item">
+          <h3>Gasto por Sucursal</h3>
+          <div class="chart-box">
+            <canvas id="sucursalChart"></canvas>
+          </div>
+        </div>
+        <div class="dashboard-item full-width">
+          <h3>Top 5 Proveedores (Mayor Gasto)</h3>
+          <div class="table-container shadow-none">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Proveedor</th>
+                  <th>Cant. Facturas</th>
+                  <th>Total Facturado</th>
+                  <th>% del Total</th>
+                </tr>
+              </thead>
+              <tbody id="top-providers-body">
+                <!-- Se llenará dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Proveedor -->
+  <div id="modal-provider" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="provider-modal-title">Gestionar Proveedor</h2>
+        <span class="close-modal" onclick="closeProviderModal()">&times;</span>
+      </div>
+      <form id="form-provider">
+        <input type="hidden" id="provider-id">
+        <div class="form-body">
+          <div class="form-group">
+            <label for="provider-name">Nombre del Proveedor *</label>
+            <input type="text" id="provider-name" required class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="provider-nit">NIT / Identificación</label>
+            <input type="text" id="provider-nit" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="provider-contact">Persona de Contacto</label>
+            <input type="text" id="provider-contact" class="form-control">
+          </div>
+        </div>
+        <div class="form-footer">
+          <button type="button" class="btn-danger" id="btn-delete-provider" style="display:none;" onclick="deleteProvider()">Eliminar</button>
+          <div class="footer-right">
+            <button type="button" class="btn-secondary" onclick="closeProviderModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Factura -->
+  <div id="modal-invoice" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="invoice-modal-title">Registrar Factura</h2>
+        <span class="close-modal" onclick="closeInvoiceModal()">&times;</span>
+      </div>
+      <form id="form-invoice">
+        <input type="hidden" id="invoice-id">
+        <div class="form-body">
+          <div class="form-group">
+            <label for="inv-provider">Proveedor *</label>
+            <select id="inv-provider" required class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label for="inv-sucursal">Sucursal *</label>
+            <select id="inv-sucursal" required class="form-control"></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inv-date">Fecha *</label>
+              <input type="date" id="inv-date" required class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="inv-number">N. Factura *</label>
+              <input type="text" id="inv-number" required class="form-control">
+            </div>
+          </div>
+          <div class="items-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h3 style="font-size: 1rem; margin: 0; color: var(--text-dark);">Desglose de Productos</h3>
+              <button type="button" class="btn-secondary" style="padding: 5px 12px; font-size: 0.8rem;" onclick="addItemRow()">
+                <i class="fas fa-plus"></i> Agregar Fila
+              </button>
+            </div>
+            <div class="table-container shadow-none" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <table class="data-table" style="font-size: 0.85rem;">
+                <thead style="position: sticky; top: 0; z-index: 10;">
+                  <tr>
+                    <th>Producto</th>
+                    <th style="width: 80px;">Cant.</th>
+                    <th style="width: 100px;">Precio U.</th>
+                    <th style="width: 100px;">Subtotal</th>
+                    <th style="width: 40px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="invoice-items-body">
+                  <!-- Filas de productos aqui -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px;">
+            <label for="inv-total">Total de Factura (Calculado)</label>
+            <div style="position: relative;">
+               <span style="position: absolute; left: 12px; top: 50%; translate: 0 -50%; font-weight: 600;">Q</span>
+               <input type="number" id="inv-total" readonly class="form-control" style="padding-left: 30px; font-weight: 700; background-color: #f8fafc; color: var(--primary);">
+            </div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button type="button" class="btn-danger" id="btn-delete-invoice" style="display:none;" onclick="deleteInvoice()">Anular</button>
+          <div class="footer-right">
+            <button type="button" class="btn-secondary" onclick="closeInvoiceModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar Factura</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Carga Rápida -->
+  <div id="modal-quick-add" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Carga por Cadena de Texto</h2>
+        <span class="close-modal" onclick="closeQuickAddModal()">&times;</span>
+      </div>
+      <div class="form-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+          Formato (separado por Tab o "|"): <strong>Fecha | Proveedor | N. Factura | Producto | Cantidad | Precio Unidad</strong><br>
+          <em>Ej: 2024-04-01 | PROVEEDOR SAC | 12345 | CAJAS PIZZA | 600 | 3.05</em>
+        </p>
+        <div class="form-group">
+          <label for="quick-add-sucursal">Sucursal para esta carga *</label>
+          <select id="quick-add-sucursal" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label for="quick-add-text">Pegar cadena(s) de texto (una por línea)</label>
+          <textarea id="quick-add-text" class="form-control" rows="8" placeholder="2024-04-01 | PROVEEDOR SAC | 12345 | CAJA PIZZA | 600 | 3.05"></textarea>
+        </div>
+      </div>
+      <div class="form-footer">
+        <button type="button" class="btn-secondary" onclick="closeQuickAddModal()">Cancelar</button>
+        <button type="button" class="btn-primary" onclick="processQuickAdd()">Procesar Carga</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="categoryDetail.js"></script>
+
+
+</body>
+</html>

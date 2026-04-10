@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carga de Facturas</title>
+  <link rel="stylesheet" href="facturas.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="../database/connection.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <button class="btn-back" onclick="window.location.href='../INDEX.HTML'">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h1>Carga de Facturas</h1>
+    </div>
+    <div class="header-right">
+      <div class="user-info" id="user-display"></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="filters-section">
+      <div class="filter-group">
+        <label for="select-sucursal">Seleccionar Sucursal</label>
+        <select id="select-sucursal" class="form-control">
+          <option value="">Todas las Sucursales</option>
+        </select>
+      </div>
+      <div class="search-group">
+        <input type="text" id="search-proveedor" placeholder="Buscar proveedor..." class="form-control">
+      </div>
+    </section>
+
+    <section class="categories-section">
+      <h2>Proveedores</h2>
+      <div id="proveedores-grid" class="providers-grid">
+        <!-- Renderizado dinámico -->
+        <div class="loading-spinner">Cargando proveedores...</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal para Agregar Factura -->
+  <div id="modal-factura" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Agregar Factura</h2>
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+      </div>
+      <form id="form-factura">
+        <input type="hidden" id="input-proveedor-id">
+        <div class="form-body">
+          <div class="form-group">
+            <label>Proveedor</label>
+            <input type="text" id="display-proveedor" readonly class="form-control readonly">
+          </div>
+          <div class="form-group">
+            <label for="input-sucursal">Sucursal *</label>
+            <select id="input-sucursal" required class="form-control">
+              <option value="">Seleccione sucursal</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="input-fecha">Fecha *</label>
+              <input type="date" id="input-fecha" required class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="input-numero">N. Factura *</label>
+              <input type="text" id="input-numero" required class="form-control" placeholder="000-000-000">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="input-total">Total *</label>
+            <div class="amount-input">
+              <span class="currency">Q</span>
+              <input type="number" id="input-total" step="0.01" required class="form-control" placeholder="0.00">
+            </div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn-primary">Guardar Factura</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="facturas.js"></script>
+</body>
+</html>
