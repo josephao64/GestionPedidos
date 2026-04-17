@@ -572,6 +572,18 @@
           </div>
         </fieldset>
 
+        <fieldset class="permisos-fieldset" style="margin-top: 16px;">
+          <legend>Permisos del Sistema de Finanzas</legend>
+          <div class="checkbox-group" style="grid-template-columns: 1fr 1fr;">
+            <label class="checkbox-item"><input type="checkbox" id="permFinViewHistorial"> Historial de Pagos</label>
+            <label class="checkbox-item"><input type="checkbox" id="permFinRegistrarPagos"> Registrar Pagos Efectivo</label>
+            <label class="checkbox-item"><input type="checkbox" id="permFinManageSucursales"> Gestionar Sucursales</label>
+            <label class="checkbox-item"><input type="checkbox" id="permFinManageProveedores"> Gestionar Proveedores</label>
+            <label class="checkbox-item"><input type="checkbox" id="permFinManageServicios"> Gestionar Servicios</label>
+            <label class="checkbox-item"><input type="checkbox" id="permFinManageUsuarios"> Gestor Interno Usuarios</label>
+          </div>
+        </fieldset>
+
         <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px;">
           <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">Cancelar</button>
           <button type="submit" class="btn btn-primary" id="save-user-btn">Guardar Usuario</button>

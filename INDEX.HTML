@@ -12,23 +12,25 @@
 
   <style>
     :root {
-      --primary: #2563eb;
-      --primary-dark: #1e40af;
-      --secondary: #64748b;
-      --surface: #ffffff;
-      --background: #f8fafc;
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --secondary: #94a3b8;
+      --background: #fdfdff;
       --text-main: #1e293b;
       --text-muted: #64748b;
-      --item-hover: #eff6ff;
-      --danger: #ef4444;
-      --radius: 16px;
-      --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --radius: 24px;
+      --transition-fast: all 0.2s ease;
+      --transition-base: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
     body {
       font-family: 'Outfit', sans-serif;
       background: var(--background);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(20, 184, 166, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(236, 72, 153, 0.05) 0px, transparent 50%);
       color: var(--text-main);
       margin: 0;
       padding: 0;
@@ -39,194 +41,191 @@
 
     /* Header */
     .header {
-      background: var(--surface);
-      padding: 20px 40px;
-      box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 16px 60px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       position: sticky;
       top: 0;
       z-index: 100;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
     }
 
     .brand img {
-      height: 40px;
+      height: 44px;
       width: auto;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
     }
 
     .brand span {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--text-main);
+      font-size: 1.25rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary), #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.01em;
+      text-transform: uppercase;
     }
 
     .user-panel {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 32px;
     }
 
     .welcome-text {
-      color: var(--text-muted);
-      font-weight: 500;
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 0.95rem;
     }
 
     .btn-logout {
-      padding: 10px 20px;
-      background-color: #fee2e2;
-      color: var(--danger);
-      border: none;
-      border-radius: 50px;
+      padding: 10px 24px;
+      background: white;
+      color: var(--text-muted);
+      border: 1px solid #f1f5f9;
+      border-radius: 100px;
       font-weight: 600;
+      font-size: 0.85rem;
       cursor: pointer;
-      transition: var(--transition);
+      transition: var(--transition-base);
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     .btn-logout:hover {
-      background-color: var(--danger);
-      color: white;
+      background: #fee2e2;
+      color: #ef4444;
+      border-color: #fee2e2;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.1);
     }
 
-    /* Main Grid */
+    /* Main Content */
     .main-container {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 40px 20px;
+      padding: 80px 40px;
     }
 
     .dashboard-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 24px;
+      gap: 40px;
       width: 100%;
-      max-width: 1400px;
+      max-width: 1300px;
     }
 
-    /* Menu Card */
+    /* Card System */
     .menu-card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 32px 24px;
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 40px 32px;
       text-decoration: none;
       color: inherit;
-      box-shadow: var(--shadow);
-      transition: var(--transition);
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      transition: var(--transition-base);
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      border: 1px solid transparent;
       position: relative;
-      overflow: hidden;
       cursor: pointer;
       height: 100%;
-      /* For uniform height */
     }
 
     .menu-card:hover {
-      transform: translateY(-8px);
+      background: white;
+      transform: translateY(-12px);
       border-color: var(--primary);
-      background: linear-gradient(to bottom, var(--surface), var(--item-hover));
+      box-shadow: 0 30px 60px -12px rgba(99, 102, 241, 0.15);
     }
 
     .icon-circle {
-      width: 72px;
-      height: 72px;
-      background: #e0e7ff;
+      width: 80px;
+      height: 80px;
+      background: #f8fafc;
       color: var(--primary);
-      border-radius: 50%;
+      border-radius: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.8rem;
-      margin-bottom: 20px;
-      transition: var(--transition);
+      font-size: 2rem;
+      margin-bottom: 24px;
+      transition: var(--transition-base);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .icon-circle::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--primary), #ec4899);
+      opacity: 0;
+      transition: var(--transition-base);
     }
 
     .menu-card:hover .icon-circle {
-      background: var(--primary);
-      color: white;
-      transform: scale(1.1);
-    }
-
-    /* Special Colors for Specific Cards */
-    .menu-card.btn-bodega .icon-circle {
-      background: #ffedd5;
-      color: #ea580c;
-    }
-
-    .menu-card.btn-bodega:hover .icon-circle {
-      background: #ea580c;
+      transform: scale(1.1) rotate(5deg);
       color: white;
     }
-
-    .menu-card.btn-bodega:hover {
-      border-color: #ea580c;
-      background: linear-gradient(to bottom, var(--surface), #fff7ed);
-    }
-
-    .menu-card.btn-rrhh .icon-circle {
-      background: #f3e8ff;
-      color: #7c3aed;
-    }
-
-    .menu-card.btn-rrhh:hover .icon-circle {
-      background: #7c3aed;
-      color: white;
-    }
-
-    .menu-card.btn-rrhh:hover {
-      border-color: #7c3aed;
-      background: linear-gradient(to bottom, var(--surface), #faf5ff);
+    .menu-card:hover .icon-circle::before { opacity: 1; }
+    
+    .icon-circle i {
+      position: relative;
+      z-index: 1;
     }
 
     .card-title {
       font-size: 1.25rem;
-      font-weight: 700;
-      margin: 0 0 8px 0;
+      font-weight: 800;
+      margin: 0;
       color: var(--text-main);
+      letter-spacing: -0.02em;
     }
 
     .card-description {
       font-size: 0.9rem;
       color: var(--text-muted);
-      margin: 0;
-      line-height: 1.4;
+      margin-top: 12px;
+      line-height: 1.6;
+      opacity: 0.7;
     }
 
-    /* Access Control */
-    .admin-only {
-      display: none;
-    }
+    /* Accent Classes */
+    .btn-bodega:hover { border-color: #ea580c; box-shadow: 0 30px 60px -12px rgba(234, 88, 12, 0.15); }
+    .btn-bodega:hover .icon-circle::before { background: linear-gradient(135deg, #ea580c, #fbbf24); }
 
-    /* Responsive */
+    .btn-rrhh:hover { border-color: #7c3aed; box-shadow: 0 30px 60px -12px rgba(124, 58, 237, 0.15); }
+    .btn-rrhh:hover .icon-circle::before { background: linear-gradient(135deg, #7c3aed, #ec4899); }
+
+    .btn-finanzas:hover { border-color: #10b981; box-shadow: 0 30px 60px -12px rgba(16, 185, 129, 0.15); }
+    .btn-finanzas:hover .icon-circle::before { background: linear-gradient(135deg, #10b981, #06b6d4); }
+
+    /* Admin Badge */
+    .admin-only { display: none; }
+
+    /* Mobile */
     @media (max-width: 768px) {
-      .header {
-        padding: 16px;
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      .user-panel {
-        width: 100%;
-        justify-content: space-between;
-      }
-
-      .dashboard-grid {
-        grid-template-columns: 1fr;
-      }
+      .header { padding: 16px 24px; }
+      .main-container { padding: 40px 16px; }
+      .dashboard-grid { gap: 24px; }
     }
   </style>
 </head>
@@ -326,6 +325,13 @@
         <p class="card-description">Personal, planilla y vacaciones.</p>
       </div>
 
+      <!-- Sistema de Finanzas -->
+      <div class="menu-card admin-only btn-finanzas" id="finanzas-button" onclick="abrirFinanzas()">
+        <div class="icon-circle"><i class="fas fa-coins"></i></div>
+        <h3 class="card-title">Sistema de Finanzas</h3>
+        <p class="card-description">Gestión financiera, ingresos y egresos.</p>
+      </div>
+
     </div>
   </div>
 
@@ -403,6 +409,16 @@
         localStorage.removeItem('usuarioLogueado');
         window.location.href = 'login.html';
       });
+    }
+
+    // Puente a Finanzas
+    function abrirFinanzas() {
+      const role = localStorage.getItem('role') || 'viewer';
+      const email = localStorage.getItem('email') || localStorage.getItem('usuarioLogueado') || 'Usuario';
+      const permisos = localStorage.getItem('permisosFinanzas') || '{}';
+      
+      const params = new URLSearchParams({ role, email, permisos });
+      window.open(`http://localhost:3000/bridge?${params.toString()}`, '_blank');
     }
 
     // Init

@@ -20,6 +20,14 @@ const permEditOrder = document.getElementById('permEditOrder');
 const permDeleteOrder = document.getElementById('permDeleteOrder');
 const permDeleteReceipt = document.getElementById('permDeleteReceipt');
 
+// Checkboxes Finanzas
+const permFinViewHistorial = document.getElementById('permFinViewHistorial');
+const permFinRegistrarPagos = document.getElementById('permFinRegistrarPagos');
+const permFinManageSucursales = document.getElementById('permFinManageSucursales');
+const permFinManageProveedores = document.getElementById('permFinManageProveedores');
+const permFinManageServicios = document.getElementById('permFinManageServicios');
+const permFinManageUsuarios = document.getElementById('permFinManageUsuarios');
+
 // -- Initialization --
 document.addEventListener('DOMContentLoaded', () => {
     verificarAdmin();
@@ -221,6 +229,15 @@ async function handleUserSubmit(e) {
         canDeleteReceipt: permDeleteReceipt.checked
     };
 
+    const permisosFinanzas = {
+        canViewHistorialPagos: permFinViewHistorial.checked,
+        canRegistrarPagos: permFinRegistrarPagos.checked,
+        canManageSucursales: permFinManageSucursales.checked,
+        canManageProveedores: permFinManageProveedores.checked,
+        canManageServicios: permFinManageServicios.checked,
+        canManageUsuarios: permFinManageUsuarios.checked
+    };
+
     try {
         Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -228,7 +245,8 @@ async function handleUserSubmit(e) {
             username,
             rol,
             sucursalId,
-            permisos
+            permisos,
+            permisosFinanzas
         };
 
         if (password) {
@@ -287,6 +305,23 @@ function showEditUserForm(id) {
         permEditOrder.checked = !!u.permisos.canEditOrder;
         permDeleteOrder.checked = !!u.permisos.canDeleteOrder;
         permDeleteReceipt.checked = !!u.permisos.canDeleteReceipt;
+    }
+
+    if (u.permisosFinanzas) {
+        permFinViewHistorial.checked = !!u.permisosFinanzas.canViewHistorialPagos;
+        permFinRegistrarPagos.checked = !!u.permisosFinanzas.canRegistrarPagos;
+        permFinManageSucursales.checked = !!u.permisosFinanzas.canManageSucursales;
+        permFinManageProveedores.checked = !!u.permisosFinanzas.canManageProveedores;
+        permFinManageServicios.checked = !!u.permisosFinanzas.canManageServicios;
+        permFinManageUsuarios.checked = !!u.permisosFinanzas.canManageUsuarios;
+    } else {
+        // Modo por defecto si es antiguo
+        permFinViewHistorial.checked = false;
+        permFinRegistrarPagos.checked = false;
+        permFinManageSucursales.checked = false;
+        permFinManageProveedores.checked = false;
+        permFinManageServicios.checked = false;
+        permFinManageUsuarios.checked = false;
     }
 
     document.getElementById('userModalTitle').textContent = 'Editar Usuario';
@@ -350,7 +385,11 @@ function handleRoleChange() {
 }
 
 function enableCheckboxes(enabled) {
-    const boxes = [permChangeStatus, permEditOrder, permDeleteOrder, permDeleteReceipt];
+    const boxes = [
+        permChangeStatus, permEditOrder, permDeleteOrder, permDeleteReceipt,
+        permFinViewHistorial, permFinRegistrarPagos, permFinManageSucursales,
+        permFinManageProveedores, permFinManageServicios, permFinManageUsuarios
+    ];
     boxes.forEach(b => {
         b.disabled = !enabled;
         if (!enabled) b.checked = false;
