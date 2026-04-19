@@ -1,11 +1,12 @@
 // Archivo: database/connection.js
+// El objeto window.FIREBASE_CONFIG se carga desde database/firebase_config.js (generado desde .env)
 const firebaseConfig = {
-  apiKey: "AIzaSyCS_iCxJiLHo618fTHVTqbhA7GeWc2cgjE",
-  authDomain: "vp-adin.firebaseapp.com",
-  projectId: "vp-adin",
-  storageBucket: "vp-adin.firebasestorage.app",
-  messagingSenderId: "199001819611",
-  appId: "1:199001819611:web:48bfb3146a0c42aab47ffe"
+  apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
+  authDomain: "logisticdb-2e63c.firebaseapp.com",
+  projectId: "logisticdb-2e63c",
+  storageBucket: "logisticdb-2e63c.appspot.com", // Asegúrate que sea .appspot.com
+  messagingSenderId: "917523682093",
+  appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
 };
 
 // Inicializar Firebase solo si no está inicializado

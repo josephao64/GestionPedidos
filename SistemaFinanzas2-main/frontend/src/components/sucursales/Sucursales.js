@@ -35,17 +35,12 @@ const lower = (v) => (v ?? '').toString().trim().toLowerCase();
 
 function getRoleFromStorageOrJWT() {
   const lsRole = lower(localStorage.getItem('role') || '');
-  if (lsRole === 'administrador') return 'admin';
   if (lsRole) return lsRole;
-
   const token = localStorage.getItem('token') || '';
   const p = decodeJwtPayloadSafe(token) || {};
   const jwtRole = lower(p.role || p.rol);
-
-  if (jwtRole === 'administrador' || jwtRole === 'admin') return 'admin';
   if (jwtRole) return jwtRole;
   if (p.admin === true || p.isAdmin === true) return 'admin';
-
   return null;
 }
 
@@ -84,9 +79,8 @@ export default function Sucursales() {
       try {
         const snap = await getDoc(doc(db, 'usuarios', user.uid));
         const data = snap.exists() ? snap.data() : {};
-        const rawRole = lower(data.role || 'viewer');
         setMe({
-          role: rawRole === 'administrador' ? 'admin' : rawRole,
+          role: lower(data.role || 'viewer'),
           sucursalId: data.sucursalId || null,
           loaded: true,
         });
@@ -99,32 +93,20 @@ export default function Sucursales() {
     return () => unsub();
   }, []);
 
-  const getGranularPerm = (permName) => {
-    try {
-      const perms = JSON.parse(localStorage.getItem('permisosFinanzas') || '{}');
-      return perms[permName] === true;
-    } catch {
-      return false;
-    }
-  };
-
   const effectiveRole = me.role || fallbackRole || 'viewer';
-  const canManage = effectiveRole === 'admin' || getGranularPerm('canManageSucursales');
+  const canManage = effectiveRole === 'admin';
 
   /* ======== Cargar sucursales según rol ======== */
   const cargarSucursales = async () => {
     try {
       setLoading(true);
 
-      if (canManage) {
-        // Puede ver todas
+      if (effectiveRole === 'admin') {
+        // Admin: puede listar todas
         const data = await getDocs(sucursalColRef);
-        setSucursales(data.docs.map((d) => {
-          const dat = d.data() || {};
-          return { ...dat, id: d.id, nombre: dat.name || dat.nombre || dat.ubicacion || d.id };
-        }));
+        setSucursales(data.docs.map((d) => ({ ...d.data(), id: d.id })));
       } else {
-        // Leer solo su sucursal asignada
+        // Viewer: NO puede listar. Leer solo su sucursal asignada
         if (!me.sucursalId) {
           setSucursales([]); // no asignado
           return;
@@ -132,8 +114,7 @@ export default function Sucursales() {
         const sRef = doc(db, 'sucursales', me.sucursalId);
         const sSnap = await getDoc(sRef);
         if (sSnap.exists()) {
-          const dat = sSnap.data() || {};
-          setSucursales([{ id: sSnap.id, ...dat, nombre: dat.name || dat.nombre || dat.ubicacion || sSnap.id }]);
+          setSucursales([{ id: sSnap.id, ...sSnap.data() }]);
         } else {
           setSucursales([]); // asignada pero no existe
         }
@@ -187,7 +168,7 @@ export default function Sucursales() {
   const openEditModal = (s) => {
     if (!canManage) return Swal.fire('Sin permisos', 'No puedes editar sucursales.', 'info');
     setEditandoId(s.id);
-    setNombre(s.name || s.nombre || '');
+    setNombre(s.nombre || '');
     setEmpresa(s.empresa || '');
     setUbicacion(s.ubicacion || '');
     setCajaChica(
@@ -220,7 +201,6 @@ export default function Sucursales() {
 
     try {
       const payload = {
-        name: nombre.trim(),
         nombre: nombre.trim(),
         empresa: empresa.trim(),
         ubicacion: ubicacion.trim(),

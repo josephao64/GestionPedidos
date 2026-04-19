@@ -15,6 +15,8 @@
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="database/firebase_config.js"></script>
+    <script src="database/connection.js"></script>
 
     <!-- CryptoJS for Password Hashing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -199,29 +201,35 @@
     </div>
 
     <script>
-        // Configuración de Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyCS_iCxJiLHo618fTHVTqbhA7GeWc2cgjE",
-            authDomain: "vp-adin.firebaseapp.com",
-            projectId: "vp-adin",
-            storageBucket: "vp-adin.firebasestorage.app",
-            messagingSenderId: "199001819611",
-            appId: "1:199001819611:web:48bfb3146a0c42aab47ffe"
-        };
-
-        // Inicializar Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.firestore();
+        // Helper para obtener la DB de forma segura (dinámica)
+        const getSafeDb = () => window.db || (window.firebase && window.firebase.firestore && window.firebase.firestore());
 
         const userSelect = document.getElementById('user-select');
         const loginForm = document.getElementById('login-form');
 
         // Cargar usuarios al iniciar
         function loadUsers() {
-            db.collection('usuarios').get()
+            const currentDb = getSafeDb();
+            
+            if (!currentDb) {
+                console.error("Firebase DB no inicializado");
+                Swal.fire('Error de Conexión', 'No se pudo conectar con la base de datos (DB no inicializada).', 'error');
+                return;
+            }
+
+            console.log("Intentando cargar usuarios de proyecto:", currentDb.app.options.projectId);
+            userSelect.innerHTML = '<option value="" disabled selected>Cargando usuarios...</option>';
+
+            currentDb.collection('usuarios').get()
                 .then((snap) => {
+                    if (snap.empty) {
+                        console.warn("La colección de usuarios está vacía en:", currentDb.app.options.projectId);
+                        userSelect.innerHTML = '<option value="" disabled selected>No hay usuarios (Crea uno con el botón verde)</option>';
+                        return;
+                    }
+
+                    // Limpiar y poblar
+                    userSelect.innerHTML = '<option value="" disabled selected>Selecciona tu cuenta</option>';
                     snap.forEach((doc) => {
                         const user = doc.data();
                         const option = document.createElement('option');
@@ -232,11 +240,20 @@
                 })
                 .catch((e) => {
                     console.error("Error cargando usuarios:", e);
-                    Swal.fire('Error', 'No se pudieron cargar los usuarios', 'error');
+                    if (e.code === 'permission-denied') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Permisos',
+                            text: 'No tienes permiso para leer la lista de usuarios. Asegúrate de que las reglas de Firestore permitan lectura pública en "usuarios".',
+                            footer: '<a href="FIRESTORE-RULES.txt" target="_blank">Ver reglas sugeridas</a>'
+                        });
+                    } else {
+                        Swal.fire('Error', 'No se pudieron cargar los usuarios: ' + (e.message || e), 'error');
+                    }
                 });
         }
 
-        window.onload = loadUsers;
+        document.addEventListener('DOMContentLoaded', loadUsers);
 
         // Crear Admin Automáticamente
         const btnCreateAdmin = document.getElementById('btn-create-admin');
@@ -248,7 +265,10 @@
                     rol: 'administrador'
                 };
 
-                db.collection('usuarios').doc('admin').set(adminData)
+                const currentDb = getSafeDb();
+                if (!currentDb) return Swal.fire('Error', 'DB no inicializado', 'error');
+
+                currentDb.collection('usuarios').doc('admin').set(adminData)
                     .then(() => {
                         return Swal.fire('¡Éxito!', 'Usuario creado correctamente.<br><br><b>Usuario:</b> admin<br><b>Contraseña:</b> admin123', 'success');
                     })
@@ -278,7 +298,10 @@
                 didOpen: () => { Swal.showLoading(); }
             });
 
-            db.collection('usuarios').where('username', '==', username).limit(1).get()
+            const currentDb = getSafeDb();
+            if (!currentDb) return Swal.fire('Error', 'DB no inicializado', 'error');
+
+            currentDb.collection('usuarios').where('username', '==', username).limit(1).get()
                 .then((snap) => {
                     if (!snap.empty) {
                         const userData = snap.docs[0].data();

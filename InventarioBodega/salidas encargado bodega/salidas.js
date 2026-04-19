@@ -3,18 +3,13 @@
    y SIN scripts inline (listo para CSP estricta). */
 
 /* =========================
-   FIREBASE
+   FIREBASE (Centralizado)
    ========================= */
-var firebaseConfig = {
-  apiKey: "AIzaSyCS_iCxJiLHo618fTHVTqbhA7GeWc2cgjE",
-  authDomain: "vp-adin.firebaseapp.com",
-  projectId: "vp-adin",
-  storageBucket: "vp-adin.firebasestorage.app",
-  messagingSenderId: "199001819611",
-  appId: "1:199001819611:web:48bfb3146a0c42aab47ffe"
-};
-firebase.initializeApp(firebaseConfig);
-var db = firebase.firestore();
+// db se hereda de window.db inicializado en connection.js
+if (!window.db) {
+  console.error("❌ Firebase no ha sido inicializado. Asegúrate de incluir connection.js");
+}
+var db = window.db;
 
 /* =========================
    UI Helpers (SweetAlert2)

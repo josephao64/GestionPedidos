@@ -19,7 +19,7 @@ export function useCuadres({ fecha, sucursalId }) {
 
   useEffect(() => { (async () => {
     const snap = await getDocs(collection(db, 'sucursales'));
-    const list = snap.docs.map(d => ({ id: d.id, nombre: d.data().name || d.data().nombre || d.data().ubicacion || 'Sin nombre' }));
+    const list = snap.docs.map(d => ({ id: d.id, nombre: d.data().ubicacion || d.data().nombre || 'Sin nombre' }));
     setSucursalesList(list.sort((a,b)=>a.nombre.localeCompare(b.nombre)));
   })(); }, []);
 
@@ -33,7 +33,7 @@ export function useCuadres({ fecha, sucursalId }) {
         const sd = await getDoc(doc(db, 'sucursales', id));
         if (sd.exists()) {
           const d = sd.data();
-          ubic[id] = d.name || d.nombre || d.ubicacion || 'Sin lugar';
+          ubic[id] = d.ubicacion || d.nombre || 'Sin lugar';
           caja[id] = parseFloat(d.cajaChica) || 0;
         } else { ubic[id] = 'Sucursal no encontrada'; caja[id] = 0; }
       }));

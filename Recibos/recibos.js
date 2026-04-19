@@ -6,17 +6,11 @@ let sucursales = [];
 let selectedSucursal = null;
 let receiptId = null;
 
-// Configuración de Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyCS_iCxJiLHo618fTHVTqbhA7GeWc2cgjE",
-  authDomain: "vp-adin.firebaseapp.com",
-  projectId: "vp-adin",
-  storageBucket: "vp-adin.firebasestorage.app",
-  messagingSenderId: "199001819611",
-  appId: "1:199001819611:web:48bfb3146a0c42aab47ffe"
-};
-firebase.initializeApp(firebaseConfig);
-db = firebase.firestore();
+// db se hereda de window.db inicializado en connection.js
+const db = window.db;
+if (!db) {
+  console.error("❌ Firebase no ha sido inicializado. Asegúrate de incluir connection.js");
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('receiptCreationContainer').style.display = 'none';

@@ -92,18 +92,18 @@ function renderTrasladoTable(dataList) {
         const dateStr = item.dateObj ? item.dateObj.toLocaleDateString("es-GT") + ' ' + item.dateObj.toLocaleTimeString("es-GT") : 'N/A';
 
         const typeLabel = item.type === 'fixed' ?
-            '<span style="color: purple; font-weight: bold; background: #f3e8ff; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">Definitivo</span>' :
-            '<span style="color: orange; font-weight: bold; background: #ffedd5; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">Temporal</span>';
+            '<span class="badge badge-purple">Definitivo</span>' :
+            '<span class="badge badge-orange">Temporal</span>';
 
         html += `
-            <tr style="border-bottom: 1px solid #eee; hover: background-color: #f9fafb;">
-                <td style="padding: 12px;">${dateStr}</td>
-                <td style="padding: 12px; font-weight: 500;">${item.resolvedName}</td>
-                <td style="padding: 12px;">${typeLabel}</td>
-                <td style="padding: 12px;">${item.fromSucursalName || '<span style="color:#ccc;">N/A</span>'}</td>
-                <td style="padding: 12px; font-weight:bold;">${item.toSucursalName || 'N/A'}</td>
-                <td style="padding: 12px; max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${item.comments || '-'}</td>
-                <td style="padding: 12px; font-size: 0.85em; color: #666;">${item.user || 'Sistema'}</td>
+            <tr>
+                <td>${dateStr}</td>
+                <td style="font-weight: 500;">${item.resolvedName}</td>
+                <td>${typeLabel}</td>
+                <td>${item.fromSucursalName || '<span style="color:#ccc;">N/A</span>'}</td>
+                <td style="font-weight:bold;">${item.toSucursalName || 'N/A'}</td>
+                <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${item.comments || '-'}</td>
+                <td style="font-size: 0.85em; color: var(--text-muted);">${item.user || 'Sistema'}</td>
             </tr>
         `;
     });
@@ -137,16 +137,16 @@ async function loadActiveLoans() {
             const endStr = data.tempEndDate ? new Date(data.tempEndDate).toLocaleDateString("es-GT") : 'Indefinido';
 
             html += `
-                <tr style="border-bottom: 1px solid #fde68a;">
-                    <td style="padding: 12px; font-weight: bold;">${data.fullName}</td>
-                    <td style="padding: 12px;">${data.sucursalName}</td>
-                    <td style="padding: 12px; color: #d97706; font-weight: 500;">${data.tempSucursalName}</td>
-                    <td style="padding: 12px;">${startStr}</td>
-                    <td style="padding: 12px;">${endStr}</td>
-                    <td style="padding: 12px;">
-                        <button class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem; background: #10b981; border: none; color: white;" 
+                <tr>
+                    <td style="font-weight: bold;">${data.fullName}</td>
+                    <td>${data.sucursalName}</td>
+                    <td style="color: #ea580c; font-weight: 500;">${data.tempSucursalName}</td>
+                    <td>${startStr}</td>
+                    <td>${endStr}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" 
                             onclick="endTempTransfer('${doc.id}', '${data.fullName}', '${data.tempSucursalName}', '${data.sucursalName}')">
-                            <i class="fas fa-undo-alt" style="margin-right:5px;"></i> Finalizar
+                            <i class="fas fa-undo-alt"></i> Finalizar
                         </button>
                     </td>
                 </tr>

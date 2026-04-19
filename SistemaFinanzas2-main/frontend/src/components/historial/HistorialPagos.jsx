@@ -11,14 +11,14 @@ import './HistorialPagos.css';
 
 import { auth, db } from '../../services/firebase';
 import { getTodayLocalISO as getTodayLocalISO_ventas } from '../../utils/dates';
-import { exportDepositosPdf, exportPagosGroupedPdf } from '../../pdf/exportadoresPagos';
+import { exportDepositosPdf, exportPagosGroupedPdf } from '../../pdf/exportadoresPagos'; 
 import GroupDownloadModal from '../ventas/GroupDownloadModal';
 
 // Compatibilidad
 const getTodayLocalISO = getTodayLocalISO_ventas || (() => {
   const d = new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 10);
+  return d.toISOString().slice(0,10);
 });
 
 const fmtQ = (val) =>
@@ -85,16 +85,16 @@ const recomputeSucursalKPI = async (sucursalId) => {
   };
 
   const anyPreferredWorked = (await Promise.all([
-    tryQuery(query(pagosRef, where('sucursalId', '==', sucursalId), orderBy('createdAt', 'desc'), limit(1)), pushPago),
-    tryQuery(query(pagosRef, where('sucursalId', '==', sucursalId), orderBy('fecha', 'desc'), limit(1)), pushPago),
-    tryQuery(query(cierresRef, where('sucursalId', '==', sucursalId), orderBy('createdAt', 'desc'), limit(1)), pushCierre),
-    tryQuery(query(cierresRef, where('sucursalId', '==', sucursalId), orderBy('fecha', 'desc'), limit(1)), pushCierre),
+    tryQuery(query(pagosRef,  where('sucursalId','==',sucursalId), orderBy('createdAt','desc'), limit(1)), pushPago),
+    tryQuery(query(pagosRef,  where('sucursalId','==',sucursalId), orderBy('fecha','desc'),     limit(1)), pushPago),
+    tryQuery(query(cierresRef, where('sucursalId','==',sucursalId), orderBy('createdAt','desc'), limit(1)), pushCierre),
+    tryQuery(query(cierresRef, where('sucursalId','==',sucursalId), orderBy('fecha','desc'),     limit(1)), pushCierre),
   ])).some(Boolean);
 
   if (!anyPreferredWorked || candidatos.length === 0) {
     try {
-      const sPagos = await getDocs(query(pagosRef, where('sucursalId', '==', sucursalId)));
-      const sCierres = await getDocs(query(cierresRef, where('sucursalId', '==', sucursalId)));
+      const sPagos   = await getDocs(query(pagosRef,  where('sucursalId','==',sucursalId)));
+      const sCierres = await getDocs(query(cierresRef, where('sucursalId','==',sucursalId)));
       sPagos.forEach(d => pushPago(d.data() || {}));
       sCierres.forEach(d => pushCierre(d.data() || {}));
     } catch (e) {
@@ -107,7 +107,7 @@ const recomputeSucursalKPI = async (sucursalId) => {
     return;
   }
 
-  const best = candidatos.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
+  const best = candidatos.sort((a,b) => (b.ts||0)-(a.ts||0))[0];
   const newKpi = Number(best?.val || 0);
   await updateDoc(sucRef, { kpiDepositos: newKpi });
 };
@@ -116,8 +116,9 @@ export default function Pagos() {
   const navigate = useNavigate();
 
   // Perfil del usuario
-  const [me, setMe] = useState({ loaded: false, role: 'viewer', sucursalId: null });
-  const permisos = me.permisos || {};
+  const [me, setMe] = useState({ loaded:false, role:'viewer', sucursalId:null });
+  const isAdmin = me.role === 'admin';
+
   // Filtros
   const [fechaFiltro, setFechaFiltro] = useState(getTodayLocalISO());
   const [sucursalFiltro, setSucursalFiltro] = useState('all');
@@ -131,38 +132,27 @@ export default function Pagos() {
   const [loading, setLoading] = useState(true);
 
   // (conservados para viewer/editor modal de soporte)
-  const [viewer, setViewer] = useState({ open: false, doc: null });
-  const [editor, setEditor] = useState({ open: false, doc: null, items: [] });
+  const [viewer, setViewer] = useState({ open:false, doc:null });
+  const [editor, setEditor] = useState({ open:false, doc:null, items:[] });
 
   // Modal agrupado (igual que HistorialCuadres)
   const [showGroup, setShowGroup] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  const getSesion = () => {
-    const r = localStorage.getItem('role') || 'viewer';
-    const email = localStorage.getItem('email') || '';
-    const pStr = localStorage.getItem('permisosFinanzas') || '{}';
-    let perms = {};
-    try { perms = JSON.parse(pStr); } catch { }
-
-    return {
-      loaded: true,
-      role: (r.toLowerCase() === 'administrador') ? 'admin' : r.toLowerCase(),
-      sucursalId: localStorage.getItem('sucursalId') || null,
-      permisos: perms
-    };
-  };
-
   useEffect(() => {
-    setMe(getSesion());
-    const onStorage = (e) => {
-      if (['role', 'email', 'permisosFinanzas'].includes(e.key)) setMe(getSesion());
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) { setMe({ loaded:true, role:'viewer', sucursalId:null }); return; }
+      try {
+        const snap = await getDoc(doc(db, 'usuarios', user.uid));
+        // 🔧 FIX ESLint: no reasignar ni usar antes de definir
+        const data = snap.exists() ? snap.data() : {};
+        setMe({ loaded:true, role: data.role || 'viewer', sucursalId: data.sucursalId || null });
+      } catch {
+        setMe({ loaded:true, role:'viewer', sucursalId:null });
+      }
+    });
+    return () => unsub();
   }, []);
-
-  const isAdmin = me.role === 'admin' || me.permisos?.canViewHistorialPagos === true;
 
   // Cargar sucursales
   useEffect(() => {
@@ -171,17 +161,17 @@ export default function Pagos() {
         const qs = await getDocs(collection(db, 'sucursales'));
         const arr = qs.docs.map(d => {
           const data = d.data() || {};
-          const name = data.name || data.nombre || data.ubicacion || d.id;
+          const ubicacion = data.ubicacion ?? data['ubicación'] ?? '';
           return {
             id: d.id,
             ...data,
-            nombre: name,
-            ubicacion: data.ubicacion || data.address || ''
+            nombre: data.nombre || d.id,
+            ubicacion
           };
         });
         setSucursalesList(arr);
         const m = {};
-        arr.forEach(s => { m[s.id] = s.nombre; });
+        arr.forEach(s => { m[s.id] = s.ubicacion || s.nombre; });
         setSucursalesMap(m);
       } catch {
         setSucursalesList([]);
@@ -199,13 +189,13 @@ export default function Pagos() {
     try {
       const col = collection(db, 'pagos');
       const conditions = [];
-      if (fechaFiltro) conditions.push(where('fecha', '==', fechaFiltro));
+      if (fechaFiltro) conditions.push(where('fecha','==',fechaFiltro));
       if (currentSucursalValue && currentSucursalValue !== 'all') {
-        conditions.push(where('sucursalId', '==', currentSucursalValue));
+        conditions.push(where('sucursalId','==',currentSucursalValue));
       }
-      const qRef = query(col, ...conditions, orderBy('fecha', 'desc'));
+      const qRef = query(col, ...conditions, orderBy('fecha','desc'));
       const snap = await getDocs(qRef);
-      const rows = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
+      const rows = snap.docs.map(d => ({ id:d.id, ...(d.data()||{}) }));
       setPagos(rows);
     } catch (e) {
       console.error(e);
@@ -234,7 +224,7 @@ export default function Pagos() {
   };
 
   const handleEliminar = async (id) => {
-    if (!isAdmin) {
+     if (!isAdmin) {
       await Swal.fire('Solo lectura', 'No tienes permisos para eliminar.', 'info');
       return;
     }
@@ -316,14 +306,14 @@ export default function Pagos() {
 
       {/* Filtros */}
       <div className="ventas-filtros">
-        <div className="filtro">
+         <div className="filtro">
           <label>Fecha:</label>
-          <input type="date" value={fechaFiltro} onChange={(e) => setFechaFiltro(e.target.value)} />
+          <input type="date" value={fechaFiltro} onChange={(e)=> setFechaFiltro(e.target.value)} />
         </div>
         <div className="filtro">
           <label>Sucursal:</label>
           {isAdmin ? (
-            <select value={currentSucursalValue} onChange={(e) => setSucursalFiltro(e.target.value)}>
+            <select value={currentSucursalValue} onChange={(e)=> setSucursalFiltro(e.target.value)}>
               <option value="all">Todas</option>
               {sucursalesList.map(s => <option key={s.id} value={s.id}>{s.ubicacion}</option>)}
             </select>
@@ -335,7 +325,7 @@ export default function Pagos() {
             </select>
           )}
         </div>
-
+       
       </div>
 
       {/* Tabla con estilos de Ventas */}
@@ -372,11 +362,11 @@ export default function Pagos() {
                     <td data-label="Sobrante p/ mañana" className="text-right">{fmtQ(sob)}</td>
                     <td data-label="Acciones">
                       <div className="acciones">
-                        <button className="btn-min" type="button" onClick={() => handleVer(p)}>Ver</button>
+                        <button className="btn-min" type="button" onClick={()=>handleVer(p)}>Ver</button>
                         <button
                           className="btn-min"
                           type="button"
-                          onClick={() => handleEditar(p)}
+                          onClick={()=>handleEditar(p)}
                           disabled={!isAdmin}
                           title={isAdmin ? '' : 'Solo admin'}
                         >
@@ -385,7 +375,7 @@ export default function Pagos() {
                         <button
                           className="btn-min danger"
                           type="button"
-                          onClick={() => handleEliminar(p.id)}
+                          onClick={()=>handleEliminar(p.id)}
                           disabled={!isAdmin}
                           title={isAdmin ? '' : 'Solo admin'}
                         >
@@ -419,7 +409,7 @@ export default function Pagos() {
           <div className="modal">
             <div className="modal-hd">
               <h3>Detalle de pagos</h3>
-              <button className="rc-btn rc-btn-ghost" onClick={() => setViewer({ open: false, doc: null })}>✕</button>
+              <button className="rc-btn rc-btn-ghost" onClick={()=>setViewer({open:false, doc:null})}>✕</button>
             </div>
             <div className="modal-bd">
               <div>
@@ -453,7 +443,7 @@ export default function Pagos() {
               </table>
             </div>
             <div className="modal-ft">
-              <button className="rc-btn" onClick={() => setViewer({ open: false, doc: null })}>Cerrar</button>
+              <button className="rc-btn" onClick={()=>setViewer({ open:false, doc:null })}>Cerrar</button>
             </div>
           </div>
         </div>
@@ -465,7 +455,7 @@ export default function Pagos() {
           <div className="modal" >
             <div className="modal-hd">
               <h3>Editar pagos</h3>
-              <button className="rc-btn rc-btn-ghost" onClick={() => setEditor({ open: false, doc: null, items: [] })}>✕</button>
+              <button className="rc-btn rc-btn-ghost" onClick={()=>setEditor({ open:false, doc:null, items:[] })}>✕</button>
             </div>
             <div className="modal-bd">
               <div>
@@ -492,7 +482,7 @@ export default function Pagos() {
                         <input
                           className="rc-input"
                           value={it.descripcion || ''}
-                          onChange={(e) => {
+                          onChange={(e)=> {
                             const v = e.target.value;
                             setEditor(prev => {
                               const arr = [...prev.items]; arr[idx] = { ...arr[idx], descripcion: v }; return { ...prev, items: arr };
@@ -506,20 +496,20 @@ export default function Pagos() {
                           className="rc-input rc-qty no-spin"
                           type="number" min="0" step="0.01" inputMode="decimal"
                           value={it.monto ?? ''}
-                          onChange={(e) => {
+                          onChange={(e)=> {
                             const v = e.target.value;
                             setEditor(prev => {
                               const arr = [...prev.items]; arr[idx] = { ...arr[idx], monto: v }; return { ...prev, items: arr };
                             });
                           }}
-                          onWheel={(e) => e.currentTarget.blur()}
+                          onWheel={(e)=>e.currentTarget.blur()}
                         />
                       </td>
                       <td>
                         <input
                           className="rc-input"
                           value={it.ref || ''}
-                          onChange={(e) => {
+                          onChange={(e)=> {
                             const v = e.target.value;
                             setEditor(prev => {
                               const arr = [...prev.items]; arr[idx] = { ...arr[idx], ref: v }; return { ...prev, items: arr };
@@ -532,7 +522,7 @@ export default function Pagos() {
                         <input
                           className="rc-input"
                           value={it.categoria || ''}
-                          onChange={(e) => {
+                          onChange={(e)=> {
                             const v = e.target.value;
                             setEditor(prev => {
                               const arr = [...prev.items]; arr[idx] = { ...arr[idx], categoria: v }; return { ...prev, items: arr };
@@ -548,10 +538,10 @@ export default function Pagos() {
                         <button
                           className="rc-btn rc-btn-ghost"
                           type="button"
-                          onClick={() => {
+                          onClick={()=>{
                             setEditor(prev => {
                               const arr = prev.items.slice();
-                              arr.splice(idx, 1);
+                              arr.splice(idx,1);
                               return { ...prev, items: arr };
                             });
                           }}
@@ -572,9 +562,9 @@ export default function Pagos() {
                 <button
                   className="rc-btn rc-btn-outline"
                   type="button"
-                  onClick={() => setEditor(prev => ({
+                  onClick={()=>setEditor(prev => ({
                     ...prev,
-                    items: [...prev.items, { descripcion: '', monto: '', ref: '', categoria: 'Varios', fileUrl: '', fileName: '', fileMime: '' }]
+                    items: [...prev.items, { descripcion:'', monto:'', ref:'', categoria:'Varios', fileUrl:'', fileName:'', fileMime:'' }]
                   }))}
                 >
                   + Agregar item
@@ -583,8 +573,8 @@ export default function Pagos() {
               <div>* La edición de adjuntos se realiza desde <em>Registrar Pagos</em>.</div>
             </div>
             <div className="modal-ft">
-              <button className="rc-btn" onClick={() => setEditor({ open: false, doc: null, items: [] })}>Cancelar</button>
-              <button className="rc-btn rc-btn-primary" onClick={async () => {
+              <button className="rc-btn" onClick={()=>setEditor({ open:false, doc:null, items:[] })}>Cancelar</button>
+              <button className="rc-btn rc-btn-primary" onClick={async ()=>{
                 try {
                   const docId = editor.doc.id;
                   const newItems = editor.items.map(it => ({
@@ -608,8 +598,8 @@ export default function Pagos() {
                     sobranteParaManana: newSobrante,
                   });
                   await recomputeSucursalKPI(editor.doc.sucursalId);
-                  await Swal.fire({ icon: 'success', title: 'Pago actualizado', timer: 1200, showConfirmButton: false });
-                  setEditor({ open: false, doc: null, items: [] });
+                  await Swal.fire({ icon:'success', title:'Pago actualizado', timer:1200, showConfirmButton:false });
+                  setEditor({ open:false, doc:null, items:[] });
                   refetch();
                 } catch (e) {
                   console.error(e);
@@ -629,17 +619,17 @@ export default function Pagos() {
           sucursalesMap={sucursalesMap}
           selectedIds={selectedIds}
           onToggleAll={() =>
-            setSelectedIds(selectedIds.length === pagos.length ? [] : pagos.map(p => p.id))
+            setSelectedIds(selectedIds.length === pagos.length ? [] : pagos.map(p=>p.id))
           }
           onToggleOne={(id) =>
-            setSelectedIds((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+            setSelectedIds((prev)=> prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id])
           }
-          onCancel={() => setShowGroup(false)}
+          onCancel={()=> setShowGroup(false)}
           onDownload={async () => {
             try {
               const docs = pagos.filter(p => selectedIds.includes(p.id));
               if (!docs.length) {
-                await Swal.fire('Selecciona al menos un registro', '', 'warning');
+                await Swal.fire('Selecciona al menos un registro','','warning');
                 return;
               }
               const nombre = `Pagos_Agrupados_${fechaFiltro || 'todas'}`;

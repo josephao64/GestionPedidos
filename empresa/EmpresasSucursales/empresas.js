@@ -92,15 +92,29 @@ function renderDashboardChart() {
             datasets: [{
                 label: 'Sucursales',
                 data: data,
-                backgroundColor: '#4f46e5',
-                borderRadius: 6
+                backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                borderColor: '#6366f1',
+                borderWidth: 2,
+                borderRadius: 12,
+                hoverBackgroundColor: '#6366f1'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
             scales: {
-                y: { beginAtZero: true, ticks: { precision: 0 } }
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { precision: 0, color: '#64748b' },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    ticks: { color: '#64748b' },
+                    grid: { display: false }
+                }
             }
         }
     });
@@ -117,9 +131,10 @@ async function loadEmpresas() {
         companiesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         container.innerHTML = '';
-        companiesData.forEach(comp => {
+        companiesData.forEach((comp, index) => {
             const card = document.createElement('div');
             card.className = 'item-card';
+            card.style.animationDelay = `${index * 0.1}s`;
 
             const statusClass = comp.status === 'activo' ? 'status-active' : 'status-inactive';
 
@@ -131,8 +146,8 @@ async function loadEmpresas() {
                 <div class="item-title">${comp.name}</div>
                 <div class="item-subtitle">${comp.phone || 'Sin teléfono'}</div>
                 <div class="item-body">
-                    <p>${comp.address || ''}</p>
-                    <small style="color:var(--text-muted)">${comp.email || ''}</small>
+                    <p><i class="fas fa-map-marker-alt" style="color:var(--primary); opacity:0.6"></i> ${comp.address || 'Sin dirección'}</p>
+                    <p><i class="fas fa-envelope" style="color:var(--primary); opacity:0.6"></i> ${comp.email || 'Sin email'}</p>
                 </div>
                 <div class="item-actions">
                     <button class="btn btn-secondary btn-sm" onclick="openEditEmpresaModal('${comp.id}')">
@@ -174,10 +189,10 @@ async function loadSucursales() {
         const compMap = {};
         companiesData.forEach(c => compMap[c.id] = c.name);
 
-        container.innerHTML = '';
-        branches.forEach(br => {
+        container.innerHTML = '';        branches.forEach((br, index) => {
             const card = document.createElement('div');
             card.className = 'item-card';
+            card.style.animationDelay = `${index * 0.1}s`;
             const statusClass = br.status === 'activo' ? 'status-active' : 'status-inactive';
             const compName = compMap[br.empresaId] || 'Sin Empresa';
 
@@ -189,11 +204,11 @@ async function loadSucursales() {
                     <span class="status-badge ${statusClass}">${br.status}</span>
                 </div>
                 <div class="item-title">${br.name}</div>
-                <div class="item-subtitle">${compName}</div>
+                <div class="item-subtitle" style="font-weight:600; color:var(--primary)">${compName}</div>
                 <div class="item-body">
-                    <p><strong>Enc:</strong> ${br.encargado || '-'}</p>
-                    <p style="font-size:0.85em">${br.address || ''}</p>
-                    <small style="color:var(--text-muted)">${br.phone || ''}</small>
+                    <p><strong><i class="fas fa-wallet"></i> Caja Chica:</strong> <span>Q.${Number(br.cajaChica || 0).toFixed(2)}</span></p>
+                    <p><strong><i class="fas fa-user-tie"></i> Enc:</strong> <span>${br.encargado || '-'}</span></p>
+                    <p><i class="fas fa-map-pin"></i> ${br.address || ''}</p>
                 </div>
                 <div class="item-actions">
                     <button class="btn btn-primary btn-sm" onclick="openQuotaModal('${br.id}', '${br.name.replace(/'/g, "\\'")}')">
@@ -210,6 +225,7 @@ async function loadSucursales() {
             container.appendChild(card);
         });
 
+
     } catch (e) {
         console.error(e);
         container.innerHTML = '<p style="color:red">Error al cargar sucursales</p>';
@@ -218,8 +234,16 @@ async function loadSucursales() {
 
 // === CRUD OPERATIONS (Retrofitted) ===
 
-function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openModal(id) { 
+    const el = document.getElementById(id);
+    el.style.display = 'flex';
+    setTimeout(() => el.classList.add('show'), 10);
+}
+function closeModal(id) { 
+    const el = document.getElementById(id);
+    el.classList.remove('show');
+    setTimeout(() => el.style.display = 'none', 300);
+}
 
 async function addEmpresa() {
     const data = {
@@ -259,7 +283,8 @@ async function addSucursal() {
         encargado: document.getElementById('sucursalEncargado').value,
         membrete: document.getElementById('sucursalMembrete').value,
         description: document.getElementById('sucursalDescription').value,
-        status: document.getElementById('sucursalStatus').value
+        status: document.getElementById('sucursalStatus').value,
+        cajaChica: parseFloat(document.getElementById('sucursalCajaChica').value) || 0
     };
 
     if (!data.name || !data.empresaId) return Swal.fire('Error', 'Nombre y Empresa requeridos', 'error');
@@ -309,6 +334,7 @@ async function openEditSucursalModal(id) {
     document.getElementById('editSucursalMembrete').value = data.membrete || '';
     document.getElementById('editSucursalDescription').value = data.description;
     document.getElementById('editSucursalStatus').value = data.status;
+    document.getElementById('editSucursalCajaChica').value = data.cajaChica || 0;
 
     openModal('editSucursalModal');
 }
@@ -346,7 +372,8 @@ async function updateSucursal() {
         encargado: document.getElementById('editSucursalEncargado').value,
         membrete: document.getElementById('editSucursalMembrete').value,
         description: document.getElementById('editSucursalDescription').value,
-        status: document.getElementById('editSucursalStatus').value
+        status: document.getElementById('editSucursalStatus').value,
+        cajaChica: parseFloat(document.getElementById('editSucursalCajaChica').value) || 0
     };
 
     try {

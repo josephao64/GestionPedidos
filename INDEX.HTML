@@ -26,7 +26,7 @@
     body {
       font-family: 'Outfit', sans-serif;
       background: var(--background);
-      background-image: 
+      background-image:
         radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
         radial-gradient(at 100% 0%, rgba(20, 184, 166, 0.05) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.05) 0px, transparent 50%),
@@ -63,7 +63,7 @@
     .brand img {
       height: 44px;
       width: auto;
-      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
     }
 
     .brand span {
@@ -98,7 +98,7 @@
       font-size: 0.85rem;
       cursor: pointer;
       transition: var(--transition-base);
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -123,22 +123,24 @@
 
     .dashboard-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 40px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 32px;
       width: 100%;
-      max-width: 1300px;
+      max-width: 1400px;
+      padding-bottom: 40px; /* Space for shadows and transition */
     }
 
     /* Card System */
     .menu-card {
       background: rgba(255, 255, 255, 0.4);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      padding: 40px 32px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 32px 24px;
       text-decoration: none;
       color: inherit;
       border-radius: var(--radius);
       border: 1px solid rgba(255, 255, 255, 0.8);
+      border-bottom: 3px solid rgba(99, 102, 241, 0.1); /* Subtle bottom accent */
       transition: var(--transition-base);
       display: flex;
       flex-direction: column;
@@ -147,26 +149,27 @@
       position: relative;
       cursor: pointer;
       height: 100%;
+      margin-bottom: 10px;
     }
 
     .menu-card:hover {
       background: white;
-      transform: translateY(-12px);
+      transform: translateY(-8px);
       border-color: var(--primary);
-      box-shadow: 0 30px 60px -12px rgba(99, 102, 241, 0.15);
+      box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.12);
     }
 
     .icon-circle {
-      width: 80px;
-      height: 80px;
+      width: 68px;
+      height: 68px;
       background: #f8fafc;
       color: var(--primary);
-      border-radius: 28px;
+      border-radius: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
-      margin-bottom: 24px;
+      font-size: 1.6rem;
+      margin-bottom: 20px;
       transition: var(--transition-base);
       position: relative;
       overflow: hidden;
@@ -184,48 +187,80 @@
     .menu-card:hover .icon-circle {
       transform: scale(1.1) rotate(5deg);
       color: white;
+      border-radius: 50%;
     }
-    .menu-card:hover .icon-circle::before { opacity: 1; }
-    
+
+    .menu-card:hover .icon-circle::before {
+      opacity: 1;
+    }
+
     .icon-circle i {
       position: relative;
       z-index: 1;
     }
 
     .card-title {
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       font-weight: 800;
       margin: 0;
       color: var(--text-main);
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
     }
 
     .card-description {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
-      margin-top: 12px;
-      line-height: 1.6;
-      opacity: 0.7;
+      margin-top: 10px;
+      line-height: 1.5;
+      opacity: 0.8;
     }
 
     /* Accent Classes */
-    .btn-bodega:hover { border-color: #ea580c; box-shadow: 0 30px 60px -12px rgba(234, 88, 12, 0.15); }
-    .btn-bodega:hover .icon-circle::before { background: linear-gradient(135deg, #ea580c, #fbbf24); }
+    .btn-bodega:hover {
+      border-color: #ea580c;
+      box-shadow: 0 30px 60px -12px rgba(234, 88, 12, 0.15);
+    }
 
-    .btn-rrhh:hover { border-color: #7c3aed; box-shadow: 0 30px 60px -12px rgba(124, 58, 237, 0.15); }
-    .btn-rrhh:hover .icon-circle::before { background: linear-gradient(135deg, #7c3aed, #ec4899); }
+    .btn-bodega:hover .icon-circle::before {
+      background: linear-gradient(135deg, #ea580c, #fbbf24);
+    }
 
-    .btn-finanzas:hover { border-color: #10b981; box-shadow: 0 30px 60px -12px rgba(16, 185, 129, 0.15); }
-    .btn-finanzas:hover .icon-circle::before { background: linear-gradient(135deg, #10b981, #06b6d4); }
+    .btn-rrhh:hover {
+      border-color: #7c3aed;
+      box-shadow: 0 30px 60px -12px rgba(124, 58, 237, 0.15);
+    }
+
+    .btn-rrhh:hover .icon-circle::before {
+      background: linear-gradient(135deg, #7c3aed, #ec4899);
+    }
+
+    .btn-finanzas:hover {
+      border-color: #10b981;
+      box-shadow: 0 30px 60px -12px rgba(16, 185, 129, 0.15);
+    }
+
+    .btn-finanzas:hover .icon-circle::before {
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+    }
 
     /* Admin Badge */
-    .admin-only { display: none; }
+    .admin-only {
+      display: none;
+    }
 
     /* Mobile */
     @media (max-width: 768px) {
-      .header { padding: 16px 24px; }
-      .main-container { padding: 40px 16px; }
-      .dashboard-grid { gap: 24px; }
+      .header {
+        padding: 16px 24px;
+      }
+
+      .main-container {
+        padding: 40px 16px;
+      }
+
+      .dashboard-grid {
+        gap: 24px;
+      }
     }
   </style>
 </head>
@@ -326,7 +361,7 @@
       </div>
 
       <!-- Sistema de Finanzas -->
-      <div class="menu-card admin-only btn-finanzas" id="finanzas-button" onclick="abrirFinanzas()">
+      <div class="menu-card btn-finanzas" id="finanzas-button" onclick="abrirFinanzas()">
         <div class="icon-circle"><i class="fas fa-coins"></i></div>
         <h3 class="card-title">Sistema de Finanzas</h3>
         <p class="card-description">Gestión financiera, ingresos y egresos.</p>
@@ -416,7 +451,7 @@
       const role = localStorage.getItem('role') || 'viewer';
       const email = localStorage.getItem('email') || localStorage.getItem('usuarioLogueado') || 'Usuario';
       const permisos = localStorage.getItem('permisosFinanzas') || '{}';
-      
+
       const params = new URLSearchParams({ role, email, permisos });
       window.open(`http://localhost:3000/bridge?${params.toString()}`, '_blank');
     }

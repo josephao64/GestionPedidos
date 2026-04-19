@@ -62,30 +62,28 @@ export default function Finanzas() {
   const calendarRef = useRef(null);
 
   // Perfil (obtener sucursal del usuario y rol)
-  const getSesion = () => {
-    const r = localStorage.getItem('role') || 'viewer';
-    return {
-      loaded: true,
-      role: (r.toLowerCase() === 'administrador') ? 'admin' : r.toLowerCase(),
-      sucursalId: localStorage.getItem('sucursalId') || null
-    };
-  };
-
   useEffect(() => {
-    const s = getSesion();
-    setIsAdmin(s.role === 'admin');
-    setUserSucursalId(s.sucursalId);
-    setUserLoaded(true);
-
-    const onStorage = (e) => {
-      if (['role', 'sucursalId'].includes(e.key)) {
-        const up = getSesion();
-        setIsAdmin(up.role === 'admin');
-        setUserSucursalId(up.sucursalId);
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setUserSucursalId(null);
+        setIsAdmin(false);
+        setUserLoaded(true);
+        return;
       }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+      try {
+        const snap = await getDoc(doc(db, 'usuarios', user.uid));
+        const data = snap.exists() ? snap.data() : {};
+        setUserSucursalId(data.sucursalId || null);
+        const role = (data.rol || data.role || '').toString().toLowerCase();
+        setIsAdmin(role === 'admin');
+      } catch {
+        setUserSucursalId(null);
+        setIsAdmin(false);
+      } finally {
+        setUserLoaded(true);
+      }
+    });
+    return () => unsub();
   }, []);
 
   const money = (n) =>
@@ -105,7 +103,7 @@ export default function Finanzas() {
           const d = snap.data() || {};
           return {
             id: snap.id,
-            nombre: d.name || d.nombre || d.ubicacion || snap.id,
+            nombre: d.nombre || d.name || snap.id,
             ubicacion: d.ubicacion || d.location || '',
           };
         });

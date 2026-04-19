@@ -114,27 +114,26 @@ export default function HistorialCuadres() {
   // Perfil del usuario (rol + sucursal asignada si viewer)
   const [me, setMe] = useState({ loaded: false, role: 'viewer', sucursalId: null });
 
-  const getSesion = () => {
-    const r = localStorage.getItem('role') || 'viewer';
-    const pStr = localStorage.getItem('permisosFinanzas') || '{}';
-    let perms = {};
-    try { perms = JSON.parse(pStr); } catch {}
-    
-    return {
-      loaded: true,
-      role: (r.toLowerCase() === 'administrador') ? 'admin' : r.toLowerCase(),
-      sucursalId: localStorage.getItem('sucursalId') || null,
-      permisos: perms
-    };
-  };
-
   useEffect(() => {
-    setMe(getSesion());
-    const onStorage = (e) => {
-      if (['role', 'sucursalId', 'permisosFinanzas'].includes(e.key)) setMe(getSesion());
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setMe({ loaded: true, role: 'viewer', sucursalId: null });
+        return;
+      }
+      try {
+        const snap = await getDoc(doc(db, 'usuarios', user.uid));
+        const data = snap.exists() ? snap.data() : {};
+        setMe({
+          loaded: true,
+          role: data.role || 'viewer',
+          sucursalId: data.sucursalId || null,
+        });
+      } catch (e) {
+        console.error(e);
+        setMe({ loaded: true, role: 'viewer', sucursalId: null });
+      }
+    });
+    return () => unsub();
   }, []);
 
   const isAdmin = me.role === 'admin';

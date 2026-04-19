@@ -11,24 +11,12 @@ function DashboardLayout({ userEmail, userRole }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Email mostrado
-  const email = userEmail || localStorage.getItem('email') || 'Administrador';
+  const email = userEmail || localStorage.getItem('email') || 'user@example.com';
 
   // Rol
-  const getRole = () => {
-    const r = String(userRole || localStorage.getItem('role') || 'viewer').toLowerCase();
-    return (r === 'administrador') ? 'admin' : r;
-  };
-  const getPermisos = () => {
-    try {
-      const raw = localStorage.getItem('permisosFinanzas');
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  };
-
+  const getRole = () =>
+    String(userRole || localStorage.getItem('role') || 'viewer').toLowerCase();
   const [role, setRole] = useState(getRole());
-  const [permisos, setPermisos] = useState(getPermisos());
   const isAdmin = role === 'admin';
 
   // Tema
@@ -45,14 +33,9 @@ function DashboardLayout({ userEmail, userRole }) {
 
   useEffect(() => {
     setRole(getRole());
-    setPermisos(getPermisos());
 
     const onStorage = (e) => {
-      if (e.key === 'role') {
-        const r = String(e.newValue || 'viewer').toLowerCase();
-        setRole((r === 'administrador') ? 'admin' : r);
-      }
-      if (e.key === 'permisosFinanzas') setPermisos(getPermisos());
+      if (e.key === 'role') setRole(String(e.newValue || 'viewer').toLowerCase());
       if (e.key === 'theme') {
         const val = e.newValue || 'light';
         setTheme(val);
@@ -86,8 +69,10 @@ function DashboardLayout({ userEmail, userRole }) {
   };
 
   const handleLogout = () => {
-    // Cuando hacen clic en salir, pueden cerrar la pestaña
-    window.close();
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('email');
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -133,16 +118,6 @@ function DashboardLayout({ userEmail, userRole }) {
               </NavLink>
             </li>
 
-            <li className="menu-item">
-              <NavLink
-                to="FacturasProveedores"
-                className={({ isActive }) => `menu-link ${isActive ? 'active' : ''}`}
-              >
-                <i className='bx bx-receipt' style={{ fontSize: '24px', marginRight: '16px', color: 'var(--primary-color)' }}></i>
-                <span>Facturas</span>
-              </NavLink>
-            </li>
-
             {/* ===== Grupo: Registrar ===== */}
             <li className={`menu-item group ${registrarActive ? 'active' : ''}`}>
               <button
@@ -168,8 +143,8 @@ function DashboardLayout({ userEmail, userRole }) {
                     </NavLink>
                   </li>
 
-                  {/* Pagos con efectivo */}
-                  {(isAdmin || permisos.canRegistrarPagos) && (
+                  {/* Pagos con efectivo (solo admin, como antes) */}
+                  {isAdmin && (
                     <li>
                       <NavLink
                         to="RegistrarPagos"
@@ -208,8 +183,8 @@ function DashboardLayout({ userEmail, userRole }) {
                     </NavLink>
                   </li>
 
-                  {/* Pagos con efectivo */}
-                  {(isAdmin || permisos.canViewHistorialPagos) && (
+                  {/* Pagos con efectivo (solo admin, como antes) */}
+                  {isAdmin && (
                     <li>
                       <NavLink
                         to="HistorialPagos"
@@ -223,8 +198,8 @@ function DashboardLayout({ userEmail, userRole }) {
               )}
             </li>
 
-            {/* ===== Otros menús ===== */}
-            {(isAdmin || permisos.canManageSucursales) && (
+            {/* ===== Otros menús solo admin (igual que antes) ===== */}
+            {isAdmin && (
               <li className="menu-item">
                 <NavLink
                   to="Sucursales"
@@ -236,31 +211,17 @@ function DashboardLayout({ userEmail, userRole }) {
               </li>
             )}
 
-            {(isAdmin || permisos.canManageProveedores) && (
+            {isAdmin && (
               <li className="menu-item">
                 <NavLink
-                  to="Proveedores"
+                  to="Usuarios"
                   className={({ isActive }) => `menu-link ${isActive ? 'active' : ''}`}
                 >
-                  <i className="bx bx-buildings" style={{ fontSize: '24px', marginRight: '16px', color: 'var(--primary-color)' }}></i>
-                  <span>Proveedores</span>
+                  <img src="/img/agregaru.png" alt="" />
+                  <span>Usuarios</span>
                 </NavLink>
               </li>
             )}
-
-            {(isAdmin || permisos.canManageServicios) && (
-              <li className="menu-item">
-                <NavLink
-                  to="Servicios"
-                  className={({ isActive }) => `menu-link ${isActive ? 'active' : ''}`}
-                >
-                  <i className="bx bx-wallet-alt" style={{ fontSize: '24px', marginRight: '16px', color: 'var(--primary-color)' }}></i>
-                  <span>Servicios</span>
-                </NavLink>
-              </li>
-            )}
-
-
           </ul>
         </nav>
 

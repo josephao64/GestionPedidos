@@ -6,12 +6,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCS_iCxJiLHo618fTHVTqbhA7GeWc2cgjE",
-  authDomain: "vp-adin.firebaseapp.com",
-  projectId: "vp-adin",
-  storageBucket: "vp-adin.firebasestorage.app",
-  messagingSenderId: "199001819611",
-  appId: "1:199001819611:web:48bfb3146a0c42aab47ffe"
+  apiKey: "AIzaSyAwPl1XkcdhuZTXpbJmqALrHhbhc6ANExg",
+  authDomain: "finanzas-vp.firebaseapp.com",
+  projectId: "finanzas-vp",
+  storageBucket: "finanzas-vp.firebasestorage.app",
+  messagingSenderId: "569633377367",
+  appId: "1:569633377367:web:4a5ec7f9ed6d64196be712",
+  measurementId: "G-V05VVF2XNL"
 };
 
 const app = initializeApp(firebaseConfig); 

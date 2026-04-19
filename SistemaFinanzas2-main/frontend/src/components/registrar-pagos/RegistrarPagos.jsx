@@ -56,6 +56,7 @@ export default function RegistrarPagos() {
   const isEditingExisting = !!editId && mode === 'edit';
 
   const [me, setMe] = useState({ loaded: false, role: 'viewer', uid: null, username: '' });
+  const isAdmin = me.role === 'admin';
 
   // sucursales
   const [sucursales, setSucursales] = useState([]);
@@ -126,33 +127,22 @@ export default function RegistrarPagos() {
   /* ===========================
      Auth
      =========================== */
-  const getSesion = () => {
-    const r = localStorage.getItem('role') || 'viewer';
-    const email = localStorage.getItem('email') || '';
-    const name = localStorage.getItem('usuarioLogueado') || email || 'Usuario';
-    const pStr = localStorage.getItem('permisosFinanzas') || '{}';
-    let perms = {};
-    try { perms = JSON.parse(pStr); } catch {}
-    
-    return {
-      loaded: true,
-      role: (r.toLowerCase() === 'administrador') ? 'admin' : r.toLowerCase(),
-      uid: email, // Usamos email como ID si no hay auth real
-      username: name,
-      permisos: perms
-    };
-  };
-
   useEffect(() => {
-    setMe(getSesion());
-    const onStorage = (e) => {
-      if (['role', 'email', 'permisosFinanzas'].includes(e.key)) setMe(getSesion());
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setMe({ loaded:true, role:'viewer', uid:null, username:'' });
+        return;
+      }
+      try {
+        const us = await getDoc(doc(db, 'usuarios', user.uid));
+        const ud = us.exists() ? us.data() : {};
+        setMe({ loaded:true, role: (ud.role||'viewer'), uid:user.uid, username: ud.username || '' });
+      } catch {
+        setMe({ loaded:true, role:'viewer', uid:user.uid, username:'' });
+      }
+    });
+    return () => unsub();
   }, []);
-
-  const isAdmin = me.role === 'admin' || me.permisos?.canRegistrarPagos === true;
 
   /* ===========================
      Sucursales + KPI + CajaChica (RT)
@@ -167,7 +157,7 @@ export default function RegistrarPagos() {
         const d = snap.data() || {};
         return {
           id: snap.id,
-          nombre: d.name || d.nombre || d.ubicacion || snap.id,
+          nombre: d.nombre || d.name || snap.id,
           ubicacion: d.ubicacion || d.location || '',
           ...d,
         };

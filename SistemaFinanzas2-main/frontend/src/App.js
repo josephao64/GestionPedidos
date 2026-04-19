@@ -1,6 +1,6 @@
 // src/App.js
 import React from 'react';
-import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 import PrivateRoute from './auth/PrivateRoute.js'; // tu guard mejorado por token/exp/roles
 import DashboardLayout from './components/nav-bar/DashboardLayout.js';
@@ -15,32 +15,14 @@ import Usuarios from './components/usuarios/Usuarios.js';
 import RegistrarPagos from './components/registrar-pagos/RegistrarPagos.jsx';
 import HistorialPagos from './components/historial/HistorialPagos.jsx';
 
-import FacturasProveedores from './components/facturas-proveedores/FacturasProveedores.jsx';
-import Proveedores from './components/proveedores/Proveedores.jsx';
-import Servicios from './components/servicios/Servicios.jsx';
-
-// Login import eliminado
-
-function AuthBridge() {
-  const [params] = useSearchParams();
-  const role = params.get('role');
-  const email = params.get('email');
-  const permisos = params.get('permisos');
-
-  if (role) localStorage.setItem('role', role);
-  if (email) localStorage.setItem('email', email);
-  if (permisos) localStorage.setItem('permisosFinanzas', permisos);
-
-  return <Navigate to="/Finanzas" replace />;
-}
+import Login from './auth/Login'; // tu login
 
 export default function App() {
   return (
     <Routes>
-      {/* Rutas públicas directas a dashboard */}
-      <Route path="/bridge" element={<AuthBridge />} />
-      <Route path="/" element={<Navigate to="/Finanzas" replace />} />
-      <Route path="/login" element={<Navigate to="/Finanzas" replace />} />
+      {/* Rutas públicas */}
+      <Route path="/" element={<Login />} />
+      <Route path="/login" element={<Login />} />
 
       {/* Rutas protegidas: Dashboard y anidadas */}
       <Route
@@ -55,13 +37,12 @@ export default function App() {
         <Route index element={<Finanzas />} />
         <Route path="RegistrarCierre" element={<RegistrarCierre />} />
         <Route path="HistorialCuadres" element={<HistorialCuadres />} />
-        <Route path="FacturasProveedores" element={<FacturasProveedores />} />
 
-        {/* Oculto mediante requerimiento de roles o permisos individuales */}
+        {/* Solo ADMIN (usa requiredRoles="admin") */}
         <Route
           path="HistorialPagos"
           element={
-            <PrivateRoute requiredRoles="admin" requiredPerm="canViewHistorialPagos" redirectIfDenied="/Finanzas">
+            <PrivateRoute requiredRoles="admin" redirectIfDenied="/Finanzas">
               <HistorialPagos />
             </PrivateRoute>
           }
@@ -69,7 +50,7 @@ export default function App() {
         <Route
           path="RegistrarPagos"
           element={
-            <PrivateRoute requiredRoles="admin" requiredPerm="canRegistrarPagos" redirectIfDenied="/Finanzas">
+            <PrivateRoute requiredRoles="admin" redirectIfDenied="/Finanzas">
               <RegistrarPagos />
             </PrivateRoute>
           }
@@ -77,31 +58,15 @@ export default function App() {
         <Route
           path="Sucursales"
           element={
-            <PrivateRoute requiredRoles="admin" requiredPerm="canManageSucursales" redirectIfDenied="/Finanzas">
+            <PrivateRoute requiredRoles="admin" redirectIfDenied="/Finanzas">
               <Sucursales />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="Proveedores"
-          element={
-            <PrivateRoute requiredRoles="admin" requiredPerm="canManageProveedores" redirectIfDenied="/Finanzas">
-              <Proveedores />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="Servicios"
-          element={
-            <PrivateRoute requiredRoles="admin" requiredPerm="canManageServicios" redirectIfDenied="/Finanzas">
-              <Servicios />
             </PrivateRoute>
           }
         />
         <Route
           path="Usuarios"
           element={
-            <PrivateRoute requiredRoles="admin" requiredPerm="canManageUsuarios" redirectIfDenied="/Finanzas">
+            <PrivateRoute requiredRoles="admin" redirectIfDenied="/Finanzas">
               <Usuarios />
             </PrivateRoute>
           }

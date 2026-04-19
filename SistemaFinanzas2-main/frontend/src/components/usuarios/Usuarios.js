@@ -84,10 +84,7 @@ export default function Usuarios() {
         // Cargar sucursales
         try {
           const snap = await getDocs(collection(db, 'sucursales'));
-          setSucursales(snap.docs.map(d => {
-            const dat = d.data() || {};
-            return { id: d.id, ...dat, nombre: dat.name || dat.nombre || dat.ubicacion || d.id };
-          }));
+          setSucursales(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (e) {
           console.error('Error al cargar sucursales:', e);
           setPermError(prev => prev || e?.message || '');
@@ -122,20 +119,10 @@ export default function Usuarios() {
 
     try {
       setWorking(true);
-      // Validación descentralizada
-      const rawRole = localStorage.getItem('role') || 'viewer';
-      const roleMapped = (rawRole.toLowerCase() === 'administrador') ? 'admin' : rawRole.toLowerCase();
-      
-      let hasAccess = (roleMapped === 'admin');
-      if (!hasAccess) {
-        try {
-          const perms = JSON.parse(localStorage.getItem('permisosFinanzas') || '{}');
-          if (perms.canManageUsuarios === true) hasAccess = true;
-        } catch {}
-      }
-
-      if (!hasAccess) {
-        return Swal.fire('Permiso denegado', 'No tienes permisos para registrar usuarios financieros.', 'info');
+      await refreshClaimsUntil(3500);
+      const claims = await auth.currentUser?.getIdTokenResult();
+      if (!(claims?.claims?.admin === true)) {
+        return Swal.fire('Permiso denegado', 'Necesitas ser administrador para registrar usuarios.', 'info');
       }
 
       const secondaryAuth = getSecondaryAuth();
@@ -205,20 +192,10 @@ export default function Usuarios() {
     if (!u) return;
     try {
       setWorking(true);
-      
-      const rawRole = localStorage.getItem('role') || 'viewer';
-      const roleMapped = (rawRole.toLowerCase() === 'administrador') ? 'admin' : rawRole.toLowerCase();
-      
-      let hasAccess = (roleMapped === 'admin');
-      if (!hasAccess) {
-        try {
-          const perms = JSON.parse(localStorage.getItem('permisosFinanzas') || '{}');
-          if (perms.canManageUsuarios === true) hasAccess = true;
-        } catch {}
-      }
-
-      if (!hasAccess) {
-        return Swal.fire('Permiso denegado', 'No tienes permisos de administrador.', 'info');
+      await refreshClaimsUntil(3500);
+      const claims = await auth.currentUser?.getIdTokenResult();
+      if (!(claims?.claims?.admin === true)) {
+        return Swal.fire('Permiso denegado', 'Necesitas ser administrador.', 'info');
       }
 
       const next = !u.disabled;
@@ -261,20 +238,10 @@ export default function Usuarios() {
 
     try {
       setWorking(true);
-      
-      const rawRole = localStorage.getItem('role') || 'viewer';
-      const roleMapped = (rawRole.toLowerCase() === 'administrador') ? 'admin' : rawRole.toLowerCase();
-      
-      let hasAccess = (roleMapped === 'admin');
-      if (!hasAccess) {
-        try {
-          const perms = JSON.parse(localStorage.getItem('permisosFinanzas') || '{}');
-          if (perms.canManageUsuarios === true) hasAccess = true;
-        } catch {}
-      }
-
-      if (!hasAccess) {
-        return Swal.fire('Permiso denegado', 'No tienes permisos de administrador.', 'info');
+      await refreshClaimsUntil(3500);
+      const claims = await auth.currentUser?.getIdTokenResult();
+      if (!(claims?.claims?.admin === true)) {
+        return Swal.fire('Permiso denegado', 'Necesitas ser administrador.', 'info');
       }
 
       const idToken = await auth.currentUser.getIdToken(true);
@@ -311,19 +278,10 @@ export default function Usuarios() {
     const u = usuarios.find(x => x.id === selectedId);
     if (!u) return;
 
-    const rawRole = localStorage.getItem('role') || 'viewer';
-    const roleMapped = (rawRole.toLowerCase() === 'administrador') ? 'admin' : rawRole.toLowerCase();
-    
-    let hasAccess = (roleMapped === 'admin');
-    if (!hasAccess) {
-      try {
-        const perms = JSON.parse(localStorage.getItem('permisosFinanzas') || '{}');
-        if (perms.canManageUsuarios === true) hasAccess = true;
-      } catch {}
-    }
-
-    if (!hasAccess) {
-      return Swal.fire('Permiso denegado', 'No tienes permisos de administrador.', 'info');
+    await refreshClaimsUntil(3500);
+    const claims = await auth.currentUser?.getIdTokenResult();
+    if (!(claims?.claims?.admin === true)) {
+      return Swal.fire('Permiso denegado', 'Necesitas ser administrador.', 'info');
     }
 
     // 1) Username
@@ -620,7 +578,7 @@ export default function Usuarios() {
                       <td>{u.username || '—'}</td>
                       <td>{u.email || '—'}</td>
                       <td>{u.role || '—'}</td>
-                      <td>{(u.role === 'admin' || u.role === 'administrador') ? 'Todas' : (sucMap[u.sucursalId] || '—')}</td>
+                      <td>{u.role === 'admin' ? 'Todas' : (sucMap[u.sucursalId] || '—')}</td>
                       <td>{u.disabled ? 'Deshabilitado' : 'Activo'}</td>
                     </tr>
                   ))

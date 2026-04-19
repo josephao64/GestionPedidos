@@ -42,9 +42,6 @@ app.options('*', cors(corsOptions));
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
-const facturasProveedoresRoutes = require('./routes/facturasProveedores');
-app.use('/api/facturas-proveedores', facturasProveedoresRoutes);
-
 // Admin routes (opcional, si existen)
 try {
   const adminRoutes = require('./routes/admin');
