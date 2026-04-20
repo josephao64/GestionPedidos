@@ -3,11 +3,11 @@
 /* =========================
    CONFIGURACIÓN DE FIREBASE
 ============================*/
-// db se hereda de window.db inicializado en connection.js
-const db = window.db;
-if (!db) {
+// db se hereda de window.db inicializado en connection.js (no redeclarar)
+if (!window.db) {
   console.error("❌ Firebase no ha sido inicializado. Asegúrate de incluir connection.js");
 }
+// Usamos el 'db' global directamente
 
 /* =========================
    ESTADO GLOBAL

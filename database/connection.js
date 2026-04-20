@@ -11,10 +11,21 @@ const firebaseConfig = {
 
 // Inicializar Firebase solo si no está inicializado
 if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+  try {
+    firebase.initializeApp(firebaseConfig);
+    console.log("✅ Firebase inicializado correctamente desde connection.js");
+  } catch (e) {
+    console.error("❌ Error al inicializar Firebase:", e.message);
+  }
 }
 
-const db = firebase.firestore();
+// Inicializar Firestore solo si no existe en el objeto global y hay una app disponible
+var db = null;
+if (firebase.apps.length > 0) {
+    db = window.db || firebase.firestore();
+} else {
+    console.error("❌ No se pudo crear 'db' porque Firebase no está inicializado.");
+}
 
 // Configurar Firestore
 try {

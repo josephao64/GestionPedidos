@@ -9,7 +9,7 @@
 if (!window.db) {
   console.error("❌ Firebase no ha sido inicializado. Asegúrate de incluir connection.js");
 }
-var db = window.db;
+// db se hereda del ámbito global (connection.js)
 
 /* =========================
    UI Helpers (SweetAlert2)

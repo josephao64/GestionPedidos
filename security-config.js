@@ -3,10 +3,12 @@
 
 // Configurar Firebase para desarrollo local
 if (typeof firebase !== 'undefined') {
-    // Configurar Firebase para permitir conexiones locales
-    firebase.auth().useDeviceLanguage();
-
-    // Firestore settings removed here as they are handled in connection.js
+    // Solo configurar si hay apps inicializadas
+    if (firebase.apps && firebase.apps.length > 0) {
+        firebase.auth().useDeviceLanguage();
+    } else {
+        console.warn('Security Config: Firebase no inicializado aún.');
+    }
 }
 
 // Configurar CORS para desarrollo local
