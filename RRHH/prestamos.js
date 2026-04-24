@@ -1,5 +1,5 @@
 
-// prestamos.js - Gestión de Préstamos y Anticipos
+// prestamos.js - Gestión de Adelantos del Personal y Anticipos
 
 let allLoans = [];
 let loanSubsCheck = false;
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadLoans() {
-    console.log("Cargando préstamos...");
+    console.log("Cargando adelantos...");
     const tbody = document.getElementById('loansTableBody');
     if (!tbody) return;
 
@@ -22,7 +22,7 @@ async function loadLoans() {
             .get();
 
         if (snap.empty) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No hay préstamos activos.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No hay adelantos activos.</td></tr>';
             allLoans = [];
             return;
         }
@@ -75,7 +75,7 @@ function renderLoansTable() {
     filtered.forEach(loan => {
         const typeLabel = loan.type === 'adelanto'
             ? '<span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.8em;">Adelanto</span>'
-            : '<span style="background:#fce7f3; color:#9d174d; padding:2px 8px; border-radius:4px; font-size:0.8em;">Préstamo</span>';
+            : '<span style="background:#fce7f3; color:#9d174d; padding:2px 8px; border-radius:4px; font-size:0.8em;">Anticipo</span>';
 
         const statusLabel = loan.status === 'paid'
             ? '<span style="color:green; font-weight:bold;">Pagado</span>'
@@ -277,7 +277,7 @@ document.getElementById('loanForm').addEventListener('submit', async (e) => {
 async function deleteLoan(id) {
     const result = await Swal.fire({
         title: '¿Eliminar?',
-        text: "Esta acción eliminará el registro del préstamo. Úselo solo si fue un error.",
+        text: "Esta acción eliminará el registro de este adelanto/anticipo. Úselo solo si fue un error.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
@@ -468,7 +468,7 @@ async function printRequestForm(loanId) {
     win.document.write(`
         <html>
         <head>
-            <title>Solicitud de ${loan.type}</title>
+            <title>Solicitud de ${loan.type === 'prestamo' ? 'Anticipo' : 'Adelanto'}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
                 
@@ -525,7 +525,7 @@ async function printRequestForm(loanId) {
                     Fecha: ${dateStr}
                 </div>
                 
-                <div class="title">SOLICITUD DE ${loan.type.toUpperCase()}</div>
+                <div class="title">SOLICITUD DE ${loan.type === 'prestamo' ? 'ANTICIPO' : 'ADELANTO'}</div>
 
                 <div class="grid">
                     <div class="field">
@@ -538,7 +538,7 @@ async function printRequestForm(loanId) {
                     </div>
                     <div class="field">
                         <span class="label">Tipo:</span><br>
-                        <span class="value">${loan.type === 'adelanto' ? 'Adelanto Salarial' : 'Préstamo Personal'}</span>
+                        <span class="value">${loan.type === 'adelanto' ? 'Adelanto Salarial' : 'Anticipo Personal'}</span>
                     </div>
                     <div class="field">
                         <span class="label">Plan de Pago:</span><br>

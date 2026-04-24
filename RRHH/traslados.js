@@ -126,7 +126,7 @@ async function loadActiveLoans() {
     try {
         const snapshot = await db.collection('employees').where('isTempTransfer', '==', true).get();
         if (snapshot.empty) {
-            tableBody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color: #aaa;">No hay préstamos activos actualmente.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color: #aaa;">No hay personal en comisión actualmente.</td></tr>';
             return;
         }
 
@@ -156,6 +156,6 @@ async function loadActiveLoans() {
 
     } catch (e) {
         console.error("Error loading active loans:", e);
-        tableBody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color: red;">Error al cargar préstamos activos.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="6" style="padding:20px; text-align:center; color: red;">Error al cargar personal en comisión.</td></tr>';
     }
 }

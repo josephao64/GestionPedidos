@@ -1853,7 +1853,7 @@ function generateSlipHtml(row, type, companyName, branchName, period, emission) 
             totalDeduct += row.judicial;
         }
         if (row.discount > 0) {
-            deductHtml += `<tr><td>Préstamos</td><td class="amount">Q${row.discount.toFixed(2)}</td></tr>`;
+            deductHtml += `<tr><td>Anticipos / Adelantos</td><td class="amount">Q${row.discount.toFixed(2)}</td></tr>`;
             totalDeduct += row.discount;
         }
         if (row.advance > 0) {
@@ -1956,7 +1956,7 @@ function generateSlipHtml(row, type, companyName, branchName, period, emission) 
 }
 
 async function processLoanPayments(payrollRows, payrollId, periodStr) {
-    console.log("Procesando pagos de préstamos...");
+    console.log("Procesando pagos de adelantos...");
     const batch = db.batch();
     let updatesCount = 0;
 
@@ -2045,7 +2045,7 @@ async function processLoanPayments(payrollRows, payrollId, periodStr) {
 
     if (updatesCount > 0) {
         await batch.commit();
-        console.log("Pagos de préstamos actualizados.");
+        console.log("Pagos de adelantos actualizados.");
     }
 }
 
