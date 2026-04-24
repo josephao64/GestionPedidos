@@ -8,443 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="prestamos.css">
-    <style>
-        :root {
-            /* Premium Palette - Indigo & Purple with HSL for dynamic control */
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #e0e7ff;
-            --accent: #8b5cf6;
-            
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #0ea5e9;
-            
-            --bg-body: #f1f5f9;
-            --bg-sidebar: #ffffff;
-            --bg-card: #ffffff;
-            
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --text-on-primary: #ffffff;
-            
-            --border: #e2e8f0;
-            --glass-bg: rgba(255, 255, 255, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.4);
-            
-            --radius-lg: 16px;
-            --radius-md: 12px;
-            --radius-sm: 8px;
-            
-            --sh-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --sh-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --sh-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --sh-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-            
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+    <link rel="stylesheet" href="rrhh.css">
+    <script src="rrhh_main.js"></script>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            scrollbar-width: thin;
-            scrollbar-color: var(--primary-light) transparent;
-        }
-
-        *::-webkit-scrollbar {
-            width: 6px;
-        }
-        *::-webkit-scrollbar-thumb {
-            background-color: var(--primary-light);
-            border-radius: 10px;
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            overflow-x: hidden;
-        }
-
-        /* --- Sidebar Navigation --- */
-        .sidebar {
-            width: 260px;
-            background: var(--bg-sidebar);
-            border-right: 1px solid var(--border);
-            padding: 32px 20px;
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            height: 100vh;
-            z-index: 100;
-            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
-            transition: var(--transition);
-        }
-
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 48px;
-            padding: 0 12px;
-            color: var(--primary-dark);
-            text-decoration: none;
-        }
-
-        .logo-area i {
-            font-size: 1.8rem;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 2px 4px rgba(99, 102, 241, 0.2));
-        }
-
-        .logo-text {
-            font-weight: 800;
-            font-size: 1.3rem;
-            letter-spacing: -0.5px;
-            background: linear-gradient(to right, #1e293b, #475569);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .nav-links {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .nav-item {
-            padding: 14px 16px;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            color: var(--text-muted);
-            transition: var(--transition);
-            text-decoration: none;
-            font-weight: 500;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .nav-item:hover {
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            transform: translateX(4px);
-        }
-
-        .nav-item.active {
-            background: var(--primary-dark);
-            color: white;
-            box-shadow: 0 8px 16px -4px rgba(79, 70, 229, 0.4);
-        }
-
-        .nav-item.active i {
-            color: white;
-        }
-
-        .nav-item i {
-            font-size: 1.2rem;
-            width: 24px;
-            text-align: center;
-            transition: var(--transition);
-        }
-
-        .nav-item span {
-            font-size: 0.95rem;
-        }
-
-        /* --- Main Content wrapper --- */
-        .main-container {
-            flex: 1;
-            margin-left: 260px;
-            padding: 40px 48px;
-            width: calc(100% - 260px);
-            animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-            padding-bottom: 24px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .page-title h1 {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: var(--text-main);
-            letter-spacing: -1px;
-        }
-
-        .page-title p {
-            color: var(--text-muted);
-            margin-top: 6px;
-            font-weight: 400;
-            font-size: 1.05rem;
-        }
-
-        /* --- Reusable Components --- */
-        .card {
-            background: var(--bg-card);
-            border-radius: var(--radius-lg);
-            padding: 28px;
-            box-shadow: var(--sh-md);
-            border: 1px solid var(--border);
-            margin-bottom: 24px;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card:hover {
-            box-shadow: var(--sh-lg);
-            transform: translateY(-2px);
-            border-color: var(--primary-light);
-        }
-
-        .card h3 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* Metric Cards Specific */
-        .metric-card {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 140px;
-            padding: 24px;
-            border: 1px solid transparent;
-            background: var(--bg-card);
-        }
-
-        .metric-card p {
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .metric-card h2 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--text-main);
-            margin: 0;
-            line-height: 1;
-        }
-
-        .metric-icon {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 1.5rem;
-            padding: 12px;
-            border-radius: var(--radius-md);
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            opacity: 0.8;
-        }
-
-        /* Buttons */
-        .btn {
-            padding: 12px 24px;
-            border-radius: var(--radius-md);
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: var(--transition);
-            font-size: 0.95rem;
-            box-shadow: var(--sh-sm);
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--sh-md);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-        }
-
-        .btn-secondary {
-            background: white;
-            color: var(--text-main);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-body);
-        }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 0.8rem;
-            border-radius: var(--radius-sm);
-        }
-
-        /* Section Visibility & Animation */
-        .hr-section {
-            display: none;
-        }
-
-        .hr-section.active {
-            display: block;
-            animation: fadeIn 0.4s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Tables Enhancements */
-        table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        th {
-            background: var(--bg-body);
-            padding: 16px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--border);
-        }
-
-        td {
-            padding: 16px;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.95rem;
-            color: var(--text-main);
-            transition: var(--transition);
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover td {
-            background: rgba(99, 102, 241, 0.03);
-        }
-
-        /* Custom Loading Spinner */
-        .loading-spinner {
-            border: 3px solid var(--primary-light);
-            border-top: 3px solid var(--primary-dark);
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            animation: spin 0.8s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
-            margin: 0 auto 20px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Badges & Status */
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .badge-purple { background: #f3e8ff; color: #7c3aed; }
-        .badge-orange { background: #ffedd5; color: #ea580c; }
-        .badge-success { background: #d1fae5; color: #059669; }
-        .badge-info { background: #e0f2fe; color: #0284c7; }
-        .badge-danger { background: #fee2e2; color: #dc2626; }
-
-        /* Specialized Cards */
-        .card-warning {
-            border-left: 4px solid var(--warning);
-            background: linear-gradient(to right, #fffcf0, #ffffff);
-        }
-
-        .card-warning h3 {
-            color: #b45309;
-        }
-
-        /* Interactive Select & Inputs */
-        select, input {
-            padding: 10px 16px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-            font-family: inherit;
-            font-size: 0.95rem;
-            transition: var(--transition);
-            outline: none;
-        }
-
-        select:focus, input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px var(--primary-light);
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .sidebar { width: 80px; padding: 32px 12px; }
-            .logo-text, .nav-item span { display: none; }
-            .logo-area { justify-content: center; padding: 0; }
-            .nav-link-area { align-items: center; }
-            .main-container { margin-left: 80px; width: calc(100% - 80px); padding: 32px; }
-            .nav-item { justify-content: center; width: 56px; height: 56px; }
-        }
-
-        /* PRINT STYLES - Kept but modernized colors */
-        @media print {
-            .sidebar, .btn, select, input { display: none !important; }
-            .main-container { margin: 0 !important; width: 100% !important; padding: 0 !important; }
-            .card { box-shadow: none !important; border: 1px solid #eee !important; page-break-inside: avoid; }
-        }
-    </style>
 </head>
 
 <body>
@@ -532,8 +98,7 @@
                 </div>
             </div>
 
-            <div
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; margin-bottom: 40px;">
+            <div class="metrics-grid">
                 <div class="card metric-card" style="border-top: 4px solid var(--primary);">
                     <i class="fas fa-users metric-icon" style="background: var(--primary-light); color: var(--primary-dark);"></i>
                     <p>Empleados Activos</p>
@@ -566,7 +131,7 @@
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <div class="charts-grid">
                 <div class="card">
                     <h3>Distribución por Puestos y Sucursal</h3>
                     <canvas id="stackedBarChart" height="200"></canvas>
@@ -577,7 +142,7 @@
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div class="charts-grid-equal">
                 <div class="card">
                     <h3>Personal por Puesto</h3>
                     <div id="position-breakdown-container" style="margin-top: 15px;">
@@ -1412,134 +977,117 @@
                 </div>
 
                 <!-- Modal for Salary Types -->
-                <div id="salaryTypeModal"
-                    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1010; align-items: center; justify-content: center;">
-                    <div style="background: white; width: 90%; max-width: 400px; padding: 24px; border-radius: 12px;">
-                        <h3 style="margin-top: 0;">Tipo de Salario</h3>
+                <div id="salaryTypeModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Agregar Nuevo Esquema</h2>
+                        <i class="fas fa-times" style="cursor: pointer;" onclick="window.salaryTypes.closeModal()"></i>
+                    </div>
+                    <div>
                         <input type="hidden" id="salaryTypeId">
-
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Descripción</label>
-                            <input type="text" id="salaryTypeName" class="form-control"
-                                placeholder="Ej. Salario Mínimo 2026" style="width: 100%; padding: 8px;">
+                        <div class="form-group">
+                            <label>Nombre del Esquema</label>
+                            <input type="text" id="salaryTypeName" class="form-control-full" placeholder="Ej: Cocina A">
                         </div>
-
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Salario Mensual
-                                (Q)</label>
-                            <input type="number" id="salaryTypeMonthly" class="form-control" placeholder="0.00"
-                                step="0.01" style="width: 100%; padding: 8px;"
-                                oninput="window.salaryTypes.calculateDaily(this.value)">
-                        </div>
-
-                        <div style="margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                            <div>
-                                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Salario
-                                    Diario</label>
-                                <input type="text" id="salaryTypeDaily" class="form-control" readonly
-                                    placeholder="Calculado" style="width: 100%; padding: 8px; background: #eee;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Salario Mensual (Q)</label>
+                                <input type="number" id="salaryTypeMonthly" class="form-control-full" oninput="window.salaryTypes.calculateDaily(this.value)">
                             </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Valor Hora</label>
-                                <input type="text" id="salaryTypeHourly" class="form-control" readonly
-                                    placeholder="Calculado" style="width: 100%; padding: 8px; background: #eee;">
+                            <div class="form-group">
+                                <label>Salario Diario (Q)</label>
+                                <input type="number" id="salaryTypeDaily" class="form-control-full" readonly>
                             </div>
                         </div>
-
-                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                            <button class="btn btn-secondary"
-                                onclick="window.salaryTypes.closeModal()">Cancelar</button>
-                            <button class="btn btn-success" onclick="window.salaryTypes.save()">Guardar</button>
+                        <div class="form-group">
+                            <label>Salario por Hora (Q)</label>
+                            <input type="number" id="salaryTypeHourly" class="form-control-full" readonly>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                            <button class="btn btn-secondary" onclick="window.salaryTypes.closeModal()">Cancelar</button>
+                            <button class="btn btn-primary" onclick="window.salaryTypes.save()">Guardar</button>
                         </div>
                     </div>
                 </div>
+            </div>
             </section>
 
     <!-- Modal for Positions (CRUD) - Reusing logic -->
-    <div id="puestoModal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-        <div style="background: white; width: 90%; max-width: 500px; padding: 32px; border-radius: 16px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
+    <div id="puestoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h2 id="modalTitle">Nuevo Puesto</h2>
                 <i class="fas fa-times" style="cursor: pointer;" onclick="closeModal()"></i>
             </div>
             <form id="puestoForm">
                 <input type="hidden" id="puestoId">
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px;">Nombre</label>
-                    <input type="text" id="nombre" required
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                <div class="form-group">
+                    <label for="nombre">Nombre del Puesto</label>
+                    <input type="text" id="nombre" class="form-control-full" placeholder="Ej: Cocinero A" required>
                 </div>
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px;">Departamento</label>
-                    <select id="departamento" required
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
-                        <option value="Ventas">Ventas</option>
+                <div class="form-group">
+                    <label for="departamento">Departamento</label>
+                    <select id="departamento" class="form-control-full" required>
+                        <option value="">Seleccione...</option>
                         <option value="Administración">Administración</option>
-                        <option value="Operaciones">Operaciones</option>
-                        <option value="Bodega">Bodega</option>
-                        <option value="RRHH">Recursos Humanos</option>
+                        <option value="Cocina">Cocina</option>
+                        <option value="Servicio">Servicio</option>
+                        <option value="Logística">Logística</option>
+                        <option value="Mantenimiento">Mantenimiento</option>
+                        <option value="Otro">Otro</option>
                     </select>
                 </div>
-                <div style="margin-bottom: 24px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px;">Tipo de Salario</label>
-                    <select id="puestoSalaryTypeId" required class="form-control"
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
-                        <option value="">Cargando...</option>
+                <div class="form-group">
+                    <label for="puestoSalaryTypeId">Esquema Salarial</label>
+                    <select id="puestoSalaryTypeId" class="form-control-full" required>
+                        <option value="">Cargando tipos...</option>
                     </select>
                 </div>
-                <div style="margin-bottom: 24px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px;">Jefe Inmediato (Reporta
-                        a)</label>
-                    <select id="puestoParentId" class="form-control"
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                <div class="form-group">
+                    <label for="puestoParentId">Jefe Inmediato (Puesto Superior)</label>
+                    <select id="puestoParentId" class="form-control-full">
                         <option value="">-- Ninguno (Puesto Superior) --</option>
                     </select>
                 </div>
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Puesto</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="empleadoModal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease;">
-        <div
-            style="background: white; width: 95%; max-width: 800px; padding: 32px; border-radius: 16px; max-height: 90vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
-                <h2 id="empleadoModalTitle">Registrar Empleado</h2>
+    <!-- EMPLEADO MODAL -->
+    <div id="empleadoModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 id="modalEmpleadoTitle">Expediente de Empleado</h2>
                 <i class="fas fa-times" style="cursor: pointer;" onclick="closeEmpleadoModal()"></i>
             </div>
             <form id="empleadoForm">
+                <input type="hidden" id="employee_id">
+                
                 <!-- Identity Section -->
-                <h3 style="margin-bottom: 16px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px;">
-                    Identidad</h3>
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Nombres y Apellidos
-                            (DPI)</label>
-                        <input type="text" name="fullName" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                <h3 style="margin-bottom: 16px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; color: var(--primary);">Identidad</h3>
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: span 1.5;">
+                        <label>Nombres y Apellidos (DPI)</label>
+                        <input type="text" name="fullName" id="fullName" class="form-control-full" required>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">CUI / DPI</label>
-                        <input type="text" name="dpi" required maxlength="13" placeholder="13 dígitos"
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>CUI / DPI</label>
+                        <input type="text" name="dpi" id="dpi" class="form-control-full" required maxlength="13" placeholder="13 dígitos">
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Fecha de Nacimiento</label>
-                        <input type="date" name="birthDate" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Fecha de Nacimiento</label>
+                        <input type="date" name="birthDate" id="birthDate" class="form-control-full" required>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Estado Civil</label>
-                        <select name="civilStatus" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>Estado Civil</label>
+                        <select name="civilStatus" id="civilStatus" class="form-control-full" required>
                             <option value="">Seleccione...</option>
                             <option value="soltero">Soltero(a)</option>
                             <option value="casado">Casado(a)</option>
@@ -1548,41 +1096,28 @@
                             <option value="viudo">Viudo(a)</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Extensión de DPI
-                            (Lugar)</label>
-                        <input type="text" name="dpiIssuedAt" required placeholder="Ej. Zacapa, Guatemala"
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>Extensión de DPI (Lugar)</label>
+                        <input type="text" name="dpiIssuedAt" id="dpiIssuedAt" class="form-control-full" required placeholder="Ej. Zacapa, Guatemala">
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Nacionalidad</label>
-                        <input type="text" name="nationality" value="guatemalteca" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Nacionalidad</label>
+                        <input type="text" name="nationality" id="nationality" class="form-control-full" value="guatemalteca" required>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Código de
-                            Empleado</label>
-                        <input type="text" name="employeeCode" id="emp_employeeCode" readonly
-                            placeholder="Se genera al seleccionar sucursal"
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background-color: #f3f4f6;">
+                    <div class="form-group">
+                        <label>NIT</label>
+                        <input type="text" name="nit" id="nit" placeholder="Opcional" class="form-control-full">
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">NIT</label>
-                        <input type="text" name="nit" placeholder="Opcional"
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>IGSS (Opcional)</label>
+                        <input type="text" name="igss" id="igss" class="form-control-full">
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">IGSS (Opcional)</label>
-                        <input type="text" name="igss"
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
-                    </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Sexo</label>
-                        <select name="sexo"
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>Sexo</label>
+                        <select name="sexo" id="sexo" class="form-control-full">
                             <option value="">Seleccione...</option>
                             <option value="Masculino">Masculino</option>
                             <option value="Femenino">Femenino</option>
@@ -1591,64 +1126,50 @@
                 </div>
 
                 <!-- Contact Section -->
-                <h3 style="margin-bottom: 16px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px;">
-                    Contacto</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Teléfono
-                            Principal</label>
-                        <input type="tel" name="phone" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                <h3 style="margin-bottom: 16px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; color: var(--primary); margin-top: 12px;">Contacto</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Teléfono Principal</label>
+                        <input type="tel" name="phone" id="phone" class="form-control-full" required>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Teléfono
-                            Emergencia</label>
-                        <input type="tel" name="phoneEmergency" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>Teléfono Emergencia</label>
+                        <input type="tel" name="phoneEmergency" id="phoneEmergency" class="form-control-full" required>
                     </div>
                 </div>
-                <div style="margin-bottom: 24px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 4px;">Dirección de
-                        Residencia</label>
-                    <textarea name="address" required
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit;"></textarea>
+                <div class="form-group">
+                    <label>Dirección de Residencia</label>
+                    <textarea name="address" id="address" class="form-control-full" required rows="2" style="font-family: inherit;"></textarea>
                 </div>
 
                 <!-- Labor Section -->
-                <h3 style="margin-bottom: 16px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px;">
-                    Información Laboral</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Sucursal</label>
-                        <select name="sucursalId" id="emp_sucursalId" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;"></select>
+                <h3 style="margin-bottom: 16px; border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; color: var(--primary); margin-top: 12px;">Laboral</h3>
+                <div style="display: grid; grid-template-columns: 1.5fr 1.5fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Sucursal</label>
+                        <select name="sucursalId" id="emp_sucursalId" class="form-control-full" required></select>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Puesto</label>
-                        <select name="positionId" id="emp_positionId" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;"></select>
+                    <div class="form-group">
+                        <label>Puesto</label>
+                        <select name="positionId" id="emp_positionId" class="form-control-full" required onchange="handlePuestoChange()"></select>
                     </div>
-
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Empresa /
-                            Planilla</label>
-                        <select name="subEmpresa" id="emp_subEmpresa" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>Empresa / Planilla</label>
+                        <select name="subEmpresa" id="emp_subEmpresa" class="form-control-full" required>
                             <option value="Propia">Propia (Sucursal)</option>
                             <option value="Pedidos Flash">Pedidos Flash ⚡</option>
                         </select>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Fecha de Inicio</label>
-                        <input type="date" name="startDate" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Fecha de Inicio</label>
+                        <input type="date" name="startDate" id="hireDate" class="form-control-full" required onchange="calculateProbationDate()">
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Jornada Laboral</label>
-                        <select name="workShift" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>Jornada</label>
+                        <select name="workShift" id="workShift" class="form-control-full" required>
                             <option value="">Seleccione...</option>
                             <option value="diurna">Diurna</option>
                             <option value="nocturna">Nocturna</option>
@@ -1656,137 +1177,71 @@
                             <option value="diurna y mixta">Diurna y Mixta</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Tipo de Contrato</label>
-                        <select name="contractType" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                        <label>Tipo de Contrato</label>
+                        <select name="contractType" id="contractType" class="form-control-full" required>
                             <option value="INDEFINIDO" selected>Indefinido</option>
                             <option value="DEFINIDO">Definido</option>
                             <option value="PLAZO FIJO">Plazo Fijo</option>
                             <option value="SERVICIOS PROFESIONALES">Servicios Profesionales</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 4px;">Duración (Opcional)</label>
-                        <input type="text" name="contractDuration" placeholder="Ej. 2 meses"
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div class="form-group">
+                         <label>Código Interno</label>
+                         <input type="text" name="employeeCode" id="employeeCode" class="form-control-full" readonly style="background: var(--bg-body);">
                     </div>
                 </div>
 
-                    <!-- Traslados Section -->
-
-
-                    <!-- Termination Section (Hidden by default, shown for Inactive) -->
-                    <div id="terminationSection"
-                        style="display: none; background-color: #fee2e2; padding: 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #fecaca;">
-                        <h3
-                            style="margin-bottom: 16px; border-bottom: 2px solid #fca5a5; padding-bottom: 8px; color: #b91c1c;">
-                            Datos de Baja</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                            <div>
-                                <label
-                                    style="display: block; font-weight: 600; margin-bottom: 4px; color: #b91c1c;">Fecha
-                                    Baja</label>
-                                <input type="date" name="terminationDate" id="emp_terminationDate"
-                                    style="width: 100%; padding: 10px; border: 1px solid #fca5a5; border-radius: 8px;">
-                            </div>
-                            <div>
-                                <label
-                                    style="display: block; font-weight: 600; margin-bottom: 4px; color: #b91c1c;">Motivo</label>
-                                <select name="terminationReason" id="emp_terminationReason"
-                                    style="width: 100%; padding: 10px; border: 1px solid #fca5a5; border-radius: 8px;">
-                                    <option value="">Seleccione...</option>
-                                    <option value="Renuncia">Renuncia</option>
-                                    <option value="Despido">Despido</option>
-                                    <option value="Abandono">Abandono de Labores</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label
-                                    style="display: block; font-weight: 600; margin-bottom: 4px; color: #b91c1c;">Calificación</label>
-                                <select name="terminationJustification" id="emp_terminationJustification"
-                                    style="width: 100%; padding: 10px; border: 1px solid #fca5a5; border-radius: 8px;">
-                                    <option value="">Seleccione...</option>
-                                    <option value="Justificado">Justificado</option>
-                                    <option value="Injustificado">Injustificado</option>
-                                </select>
-                            </div>
+                <div class="card card-warning" style="padding: 20px; margin-top: 12px;">
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Base Salarial Actual (Q)</label>
+                            <input type="number" id="baseSalary_emp" class="form-control-full" step="0.01">
                         </div>
-                        <div>
-                            <label
-                                style="display: block; font-weight: 600; margin-bottom: 4px; color: #b91c1c;">Comentarios
-                                / Observaciones</label>
-                            <textarea name="terminationComments" id="emp_terminationComments" rows="2"
-                                style="width: 100%; padding: 10px; border: 1px solid #fca5a5; border-radius: 8px;"></textarea>
-                        </div>
-
-                        <!-- Settlement Editable Fields -->
-                        <div id="settlementEditSection"
-                            style="margin-top: 16px; border-top: 1px dashed #fca5a5; padding-top: 16px;">
-                            <h4 style="margin-bottom: 12px; color: #b91c1c;">Montos de Liquidación (Q) - Editable</h4>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-                                <div>
-                                    <label
-                                        style="display: block; font-size: 0.85rem; color: #dc2626; font-weight: bold;">Total
-                                        Liquidación</label>
-                                    <input type="number" step="0.01" name="set_total" id="set_total" value="0" readonly
-                                        style="width: 100%; padding: 8px; border: 1px solid #fca5a5; background: #fff1f2; font-weight: bold; color: #b91c1c; border-radius: 8px;">
-                                </div>
-                                <div>
-                                    <label style="display: block; font-size: 0.85rem; color: #b91c1c;">Aguinaldo</label>
-                                    <input type="number" step="0.01" name="set_aguinaldo" id="set_aguinaldo" value="0"
-                                        style="width: 100%; padding: 8px; border: 1px solid #fca5a5; border-radius: 8px;"
-                                        oninput="updateSettlementTotal()">
-                                </div>
-                                <div>
-                                    <label style="display: block; font-size: 0.85rem; color: #b91c1c;">Bono 14</label>
-                                    <input type="number" step="0.01" name="set_bono14" id="set_bono14" value="0"
-                                        style="width: 100%; padding: 8px; border: 1px solid #fca5a5; border-radius: 8px;"
-                                        oninput="updateSettlementTotal()">
-                                </div>
-                                <div>
-                                    <label
-                                        style="display: block; font-size: 0.85rem; color: #b91c1c;">Vacaciones</label>
-                                    <input type="number" step="0.01" name="set_vacations" id="set_vacations" value="0"
-                                        style="width: 100%; padding: 8px; border: 1px solid #fca5a5; border-radius: 8px;"
-                                        oninput="updateSettlementTotal()">
-                                </div>
-                                <div>
-                                    <label style="display: block; font-size: 0.85rem; color: #b91c1c;">Salario
-                                        Pendiente</label>
-                                    <input type="number" step="0.01" name="set_pendingSalary" id="set_pendingSalary"
-                                        value="0"
-                                        style="width: 100%; padding: 8px; border: 1px solid #fca5a5; border-radius: 8px;"
-                                        oninput="updateSettlementTotal()">
-                                </div>
-                                <div>
-                                    <label
-                                        style="display: block; font-size: 0.85rem; color: #b91c1c;">Indemnización</label>
-                                    <input type="number" step="0.01" name="set_indemnization" id="set_indemnization"
-                                        value="0"
-                                        style="width: 100%; padding: 8px; border: 1px solid #fca5a5; border-radius: 8px;"
-                                        oninput="updateSettlementTotal()">
-                                </div>
-                            </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Bonificación Ley (Q)</label>
+                            <input type="number" id="bonoLey" class="form-control-full" value="250" step="0.01">
                         </div>
                     </div>
+                </div>
 
-                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                        <button type="button" class="btn btn-secondary" onclick="closeEmpleadoModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" style="padding: 12px 32px;">Guardar
-                            Registro</button>
+                <!-- Termination Section (Hidden by default, shown for Inactive) -->
+                <div id="terminationSection" class="card card-danger" style="display: none; background-color: #fee2e2; border-color: #fecaca; margin-top: 24px;">
+                    <h3 style="margin-bottom: 16px; border-bottom: 2px solid #fca5a5; padding-bottom: 8px; color: #b91c1c;">Datos de Baja</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label style="color: #b91c1c;">Fecha Baja</label>
+                            <input type="date" name="terminationDate" id="emp_terminationDate" class="form-control-full">
+                        </div>
+                        <div class="form-group">
+                            <label style="color: #b91c1c;">Motivo</label>
+                            <select name="terminationReason" id="emp_terminationReason" class="form-control-full">
+                                <option value="">Seleccione...</option>
+                                <option value="Renuncia">Renuncia</option>
+                                <option value="Despido">Despido</option>
+                                <option value="Abandono">Abandono de Labores</option>
+                            </select>
+                        </div>
                     </div>
+                    <div class="form-group">
+                        <label style="color: #b91c1c;">Comentarios / Observaciones</label>
+                        <textarea name="terminationComments" id="emp_terminationComments" rows="2" class="form-control-full"></textarea>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEmpleadoModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 12px 32px;">Guardar Expediente</button>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Modal for Sucursal Quotas -->
-    <div id="quotaModal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1002; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease;">
-        <div
-            style="background: white; width: 95%; max-width: 600px; padding: 32px; border-radius: 16px; max-height: 90vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
-                <h2 id="quotaModalTitle">Definir Plazas: <span id="targetSucursalName"></span></h2>
+    <div id="quotaModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Definir Plazas: <span id="targetSucursalName"></span></h2>
                 <i class="fas fa-times" style="cursor: pointer;" onclick="closeQuotaModal()"></i>
             </div>
             <div id="quotaInputsContainer" style="margin-bottom: 24px; display: grid; gap: 16px;">
@@ -1936,7 +1391,7 @@
     </div>
 
     <!-- Traslados Section (Moved out of Modal) -->
-    <div id="traslados-section" class="hr-section">
+    <section id="traslados-section" class="hr-section">
         <div class="card card-warning" style="overflow-x: auto; margin-bottom: 40px;">
             <h3><i class="fas fa-history"></i> Personal en Comisión Activo</h3>
             <table>
@@ -1991,10 +1446,10 @@
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
 
     <!-- ADELANTOS SECTION -->
-    <div id="prestamos-section" class="hr-section">
+    <section id="prestamos-section" class="hr-section">
         <div class="header">
             <div class="page-title">
                 <h1>Adelantos del Personal</h1>
@@ -2047,12 +1502,12 @@
                 </table>
             </div>
         </div>
-    </div>
+    </section>
 
 
 
     <!-- REPORTS SECTION -->
-    <div id="reportes-section" class="hr-section">
+    <section id="reportes-section" class="hr-section">
         <div class="header">
             <div class="page-title">
                 <h1>Organigrama Estructural</h1>
@@ -2131,259 +1586,63 @@
             </table>
         </div>
 
-        <style>
-            /* ORG CHART CSS Styles */
-            .tree ul {
-                padding-top: 20px;
-                position: relative;
-                transition: all 0.5s;
-                -webkit-transition: all 0.5s;
-                -moz-transition: all 0.5s;
-                display: flex;
-                justify-content: center;
-            }
 
-            .tree li {
-                float: left;
-                text-align: center;
-                list-style-type: none;
-                position: relative;
-                padding: 20px 5px 0 5px;
-                transition: all 0.5s;
-                -webkit-transition: all 0.5s;
-                -moz-transition: all 0.5s;
-            }
-
-            /* Connectors */
-            .tree li::before,
-            .tree li::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                right: 50%;
-                border-top: 1px solid #000;
-                width: 50%;
-                height: 20px;
-            }
-
-            .tree li::after {
-                right: auto;
-                left: 50%;
-                border-left: 1px solid #000;
-            }
-
-            .tree li:only-child::after,
-            .tree li:only-child::before {
-                display: none;
-            }
-
-            .tree li:only-child {
-                padding-top: 0;
-            }
-
-            .tree li:first-child::before,
-            .tree li:last-child::after {
-                border: 0 none;
-            }
-
-            .tree li:last-child::before {
-                border-right: 1px solid #000;
-                border-radius: 0 5px 0 0;
-            }
-
-            .tree li:first-child::after {
-                border-radius: 5px 0 0 0;
-            }
-
-            .tree ul ul::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 50%;
-                border-left: 1px solid #000;
-                width: 0;
-                height: 20px;
-            }
-
-            /* Vertical List for Employees */
-            .tree ul.vertical {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding-top: 0;
-            }
-
-            .tree ul.vertical::before {
-                display: none;
-            }
-
-            .tree ul.vertical li {
-                padding: 10px 0 0 0;
-                float: none;
-            }
-
-            /* Vertical Connectors override */
-            .tree ul.vertical li::before {
-                border-left: 1px solid #ccc;
-                border-top: 0;
-                width: 0;
-                height: 10px;
-                left: 50%;
-                right: auto;
-                top: 0;
-            }
-
-            .tree ul.vertical li::after {
-                display: none;
-            }
-
-            /* First child connector fix for vertical */
-            .tree ul.vertical li:first-child::before {
-                border: 0;
-                /* The branch line comes from parent */
-                /* Actually we need a connector from the parent logic?
-                    The parent UL has ::before logic.
-                    Let's just keep it simple: small line above each node.
-                 */
-                border-left: 1px solid #ccc;
-                /* Restore border */
-            }
-
-            /* To make it look like a list hanging from single point,
-                we might rely on the UL's ::before which we hid.
-                Let's reveal UL::before but rotate it?
-                Actually, simpler: Just a straight line down from Branch to 1st employee, 2nd, etc?
-                The standard tree is good for horizontal.
-                Vertical stack: Just boxes stacked.
-             */
-            .tree ul.vertical li::before {
-                display: block;
-                width: 1px;
-                height: 10px;
-                border: 0;
-                background: #ccc;
-                margin: 0 auto;
-                top: -10px;
-                left: 0;
-                right: 0;
-            }
-
-            .tree ul.vertical li:first-child {
-                padding-top: 20px;
-            }
-
-
-            .tree li a {
-                border: 1px solid #ccc;
-                padding: 10px 15px;
-                text-decoration: none;
-                color: #666;
-                font-family: arial, verdana, tahoma;
-                font-size: 11px;
-                display: inline-block;
-                border-radius: 5px;
-                background: white;
-                transition: all 0.5s;
-                -webkit-transition: all 0.5s;
-                -moz-transition: all 0.5s;
-                min-width: 120px;
-                /* Slightly wider */
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                /* Slight shadow */
-            }
-
-            .tree li a:hover,
-            .tree li a:hover+ul li a {
-                background: #c8e4f8;
-                color: #000;
-                border: 1px solid #94a0b4;
-            }
-
-            .node-branch {
-                background: #e0f2fe !important;
-                border-color: #7dd3fc !important;
-                font-weight: bold;
-                font-size: 14px !important;
-                color: #0369a1 !important;
-            }
-
-            /* Employee node styling will be dynamic via JS style attribute for color */
-            .node-employee {
-                color: #fff !important;
-                /* Text white for colored backgrounds */
-                font-weight: 500;
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-            }
-
-            .node-role {
-                display: block;
-                font-size: 0.8em;
-                color: rgba(255, 255, 255, 0.9);
-                margin-top: 4px;
-                font-style: italic;
-            }
-        </style>
-    </div>
+    </section>
 
     <!-- LOAN MODAL -->
-    <div id="loanModal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; z-index: 1000;">
-        <div class="card" style="width: 500px; max-width: 90%; margin: 0; max-height: 90vh; overflow-y: auto;">
-            <h2 style="margin-bottom: 20px; color: var(--primary);">Registrar Adelanto del Personal</h2>
-            <form id="loanForm" style="display: flex; flex-direction: column; gap: 15px;">
+    <div id="loanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Registrar Adelanto del Personal</h2>
+                <i class="fas fa-times" style="cursor: pointer;" onclick="closeLoanModal()"></i>
+            </div>
+            <form id="loanForm">
                 <input type="hidden" id="loan_id">
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 5px;">
-                    <div>
-                        <label style="display:block; margin-bottom:5px; font-weight:600;">Filtrar Sucursal</label>
-                        <select id="loan_branch_filter" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;" onchange="filterLoanEmployees()">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Filtrar Sucursal</label>
+                        <select id="loan_branch_filter" class="form-control-full" onchange="filterLoanEmployees()">
                             <option value="">Todas las Sucursales</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="display:block; margin-bottom:5px; font-weight:600;">Buscar Empleado</label>
-                        <input type="text" id="loan_employee_search" placeholder="Escriba nombre o código..." style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;" oninput="filterLoanEmployees()">
+                    <div class="form-group">
+                        <label>Buscar Empleado</label>
+                        <input type="text" id="loan_employee_search" placeholder="Nombre o código..." class="form-control-full" oninput="filterLoanEmployees()">
                     </div>
                 </div>
 
-                <div>
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Empleado Solicitante</label>
-                    <select id="loan_employee" required
-                        style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                <div class="form-group">
+                    <label>Empleado Solicitante</label>
+                    <select id="loan_employee" class="form-control-full" required>
                         <option value="">Cargando empleados...</option>
                     </select>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <label style="display:block; margin-bottom:5px; font-weight:600;">Tipo</label>
-                        <select id="loan_type" required
-                            style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;"
-                            onchange="toggleLoanFields()">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="loan_type" class="form-control-full" required onchange="toggleLoanFields()">
                             <option value="adelanto">Adelanto Salarial</option>
                             <option value="prestamo">Anticipo / Préstamo</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="display:block; margin-bottom:5px; font-weight:600;">Monto (Q)</label>
-                        <input type="number" id="loan_amount" required min="1" step="0.01"
-                            style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                    <div class="form-group">
+                        <label>Monto (Q)</label>
+                        <input type="number" id="loan_amount" class="form-control-full" required min="1" step="0.01">
                     </div>
                 </div>
 
                 <!-- Fields for LOANS only -->
-                <div id="loan_details"
-                    style="display:none; border: 1px solid var(--border); padding: 10px; border-radius: 8px; background: #f8fafc;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div>
-                            <label style="display:block; margin-bottom:5px; font-weight:600;">Cuotas</label>
-                            <input type="number" id="loan_installments" value="1" min="1"
-                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                <div id="loan_details" class="card card-warning" style="display:none; padding: 16px;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Cuotas</label>
+                            <input type="number" id="loan_installments" value="1" min="1" class="form-control-full">
                         </div>
-                        <div>
-                            <label style="display:block; margin-bottom:5px; font-weight:600;">Frecuencia</label>
-                            <select id="loan_frequency"
-                                style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;">
+                        <div class="form-group">
+                            <label>Frecuencia</label>
+                            <select id="loan_frequency" class="form-control-full">
                                 <option value="quincenal">Quincenal (Cada pago)</option>
                                 <option value="mensual">Mensual (Fin de Mes)</option>
                             </select>
@@ -2391,39 +1650,58 @@
                     </div>
                 </div>
 
-                <div>
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Comentarios / Motivo</label>
-                    <textarea id="loan_comments" rows="3"
-                        style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px;"></textarea>
+                <div class="form-group">
+                    <label>Comentarios / Motivo</label>
+                    <textarea id="loan_comments" rows="3" class="form-control-full"></textarea>
                 </div>
 
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
                     <button type="button" class="btn btn-secondary" onclick="closeLoanModal()">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
         </div>
     </div>
+        </div>
+    </div>
 
     <!-- SAVE PLANILLA MODAL -->
-    <div id="savePlanillaModal"
-        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1005; align-items: center; justify-content: center;">
-        <div
-            style="background: white; width: 400px; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-            <h3 style="margin-bottom: 16px; color: var(--primary);">Guardar Planilla</h3>
-
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 8px;">Nombre Identificador
-                    (Opcional)</label>
-                <input type="text" id="planillaCustomName" placeholder="Ej: Planilla Enero Final"
-                    style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem;">
-                <p style="font-size: 0.8em; color: #666; margin-top: 5px;">Este nombre aparecerá en el historial.</p>
+    <div id="savePlanillaModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2>Guardar Planilla</h2>
+                <i class="fas fa-times" style="cursor: pointer;" onclick="closeSaveModal()"></i>
             </div>
-
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <div class="form-group">
+                <label>Nombre Identificador (Opcional)</label>
+                <input type="text" id="planillaCustomName" placeholder="Ej: Planilla Enero Final" class="form-control-full">
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Este nombre aparecerá en el historial central.</p>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
                 <button class="btn btn-secondary" onclick="closeSaveModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="confirmSavePlanilla()">
-                    <i class="fas fa-save"></i> Guardar
+                    <i class="fas fa-save"></i> Guardar Planilla
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRINT SELECTOR MODAL -->
+    <div id="printSelectorModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Opciones de Exportación</h2>
+                <i class="fas fa-times" style="cursor: pointer;" onclick="closePrintSelectorModal()"></i>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="btn btn-secondary" style="justify-content: flex-start;" onclick="printActivePlanilla()">
+                    <i class="fas fa-file-invoice"></i> Exportar Resumen General
+                </button>
+                <button class="btn btn-secondary" style="justify-content: flex-start;" onclick="printVouchers()">
+                    <i class="fas fa-receipt"></i> Generar Boletas (Vouchers)
+                </button>
+                <button class="btn btn-secondary" style="justify-content: flex-start;" onclick="printDetailedReport()">
+                    <i class="fas fa-table"></i> Reporte Detallado Excel
                 </button>
             </div>
         </div>
@@ -2522,49 +1800,7 @@
     <script src="../security-config.js"></script>
 
 
-    <script>
-        function switchSection(sectionId, el) {
-            document.querySelectorAll('.hr-section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
 
-            document.getElementById(sectionId + '-section').classList.add('active');
-            el.classList.add('active');
-
-            // Trigger data load for the specific section if needed
-            if (sectionId === 'puestos') loadPositions();
-            if (sectionId === 'empleados') loadEmployees();
-            if (sectionId === 'dashboard') initDashboard();
-            if (sectionId === 'sucursales') loadSucursales();
-            if (sectionId === 'traslados') loadTraslados();
-            if (sectionId === 'config') window.rrhhConfig.load();
-            if (sectionId === 'vacaciones') initVacaciones();
-            if (sectionId === 'prestamos') loadLoans();
-            if (sectionId === 'planillas') {
-                if (window.populatePlanillaBranches) window.populatePlanillaBranches();
-            }
-            if (sectionId === 'reportes' && window.reports) window.reports.init();
-        }
-
-        function openPuestoModal() {
-            const modal = document.getElementById('puestoModal');
-            modal.style.display = 'flex';
-            setTimeout(() => { modal.style.opacity = '1'; modal.style.pointerEvents = 'auto'; }, 10);
-            openModal(); // From puestos.js
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('puestoModal');
-            modal.style.opacity = '0';
-            modal.style.pointerEvents = 'none';
-            setTimeout(() => modal.style.display = 'none', 300);
-        }
-
-        window.onload = () => {
-            // Basic init to ensure firebase is ready
-            if (window.rrhhConfig) window.rrhhConfig.load();
-            initDashboard();
-        };
-    </script>
     <script src="config.js"></script>
     <script src="descansos.js?v=2.2"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
@@ -2632,72 +1868,40 @@
         </div>
     </div>
 
+    <!-- PAYROLL DETAILS MODAL -->
+    <div id="payrollDetailsModal" class="modal">
+        <div class="modal-content" style="max-width: 1000px; width: 95%;">
+            <div class="modal-header">
+                <h2>Detalles de Planilla</h2>
+                <button class="btn btn-secondary btn-sm" onclick="closeDetailsModal()">Cerrar</button>
+            </div>
+            <div id="detailsModalBody" style="overflow-x: auto;">
+                <!-- Tables populated by planillas.js -->
+            </div>
+        </div>
+    </div>
+
     <!-- Modal for Personalized Payment Slip -->
-    <div id="personalizedSlipModal"
-        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; align-items: center; justify-content: center;">
-        <div
-            style="background: white; width: 90%; max-width: 500px; padding: 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h3 style="margin: 0; color: var(--primary);">Boleta Personalizada</h3>
-                <i class="fas fa-times" style="cursor: pointer; font-size: 1.2em;"
-                    onclick="closePersonalizedSlipModal()"></i>
+    <div id="personalizedSlipModal" class="modal">
+        <div class="modal-content" style="max-width: 550px;">
+            <div class="modal-header">
+                <h2>Boleta Personalizada</h2>
+                <i class="fas fa-times" style="cursor: pointer;" onclick="closePersonalizedSlipModal()"></i>
             </div>
 
             <form id="personalizedSlipForm" onsubmit="event.preventDefault(); printPersonalizedSlip();">
-                <!-- Editable Branch -->
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Empresa / Sucursal
-                        (Editable)</label>
+                <div class="form-group">
+                    <label>Empresa / Sucursal (Editable)</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="customSlipBranchInput" required class="form-control"
-                            placeholder="Nombre de la Empresa"
-                            style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
-                        <select id="customSlipBranchSelect"
-                            onchange="document.getElementById('customSlipBranchInput').value = this.options[this.selectedIndex].text; if(this.selectedOptions[0].dataset.logo) document.getElementById('customSlipLogoUrl').value = this.selectedOptions[0].dataset.logo;"
-                            class="form-control"
-                            style="width: 150px; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
+                        <input type="text" id="customSlipBranchInput" required class="form-control-full" placeholder="Nombre de la Empresa" style="flex: 1;">
+                        <select id="customSlipBranchSelect" class="form-control-full" style="width: 160px;"
+                            onchange="document.getElementById('customSlipBranchInput').value = this.options[this.selectedIndex].text; if(this.selectedOptions[0].dataset.logo) document.getElementById('customSlipLogoUrl').value = this.selectedOptions[0].dataset.logo;">
                             <option value="">Cargar...</option>
                         </select>
                     </div>
                     <input type="hidden" id="customSlipLogoUrl">
                 </div>
 
-                <!-- Editable Title -->
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Título del Documento</label>
-                    <input type="text" id="customSlipTitle" class="form-control" value="BOLETA DE PAGO"
-                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Nombre del Empleado</label>
-                    <input type="text" id="customSlipName" required class="form-control" placeholder="Nombre Completo"
-                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Fecha / Periodo</label>
-                        <input type="text" id="customSlipDateText" required class="form-control"
-                            placeholder="Ej. 15/01/2026"
-                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
-                    </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Fecha de Emisión</label>
-                        <input type="date" id="customSlipEmissionDate" required class="form-control"
-                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
-                    </div>
-                    <div>
-                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Monto (Q)</label>
-                        <input type="number" id="customSlipAmount" step="0.01" required class="form-control"
-                            placeholder="0.00"
-                            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 24px;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 6px;">Concepto (Aparecerá en
-                        Devengado)</label>
                     <textarea id="customSlipDetail" rows="3" class="form-control"
                         placeholder="Ej. Pago de horas extras..."
                         style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit;"></textarea>

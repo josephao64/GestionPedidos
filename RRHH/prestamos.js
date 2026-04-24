@@ -141,8 +141,7 @@ async function openLoanModal() {
     document.getElementById('loanForm').reset();
     document.getElementById('loan_details').style.display = 'none';
 
-    modal.style.display = 'flex';
-    setTimeout(() => { modal.style.opacity = '1'; modal.style.pointerEvents = 'auto'; }, 10);
+    modal.classList.add('active');
 
     // Load Employees
     empSelect.innerHTML = '<option value="">Cargando...</option>';
@@ -168,6 +167,11 @@ async function openLoanModal() {
         console.error(e);
         empSelect.innerHTML = '<option value="">Error al cargar</option>';
     }
+}
+
+function closeLoanModal() {
+    const modal = document.getElementById('loanModal');
+    modal.classList.remove('active');
 }
 
 function filterLoanEmployees() {

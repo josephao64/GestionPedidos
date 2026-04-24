@@ -207,7 +207,7 @@ function openModal() {
     loadSalaryTypesForModal();
     loadParentsForModal(); // New call
 
-    document.getElementById('puestoModal').style.display = 'flex';
+    document.getElementById('puestoModal').classList.add('active');
 }
 
 function editPosition(id, name, dept, salary, salaryTypeId, parentId = null) {
@@ -222,11 +222,11 @@ function editPosition(id, name, dept, salary, salaryTypeId, parentId = null) {
     loadSalaryTypesForModal(salaryTypeId);
     loadParentsForModal(parentId, id); // New call
 
-    document.getElementById('puestoModal').style.display = 'flex';
+    document.getElementById('puestoModal').classList.add('active');
 }
 
 function closeModal() {
-    document.getElementById('puestoModal').style.display = 'none';
+    document.getElementById('puestoModal').classList.remove('active');
 }
 
 // Close modal if clicked outside
