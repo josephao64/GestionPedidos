@@ -57,6 +57,10 @@
                 <i class="fas fa-umbrella-beach"></i>
                 <span>Vacaciones</span>
             </li>
+            <li class="nav-item" onclick="switchSection('actividades', this)">
+                <i class="fas fa-tasks"></i>
+                <span>Reporte Actividades</span>
+            </li>
             <a href="descansos.html" class="nav-item">
                 <i class="fas fa-calendar-check"></i>
                 <span>Días de Descanso</span>
@@ -1589,6 +1593,60 @@
 
     </section>
 
+    <!-- ACTIVIDADES SECTION -->
+    <section id="actividades-section" class="hr-section">
+        <div class="header">
+            <div class="page-title">
+                <h1>Reporte Diario de Actividades</h1>
+                <p>Seguimiento de labores para Logística, RRHH y Finanzas.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openActividadModal()">
+                <i class="fas fa-plus"></i> Registrar Actividad
+            </button>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; align-items: flex-end;">
+                <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
+                    <label>Sucursal</label>
+                    <select id="activityFilterBranch" onchange="loadActivities()" class="form-control-full">
+                        <option value="all">Todas las Sucursales</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
+                    <label>Departamento</label>
+                    <select id="activityFilterDept" onchange="loadActivities()" class="form-control-full">
+                        <option value="all">Todos</option>
+                        <option value="Logística">Logística</option>
+                        <option value="Recursos Humanos">Recursos Humanos</option>
+                        <option value="Finanzas">Finanzas</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Depto.</th>
+                            <th>Actividad / Tarea</th>
+                            <th style="text-align: center;">Estado</th>
+                            <th style="text-align: center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activitiesTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                Cargando actividades...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
     <!-- LOAN MODAL -->
     <div id="loanModal" class="modal">
         <div class="modal-content">
@@ -1915,6 +1973,66 @@
             </form>
         </div>
     </div>
+
+    <!-- ACTIVIDAD MODAL -->
+    <div id="actividadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Registrar Actividad Diaria</h2>
+                <i class="fas fa-times" style="cursor: pointer;" onclick="closeActividadModal()"></i>
+            </div>
+            <form id="actividadForm">
+                <input type="hidden" id="actividad_id">
+
+                <div class="form-group">
+                    <label>Sucursal del Trabajo</label>
+                    <select id="act_sucursalId" class="form-control-full" required onchange="filterEmployeesByDept()">
+                        <option value="">Seleccione Sucursal...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Empleado Responsable</label>
+                    <select id="act_employeeId" class="form-control-full" required>
+                        <option value="">Seleccione Sucursal primero...</option>
+                    </select>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Solo se muestran empleados de Logística, RRHH y Finanzas.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Área de la Actividad</label>
+                    <select id="act_area" class="form-control-full" required>
+                        <option value="Logística">Logística</option>
+                        <option value="Recursos Humanos">Recursos Humanos</option>
+                        <option value="Finanzas">Finanzas</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Descripción de la Actividad</label>
+                    <textarea id="act_description" class="form-control-full" rows="3" required placeholder="Ej: Revisión de inventario físico en bodega..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="act_status" class="form-control-full">
+                            <option value="Completado">Completado</option>
+                            <option value="En Proceso">En Proceso</option>
+                            <option value="Pendiente">Pendiente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeActividadModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Actividad</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="actividades.js"></script>
 
 </body>
 </html>

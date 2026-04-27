@@ -678,3 +678,101 @@ select:focus, input:focus, textarea:focus {
     margin-top: 4px;
     font-style: italic;
 }
+/* --- Activities Section Specific Styles --- */
+#actividades-section .card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+}
+
+.badge-purple {
+    background: #f3e8ff;
+    color: #7e22ce;
+    border: 1px solid #e9d5ff;
+}
+
+.badge-success {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #d1fae5;
+}
+
+.badge-info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #dbeafe;
+}
+
+.badge-orange {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #ffedd5;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+#activitiesTableBody tr {
+    transition: var(--transition);
+}
+
+#activitiesTableBody tr:hover {
+    background: var(--primary-light) !important;
+}
+
+#activitiesTableBody td {
+    padding: 16px 12px;
+    vertical-align: middle;
+}
+
+/* Modal Enhancements for Activities */
+#actividadModal .modal-content {
+    background: linear-gradient(to bottom right, #ffffff, #fdfcff);
+    border: 1px solid var(--primary-light);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+#actividadModal .modal-header h2 {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+
+#actividadModal .form-group label {
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+    display: block;
+}
+
+#actividadModal .form-control-full {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    transition: var(--transition);
+}
+
+#actividadModal .form-control-full:focus {
+    background: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+/* Status dots for better visual tracking */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}
+.status-dot.success { background: var(--success); }
+.status-dot.info { background: var(--info); }
+.status-dot.warning { background: var(--warning); }

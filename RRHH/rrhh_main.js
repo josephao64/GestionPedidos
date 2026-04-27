@@ -55,6 +55,9 @@ function switchSection(sectionId, el) {
         case 'reportes':
             if (window.reports) window.reports.init();
             break;
+        case 'actividades':
+            if (typeof initActividades === 'function') initActividades();
+            break;
     }
 }
 
@@ -70,6 +73,22 @@ function openPuestoModal() {
 
 function closeModal() {
     const modal = document.getElementById('puestoModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+}
+
+/**
+ * Modal handling for Actividades
+ */
+function openActividadModal() {
+    const modal = document.getElementById('actividadModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    if (typeof onOpenActividadModal === 'function') onOpenActividadModal();
+}
+
+function closeActividadModal() {
+    const modal = document.getElementById('actividadModal');
     if (!modal) return;
     modal.classList.remove('active');
 }

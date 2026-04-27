@@ -1136,7 +1136,10 @@ async function openEmpleadoModal(id = null) {
     const modal = document.getElementById('empleadoModal');
     const form = document.getElementById('empleadoForm');
     form.reset();
-    document.getElementById('empleadoModalTitle').textContent = id ? 'Editar Empleado' : 'Registrar Nuevo Empleado';
+    const titleElement = document.getElementById('modalEmpleadoTitle');
+    if (titleElement) {
+        titleElement.textContent = id ? 'Editar Empleado' : 'Registrar Nuevo Empleado';
+    }
 
     // Reset defaults for added fields
     form.nationality.value = 'guatemalteca';
