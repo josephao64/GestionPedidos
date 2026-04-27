@@ -3,45 +3,54 @@
 
 async function openPersonalizedSlipModal() {
     const modal = document.getElementById('personalizedSlipModal');
+    if (!modal) return;
+    
     const branchSelect = document.getElementById('customSlipBranchSelect');
+    const form = document.getElementById('personalizedSlipForm');
 
-    // Reset Form
-    document.getElementById('personalizedSlipForm').reset();
+    // Reset Form if exists
+    if (form) form.reset();
 
-    // Set default date to today
-    document.getElementById('customSlipDateText').value = new Date().toLocaleDateString('es-GT');
-    document.getElementById('customSlipEmissionDate').value = new Date().toISOString().split('T')[0];
+    // Set default date to today comfortably
+    const dateTextInput = document.getElementById('customSlipDateText');
+    if (dateTextInput) dateTextInput.value = new Date().toLocaleDateString('es-GT');
+    
+    const emissionDateInput = document.getElementById('customSlipEmissionDate');
+    if (emissionDateInput) emissionDateInput.value = new Date().toISOString().split('T')[0];
 
-    // Show Modal
-    modal.style.display = 'flex';
+    // Show Modal using premium class
+    modal.classList.add('active');
 
     // Populate Branches
-    branchSelect.innerHTML = '<option value="">Cargando...</option>';
-    try {
-        // Fetch branches from Firestore
-        const snap = await db.collection('sucursales').orderBy('name').get();
-        branchSelect.innerHTML = '<option value="">Seleccione para Autocompletar...</option>';
+    if (branchSelect) {
+        branchSelect.innerHTML = '<option value="">Cargando...</option>';
+        try {
+            // Fetch branches from Firestore
+            const snap = await db.collection('sucursales').orderBy('name').get();
+            branchSelect.innerHTML = '<option value="">Seleccione para Autocompletar...</option>';
 
-        snap.forEach(doc => {
-            const data = doc.data();
-            const option = document.createElement('option');
-            option.value = doc.id;
-            // Store additional data for printing
-            option.dataset.name = data.name;
-            option.dataset.membrete = data.membrete || '';
-            option.dataset.logo = data.logo || '';
-            option.dataset.company = data.companyName ? data.companyName.toUpperCase() : data.name.toUpperCase();
-            option.textContent = data.name;
-            branchSelect.appendChild(option);
-        });
-    } catch (e) {
-        console.error("Error loading branches:", e);
-        branchSelect.innerHTML = '<option value="">Error al cargar</option>';
+            snap.forEach(doc => {
+                const data = doc.data();
+                const option = document.createElement('option');
+                option.value = doc.id;
+                // Store additional data for printing
+                option.dataset.name = data.name;
+                option.dataset.membrete = data.membrete || '';
+                option.dataset.logo = data.logo || '';
+                option.dataset.company = data.companyName ? data.companyName.toUpperCase() : data.name.toUpperCase();
+                option.textContent = data.name;
+                branchSelect.appendChild(option);
+            });
+        } catch (e) {
+            console.error("Error loading branches:", e);
+            branchSelect.innerHTML = '<option value="">Error al cargar</option>';
+        }
     }
 }
 
 function closePersonalizedSlipModal() {
-    document.getElementById('personalizedSlipModal').style.display = 'none';
+    const modal = document.getElementById('personalizedSlipModal');
+    if (modal) modal.classList.remove('active');
 }
 
 async function printPersonalizedSlip() {

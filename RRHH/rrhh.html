@@ -699,12 +699,10 @@
                         style="background-color: #d97706; border-color: #b45309;">
                         <i class="fas fa-file-invoice-dollar"></i> Boletas Adicionales
                     </button>
-                    <!-- NEW EXPORT FORMAT BUTTON -->
                     <button class="btn btn-secondary" onclick="exportarFormatoPlanilla()"
                         style="background-color: #107c41; border-color: #0b572e; color: white;">
                         <i class="fas fa-file-excel"></i> Exportar Formato
                     </button>
-                    <!-- NEW BUTTON -->
                     <button class="btn btn-warning" onclick="openPersonalizedSlipModal()"
                         style="background-color: #7c3aed; border-color: #6d28d9; color: white;">
                         <i class="fas fa-user-edit"></i> Boleta Personalizada
@@ -1960,9 +1958,38 @@
                     <input type="hidden" id="customSlipLogoUrl">
                 </div>
 
-                    <textarea id="customSlipDetail" rows="3" class="form-control"
-                        placeholder="Ej. Pago de horas extras..."
-                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit;"></textarea>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Título del Documento</label>
+                        <input type="text" id="customSlipTitle" class="form-control-full" placeholder="Ej: BOLETA DE PAGO / RECIBO">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre del Empleado</label>
+                        <input type="text" id="customSlipName" class="form-control-full" required placeholder="Nombre Completo">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha / Periodo del Pago</label>
+                        <input type="text" id="customSlipDateText" class="form-control-full" placeholder="Ej: Mayo 2024 / Primera Quincena">
+                    </div>
+                    <div class="form-group">
+                        <label>Monto a Pagar (Q)</label>
+                        <input type="number" id="customSlipAmount" class="form-control-full" required step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fecha de Emisión</label>
+                    <input type="date" id="customSlipEmissionDate" class="form-control-full">
+                </div>
+
+                <div class="form-group">
+                    <label>Detalle / Concepto</label>
+                    <textarea id="customSlipDetail" rows="3" class="form-control-full"
+                        placeholder="Ej. Pago de horas extras, bonificación incentivo..."
+                        style="width: 100%; border-radius: 8px; font-family: inherit;"></textarea>
                 </div>
 
                 <div style="display: flex; gap: 12px; justify-content: flex-end;">
