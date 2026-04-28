@@ -357,16 +357,25 @@ async function reviewInvoice(facturaId) {
   currentReviewFactura = factura;
   
   // Cargar datos del pedido
-  const pedidoSnap = await db.collection('orders').doc(factura.pedidoId).get();
-  const pedidoData = pedidoSnap.data();
+  let pedidoData = {};
+  if (factura.pedidoId) {
+    try {
+      const pedidoSnap = await db.collection('orders').doc(factura.pedidoId).get();
+      if (pedidoSnap.exists) {
+        pedidoData = pedidoSnap.data();
+      }
+    } catch (e) {
+      console.error("Error fetching order:", e);
+    }
+  }
   
   // Completar sección de pedido
-  document.getElementById('pedido-link').textContent = pedidoData.orderId;
-  document.getElementById('pedido-proveedor').textContent = pedidoData.providerName;
+  document.getElementById('pedido-link').textContent = pedidoData.orderId || factura.orderId || 'N/A';
+  document.getElementById('pedido-proveedor').textContent = pedidoData.providerName || factura.proveedorNombre || 'N/A';
   document.getElementById('pedido-fecha').textContent = formatDate(pedidoData.orderDate);
   
-  renderPedidoItems(pedidoData.products);
-  calculatePedidoTotals(pedidoData.products);
+  renderPedidoItems(pedidoData.products || []);
+  calculatePedidoTotals(pedidoData.products || []);
   
   // Completar sección de factura
   document.getElementById('factura-numero').textContent = factura.numeroFactura;
@@ -377,7 +386,7 @@ async function reviewInvoice(facturaId) {
   calculateFacturaTotals(factura.items || []);
   
   // Validación
-  performValidation(pedidoData.total, factura.total);
+  performValidation(pedidoData.total || 0, factura.total || 0);
   
   // Cargar crédito a favor
   await loadCreditoFavor(factura.proveedorId);
@@ -611,22 +620,59 @@ function registerPayment(facturaId) {
 
 function viewDetails(facturaId) {
   const factura = facturas.find(f => f.id === facturaId);
+  const estadoClass = getEstadoClass(factura.estado);
+  
   let detalles = `
-    <div style="text-align: left;">
-      <h3>Detalles de la Factura</h3>
-      <p><strong># Factura:</strong> ${factura.numeroFactura}</p>
-      <p><strong>Proveedor:</strong> ${factura.proveedorNombre}</p>
-      <p><strong>Total:</strong> Q ${formatAmount(factura.total)}</p>
-      <p><strong>Saldo Pendiente:</strong> Q ${formatAmount(factura.saldoPendiente)}</p>
-      <p><strong>Estado:</strong> ${factura.estado}</p>
-      <p><strong>Fecha Emisión:</strong> ${formatDate(factura.fechaEmision)}</p>
-      <p><strong>Fecha Vencimiento:</strong> ${formatDate(factura.fechaVencimiento)}</p>
+    <div style="text-align: left; font-family: 'Outfit', sans-serif;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #1e293b; font-weight: 800; font-size: 1.4rem;"><i class="fa fa-file-invoice" style="color: #6366f1; margin-right: 8px;"></i> Detalles de Factura</h3>
+        <span class="badge ${estadoClass}" style="font-size: 0.85rem; padding: 6px 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">${factura.estado.toUpperCase()}</span>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+        <div>
+          <p style="margin: 0 0 4px; color: #64748b; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">N° de Factura</p>
+          <p style="margin: 0; color: #0f172a; font-weight: 600; font-size: 1.05rem;">${factura.numeroFactura || 'N/A'}</p>
+        </div>
+        <div>
+          <p style="margin: 0 0 4px; color: #64748b; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Proveedor</p>
+          <p style="margin: 0; color: #0f172a; font-weight: 600; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${factura.proveedorNombre || 'N/A'}">${factura.proveedorNombre || 'N/A'}</p>
+        </div>
+        <div>
+          <p style="margin: 0 0 4px; color: #64748b; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Emisión</p>
+          <p style="margin: 0; color: #334155; font-weight: 500;">
+            <i class="fa fa-calendar-alt" style="color: #94a3b8; margin-right: 4px;"></i> ${formatDate(factura.fechaEmision)}
+          </p>
+        </div>
+        <div>
+          <p style="margin: 0 0 4px; color: #64748b; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Vencimiento</p>
+          <p style="margin: 0; color: #334155; font-weight: 500;">
+            <i class="fa fa-calendar-check" style="color: #94a3b8; margin-right: 4px;"></i> ${formatDate(factura.fechaVencimiento)}
+          </p>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 16px;">
+        <div style="flex: 1; background: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <p style="margin: 0 0 8px; color: #64748b; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Total Facturado</p>
+          <h2 style="margin: 0; color: #1e293b; font-size: 1.6rem; font-weight: 800;">Q ${formatAmount(factura.total)}</h2>
+        </div>
+        <div style="flex: 1; background: ${factura.saldoPendiente > 0 ? 'linear-gradient(135deg, #fff1f2, #ffe4e6)' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)'}; padding: 20px; border-radius: 12px; border: 1px solid ${factura.saldoPendiente > 0 ? '#fecdd3' : '#bbf7d0'}; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <p style="margin: 0 0 8px; color: ${factura.saldoPendiente > 0 ? '#9f1239' : '#166534'}; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Saldo Pendiente</p>
+          <h2 style="margin: 0; color: ${factura.saldoPendiente > 0 ? '#e11d48' : '#16a34a'}; font-size: 1.6rem; font-weight: 800;">Q ${formatAmount(factura.saldoPendiente)}</h2>
+        </div>
+      </div>
     </div>
   `;
   
   Swal.fire({
     html: detalles,
-    width: '600px'
+    width: '650px',
+    showCloseButton: true,
+    showConfirmButton: false,
+    customClass: {
+      popup: 'premium-swal-popup'
+    }
   });
 }
 
