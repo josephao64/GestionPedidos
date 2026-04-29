@@ -162,7 +162,7 @@ function showProductSelectionModal() {
     return;
   }
   loadProductsForProvider(providerId);
-  document.getElementById('productSelectionModal').style.display = 'block';
+  document.getElementById('productSelectionModal').style.display = 'flex';
 }
 
 function closeProductSelectionModal() {
@@ -909,7 +909,7 @@ async function initUsageAverageModalControls() {
 function showUsageAverageModal() {
   const m = document.getElementById('usageAverageModal');
   if (!m) return;
-  m.style.display = 'block';
+  m.style.display = 'flex';
   // Preseleccionar sucursal si no admin
   const sucSel = document.getElementById('avgSucursalSelect');
   if (sucSel && userRole !== 'administrador') {
@@ -1618,7 +1618,7 @@ async function saveBulkOrder() {
 async function openBulkConfigModal() {
   const listDiv = document.getElementById('bulkConfigProviderList');
   listDiv.innerHTML = '<p>Cargando datos...</p>';
-  document.getElementById('bulkConfigModal').style.display = 'block';
+  document.getElementById('bulkConfigModal').style.display = 'flex';
 
   try {
     // Fetch Providers and Products in parallel for performance
