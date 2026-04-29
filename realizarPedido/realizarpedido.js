@@ -1272,6 +1272,7 @@ async function loadAllProvidersAndProducts() {
           row.setAttribute('data-provider-id', providerId);
           row.setAttribute('data-provider-name', providerName);
           row.setAttribute('data-avg', avgVal); // Store average
+          row.setAttribute('data-presentation', prod.presentation || '');
 
           const presentacionTd = userRole === 'administrador' ? `<td>${escapeHtml(prod.presentation)}</td>` : '';
           const advertenciaTd = userRole === 'administrador' ? `<td class="bulk-warning-cell" style="font-size: 0.9em; font-weight: bold;"></td>` : '';
@@ -1425,9 +1426,9 @@ async function saveBulkOrder() {
     const productId = row.getAttribute('data-id');
     const providerId = row.getAttribute('data-provider-id');
     const providerName = row.getAttribute('data-provider-name');
+    const pres = row.getAttribute('data-presentation') || '';
 
     const name = row.cells[0].textContent;
-    const pres = row.cells[1].textContent;
     const invInput = row.querySelector('.bulk-inventory-input');
     const qtyInput = row.querySelector('.bulk-qty-input');
 
