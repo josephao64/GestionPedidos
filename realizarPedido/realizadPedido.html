@@ -151,9 +151,13 @@
           <span id="bulkOrderIdText" style="font-weight: 700; font-size: 1.1rem; color: var(--primary);"></span>
         </div>
 
-        <select id="bulkOrderSucursalSelect" style="display:none;" onchange="loadAllProvidersAndProducts()">
-          <option value="" disabled selected>-- Selecciona una Sucursal --</option>
-        </select>
+        <div class="form-group">
+          <label for="bulkOrderSucursalSelect">Sucursal</label>
+          <select id="bulkOrderSucursalSelect" style="display:none;" onchange="loadAllProvidersAndProducts()">
+            <option value="" disabled selected>-- Selecciona una Sucursal --</option>
+          </select>
+          <span id="bulkOrderSucursalText" style="font-weight: 700; color: var(--primary);"></span>
+        </div>
       </div>
 
       <div class="form-logo" style="text-align: right;">

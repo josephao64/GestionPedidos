@@ -1,32 +1,32 @@
 :root {
-  /* Color Palette - Premium & Professional */
-  --primary: hsl(230, 85%, 60%);
-  --primary-hover: hsl(230, 85%, 50%);
-  --primary-light: hsl(230, 85%, 96%);
-  --secondary: hsl(215, 25%, 50%);
-  --success: hsl(150, 60%, 45%);
-  --warning: hsl(35, 90%, 55%);
-  --danger: hsl(0, 75%, 60%);
+  /* Color Palette - Premium Emerald & Slate */
+  --primary: hsl(165, 70%, 35%);
+  --primary-hover: hsl(165, 70%, 28%);
+  --primary-light: hsl(165, 70%, 96%);
+  --secondary: hsl(210, 20%, 45%);
+  --success: hsl(150, 60%, 40%);
+  --warning: hsl(35, 90%, 50%);
+  --danger: hsl(0, 75%, 55%);
 
   /* Neutral Colors */
-  --bg-main: #f8fafc;
-  --bg-card: rgba(255, 255, 255, 0.95);
-  --text-bold: hsl(220, 40%, 15%);
-  --text-main: hsl(220, 20%, 30%);
-  --text-muted: hsl(220, 15%, 50%);
-  --border-light: hsl(220, 20%, 92%);
+  --bg-main: #f0f4f4;
+  --bg-card: rgba(255, 255, 255, 0.98);
+  --text-bold: hsl(210, 40%, 12%);
+  --text-main: hsl(210, 15%, 25%);
+  --text-muted: hsl(210, 10%, 45%);
+  --border-light: hsl(165, 10%, 90%);
   --border-focus: var(--primary);
 
   /* Effects */
-  --radius-lg: 24px;
-  --radius-md: 14px;
-  --radius-sm: 8px;
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 10px 30px rgba(149, 157, 165, 0.1);
-  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.08);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-sm: 6px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 12px 35px rgba(22, 60, 50, 0.08);
+  --shadow-lg: 0 25px 60px rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -38,9 +38,9 @@ body {
   font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-main);
   background-image:
-    radial-gradient(at 0% 0%, hsla(230, 85%, 60%, 0.05) 0, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(150, 60%, 45%, 0.03) 0, transparent 50%),
-    radial-gradient(at 100% 100%, hsla(230, 85%, 60%, 0.05) 0, transparent 50%);
+    radial-gradient(at 0% 0%, hsla(165, 70%, 35%, 0.05) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(150, 60%, 40%, 0.03) 0, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(165, 70%, 35%, 0.05) 0, transparent 50%);
   color: var(--text-main);
   margin: 0;
   padding: 20px;
@@ -117,7 +117,7 @@ h1 {
   color: white;
   border-color: var(--primary);
   transform: translateY(-3px);
-  box-shadow: 0 10px 20px hsla(230, 85%, 60%, 0.2);
+  box-shadow: 0 10px 20px hsla(165, 70%, 35%, 0.2);
 }
 
 .buttons .btn-icon {
@@ -275,11 +275,13 @@ tr:hover td {
   background: linear-gradient(90deg, var(--primary), var(--primary-hover)) !important;
   color: white !important;
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   text-align: center;
-  padding: 12px !important;
+  padding: 14px !important;
   border-radius: 0;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 0 -2px 10px rgba(0,0,0,0.1);
 }
 
 /* --- Buttons --- */
@@ -300,7 +302,7 @@ tr:hover td {
   font-size: 1.05rem;
   border: none;
   cursor: pointer;
-  box-shadow: 0 10px 25px hsla(230, 85%, 60%, 0.3);
+  box-shadow: 0 10px 25px hsla(165, 70%, 35%, 0.2);
   transition: var(--transition);
   display: inline-flex;
   align-items: center;
@@ -310,7 +312,7 @@ tr:hover td {
 .save-order-button:hover,
 .btn-primary:hover {
   transform: translateY(-4px);
-  box-shadow: 0 15px 35px hsla(230, 85%, 60%, 0.4);
+  box-shadow: 0 15px 35px hsla(165, 70%, 35%, 0.3);
   filter: brightness(1.1);
 }
 
@@ -415,29 +417,113 @@ tr:hover td {
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
   h1 {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
+  }
+
+  body {
+    padding: 10px;
   }
 
   .buttons {
     gap: 8px;
     padding: 8px;
+    margin-bottom: 20px;
   }
 
   .buttons button {
-    padding: 12px;
-    font-size: 0.8rem;
+    padding: 10px;
+    font-size: 0.75rem;
+    flex: 1 1 calc(50% - 8px);
+    gap: 6px;
   }
 
   .container {
-    padding: 20px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: var(--radius-md);
   }
 
   .order-form {
     grid-template-columns: 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
   }
 
   .order-form img {
     display: none;
+  }
+
+  /* --- Table Mobile Optimization (Strict Table Style) --- */
+  .table-wrapper {
+    margin: 15px -10px; 
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    overflow-x: hidden; /* No scroll as requested */
+  }
+
+  table {
+    font-size: 0.72rem; /* Even smaller for more columns */
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  th, td {
+    padding: 8px 3px; /* Minimal padding */
+    word-break: break-word;
+    text-align: center;
+  }
+
+  th:first-child, td:first-child {
+    text-align: left;
+    padding-left: 8px;
+  }
+
+  /* Adjust widths for newOrderTable (6 columns) */
+  #newOrderTable th:nth-child(1), #newOrderTable td:nth-child(1) { width: 26%; } /* Producto */
+  #newOrderTable th:nth-child(2), #newOrderTable td:nth-child(2) { width: 16%; } /* Presentación */
+  #newOrderTable th:nth-child(3), #newOrderTable td:nth-child(3) { width: 13%; } /* Promedio */
+  #newOrderTable th:nth-child(4), #newOrderTable td:nth-child(4) { width: 14%; } /* Inventario */
+  #newOrderTable th:nth-child(5), #newOrderTable td:nth-child(5) { width: 14%; } /* Cantidad */
+  #newOrderTable th:nth-child(6), #newOrderTable td:nth-child(6) { width: 17%; } /* Acciones */
+
+  /* Adjust widths for bulkOrderTable (varies by role) */
+  #bulkOrderTable th:nth-child(1), #bulkOrderTable td:nth-child(1) { width: 30%; } 
+  #bulkOrderTable th:nth-child(2), #bulkOrderTable td:nth-child(2) { width: 20%; } 
+  #bulkOrderTable th:nth-child(3), #bulkOrderTable td:nth-child(3) { width: 15%; } 
+  #bulkOrderTable th:nth-child(4), #bulkOrderTable td:nth-child(4) { width: 15%; } 
+  #bulkOrderTable th:nth-child(5), #bulkOrderTable td:nth-child(5) { width: 20%; } 
+
+  input[type="number"], 
+  .bulk-qty-input, 
+  .bulk-inventory-input,
+  .qty-input,
+  .inventory-input {
+    padding: 4px 2px !important;
+    font-size: 0.8rem;
+    height: 30px;
+    width: 100%; /* Fill the column */
+    min-width: 0;
+  }
+
+  .bulk-suggestion-text {
+    font-size: 0.7rem !important;
+  }
+
+  .bulk-warning-cell {
+    font-size: 0.75rem !important;
+    padding: 4px !important;
+  }
+
+  .save-order-container {
+    margin-top: 20px;
+  }
+
+  .save-order-button, .btn-primary {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 1rem;
+    justify-content: center;
   }
 }
 

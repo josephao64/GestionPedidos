@@ -307,10 +307,15 @@ function addSelectedProductToTable() {
   const cell4 = row.insertCell(5);
 
   cell1.textContent = selectedProduct.name;
+  cell1.setAttribute('data-label', 'Producto');
   cell2.textContent = selectedProduct.presentation;
+  cell2.setAttribute('data-label', 'Presentación');
   cellAvg.innerHTML = `<span class="avg-value" style="font-weight:bold;">-</span>`;
+  cellAvg.setAttribute('data-label', 'Promedio');
   cellInv.innerHTML = `<input type="number" min="0" step="1" class="inventory-input" placeholder="Inventario" />`;
-  cell3.innerHTML = `<input type="number" min="1" step="1" class="qty-input" placeholder="Cantidad" />`; // step=1 para enteros
+  cellInv.setAttribute('data-label', 'Inventario');
+  cell3.innerHTML = `<input type="number" min="1" step="1" class="qty-input" placeholder="Cantidad" />`;
+  cell3.setAttribute('data-label', 'Cantidad');
   cell4.innerHTML = `
     <button class="action-button edit-button" onclick="editNewOrderProduct(this)">
       <i class="fas fa-edit"></i>
@@ -319,6 +324,7 @@ function addSelectedProductToTable() {
       <i class="fas fa-trash-alt"></i>
     </button>
   `;
+  cell4.setAttribute('data-label', 'Acciones');
   document.getElementById('newOrderProviderSelect').disabled = true;
   selectedProduct = null;
 
@@ -974,9 +980,9 @@ async function loadProductsForAverage(providerId) {
       const tr = tbody.insertRow();
       tr.setAttribute('data-id', doc.id);
       tr.innerHTML = `
-        <td>${escapeHtml(prod.name || '')}</td>
-        <td>${escapeHtml(prod.presentation || '')}</td>
-        <td><input type="number" min="0" step="1" class="avg-input" placeholder="0" /></td>
+        <td data-label="Producto">${escapeHtml(prod.name || '')}</td>
+        <td data-label="Presentación">${escapeHtml(prod.presentation || '')}</td>
+        <td data-label="Promedio"><input type="number" min="0" step="1" class="avg-input" placeholder="0" /></td>
       `;
       // Cargar valor existente desde mapa
       const avg = averagesMap[doc.id];
@@ -1274,18 +1280,15 @@ async function loadAllProvidersAndProducts() {
           row.setAttribute('data-avg', avgVal); // Store average
           row.setAttribute('data-presentation', prod.presentation || '');
 
-          const presentacionTd = userRole === 'administrador' ? `<td>${escapeHtml(prod.presentation)}</td>` : '';
-          const advertenciaTd = userRole === 'administrador' ? `<td class="bulk-warning-cell" style="font-size: 0.9em; font-weight: bold;"></td>` : '';
-
           row.innerHTML = `
-                      <td>${escapeHtml(prod.name)}</td>
-                      ${presentacionTd}
-                      <td><input type="number" min="0" step="1" class="bulk-inventory-input" placeholder="Inv" oninput="onBulkInventoryChange(this)" /></td>
-                      <td>
+                      <td data-label="Producto">${escapeHtml(prod.name)}</td>
+                      ${userRole === 'administrador' ? `<td data-label="Presentación">${escapeHtml(prod.presentation)}</td>` : ''}
+                      <td data-label="Inventario"><input type="number" min="0" step="1" class="bulk-inventory-input" placeholder="Inv" oninput="onBulkInventoryChange(this)" /></td>
+                      <td data-label="Pedido">
                           <input type="number" min="1" step="1" class="bulk-qty-input" placeholder="Cant" oninput="onBulkQuantityChange(this)" />
                           <div class="bulk-suggestion-text" style="font-size: 0.85em; color: #666; margin-top: 2px; font-style: italic;"></div>
                       </td>
-                      ${advertenciaTd}
+                      ${userRole === 'administrador' ? `<td data-label="Advertencia" class="bulk-warning-cell" style="font-size: 0.9em; font-weight: bold;"></td>` : ''}
                     `;
         });
       }
