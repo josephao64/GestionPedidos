@@ -25,7 +25,6 @@ const permFinViewHistorial = document.getElementById('permFinViewHistorial');
 const permFinRegistrarPagos = document.getElementById('permFinRegistrarPagos');
 const permFinManageSucursales = document.getElementById('permFinManageSucursales');
 const permFinManageProveedores = document.getElementById('permFinManageProveedores');
-const permFinManageServicios = document.getElementById('permFinManageServicios');
 const permFinManageUsuarios = document.getElementById('permFinManageUsuarios');
 
 // -- Initialization --
@@ -234,7 +233,6 @@ async function handleUserSubmit(e) {
         canRegistrarPagos: permFinRegistrarPagos.checked,
         canManageSucursales: permFinManageSucursales.checked,
         canManageProveedores: permFinManageProveedores.checked,
-        canManageServicios: permFinManageServicios.checked,
         canManageUsuarios: permFinManageUsuarios.checked
     };
 
@@ -312,7 +310,6 @@ function showEditUserForm(id) {
         permFinRegistrarPagos.checked = !!u.permisosFinanzas.canRegistrarPagos;
         permFinManageSucursales.checked = !!u.permisosFinanzas.canManageSucursales;
         permFinManageProveedores.checked = !!u.permisosFinanzas.canManageProveedores;
-        permFinManageServicios.checked = !!u.permisosFinanzas.canManageServicios;
         permFinManageUsuarios.checked = !!u.permisosFinanzas.canManageUsuarios;
     } else {
         // Modo por defecto si es antiguo
@@ -320,7 +317,6 @@ function showEditUserForm(id) {
         permFinRegistrarPagos.checked = false;
         permFinManageSucursales.checked = false;
         permFinManageProveedores.checked = false;
-        permFinManageServicios.checked = false;
         permFinManageUsuarios.checked = false;
     }
 
@@ -388,7 +384,7 @@ function enableCheckboxes(enabled) {
     const boxes = [
         permChangeStatus, permEditOrder, permDeleteOrder, permDeleteReceipt,
         permFinViewHistorial, permFinRegistrarPagos, permFinManageSucursales,
-        permFinManageProveedores, permFinManageServicios, permFinManageUsuarios
+        permFinManageProveedores, permFinManageUsuarios
     ];
     boxes.forEach(b => {
         b.disabled = !enabled;

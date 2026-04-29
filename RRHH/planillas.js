@@ -1109,7 +1109,8 @@ async function savePlanilla() {
     if (modal) {
         // Pre-fill name if known?
         document.getElementById('planillaCustomName').value = ""; // Clear or set default
-        modal.style.display = 'flex';
+        modal.classList.add('active');
+        modal.style.display = ''; // Clear inline style if present
     } else {
         // Fallback if modal missing (shouldn't happen)
         confirmSavePlanilla();
@@ -1117,7 +1118,11 @@ async function savePlanilla() {
 }
 
 function closeSaveModal() {
-    document.getElementById('savePlanillaModal').style.display = 'none';
+    const modal = document.getElementById('savePlanillaModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = ''; // Let CSS handle hiding
+    }
 }
 
 async function confirmSavePlanilla() {
