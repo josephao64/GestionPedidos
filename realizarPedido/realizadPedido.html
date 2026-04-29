@@ -4,7 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Realizar Pedido</title>
+  <title>Realizar Pedido | Sistema de Gestión</title>
+
+  <!-- Google Fonts: Outfit -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
@@ -20,12 +23,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- FontAwesome -->
-  <link rel="stylesheet" href="../resources/fontawesome/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <!-- Estilos -->
   <link rel="stylesheet" href="stylerealizarpedido.css" />
 
-  <!-- Archivo de conexión a Firebase (ubicado en la carpeta database) -->
+  <!-- Archivo de conexión a Firebase -->
   <script src="../database/connection.js"></script>
 
   <!-- JS Principal -->
@@ -33,11 +36,26 @@
 </head>
 
 <body>
+  <header class="page-header">
+    <h1>Realizar Pedido</h1>
+    <p id="userContextDisplay" style="color: var(--text-muted); font-weight: 600; margin-top: 10px;"></p>
+  </header>
+
   <div class="buttons">
-    <button onclick="requestNavigation(showNewOrderForm)">Realizar Nuevo Pedido</button>
-    <button onclick="requestNavigation(showBulkOrderForm)">Pedido por formulario</button>
-    <button id="btnConfigAverages" onclick="showUsageAverageModal()">Configurar Promedios</button>
-    <button class="btn-icon right" onclick="requestNavigation(() => { window.location.href='../index.html' })">
+    <button onclick="requestNavigation(showNewOrderForm)">
+      <i class="fas fa-plus-circle"></i>
+      <span>Nuevo Pedido Individual</span>
+    </button>
+    <button onclick="requestNavigation(showBulkOrderForm)">
+      <i class="fas fa-layer-group"></i>
+      <span>Pedido Masivo (Formulario)</span>
+    </button>
+
+    <button id="btnConfigAverages" onclick="showUsageAverageModal()">
+      <i class="fas fa-chart-line"></i>
+      <span>Configurar Promedios</span>
+    </button>
+    <button class="btn-icon" onclick="requestNavigation(() => { window.location.href='../index.html' })">
       <i class="fas fa-home"></i>
       <span>Volver</span>
     </button>
@@ -46,32 +64,34 @@
   <!-- Contenedor principal de creación de pedidos -->
   <div id="orderCreationContainer" class="container" style="display: none;">
     <div class="order-form">
-      <!-- Parte Izquierda: Proveedor, Fecha, ID -->
       <div class="form-inputs">
         <div class="form-group">
           <label for="newOrderProviderSelect">Seleccione Proveedor</label>
           <select id="newOrderProviderSelect"></select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="dateGroup">
           <label for="orderDate">Fecha de Pedido</label>
           <input type="date" id="orderDate" style="display: none;" />
-          <span id="orderDateText" style="display: none;"></span>
+          <span id="orderDateText" style="font-weight: 700; font-size: 1.1rem; color: var(--primary);"></span>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="idGroup">
           <label for="orderId">ID Pedido</label>
-          <input type="text" id="orderId" placeholder="ID Pedido" readonly style="display: none;" />
-          <span id="orderIdText" style="display: none;"></span>
+          <input type="text" id="orderId" placeholder="Generando..." readonly style="display: none;" />
+          <span id="orderIdText" style="font-weight: 700; font-size: 1.1rem; color: var(--primary);"></span>
         </div>
 
-        <!-- Sucursal oculta (solo para lógica interna) -->
-        <select id="newOrderSucursalSelect" style="display:none;"></select>
-        <span id="newOrderSucursalText" style="display:none;"></span>
+        <div class="form-group" id="sucursalGroup" style="display: none;">
+          <label for="newOrderSucursalSelect">Sucursal</label>
+          <select id="newOrderSucursalSelect"></select>
+          <span id="newOrderSucursalText" style="font-weight: 700; color: var(--primary);"></span>
+        </div>
       </div>
 
-      <!-- Parte Derecha: Logo -->
-      <img src="../resources/images/logo.png" alt="Logo" />
+      <div class="form-logo" style="text-align: right;">
+        <img src="../resources/images/logo.png" alt="Logo" />
+      </div>
     </div>
 
     <!-- Tabla de productos -->
@@ -83,43 +103,123 @@
               <th>Producto</th>
               <th>Presentación</th>
               <th>Promedio Sem.</th>
-              <th>Inventario Actual</th>
+              <th>Inventario</th>
               <th>Cantidad</th>
-              <th>Acciones</th>
+              <th style="text-align: center;">Acciones</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
-      <!-- Botón Seleccionar Producto abajo, lado izquierdo -->
-      <div style="margin-top: 10px; text-align: left;">
+      
+      <div style="margin-top: 20px;">
         <button id="selectProductButton" onclick="showProductSelectionModal()">
-          <i class="fas fa-plus-circle"></i> Seleccionar Producto
+          <i class="fas fa-search-plus"></i> Buscar y Agregar Producto
         </button>
       </div>
     </div>
 
     <div class="save-order-container">
       <button class="save-order-button" onclick="saveNewOrder()">
-        <i class="fas fa-save"></i> Guardar Pedido
+        <i class="fas fa-check-circle"></i> Confirmar y Guardar Pedido
       </button>
     </div>
   </div>
 
-  <!-- Modal de Configuración de Promedios de Uso -->
-  <div id="usageAverageModal" class="modal" style="display:none;">
-    <div class="modal-content">
-      <span class="close" onclick="closeUsageAverageModal()">&times;</span>
-      <h2>Configurar Promedios de Uso (semanal)</h2>
 
-      <div class="form-group">
-        <label for="avgSucursalSelect">Sucursal</label>
-        <select id="avgSucursalSelect"></select>
+
+  <!-- Contenedor Pedido por Formulario -->
+  <div id="bulkOrderContainer" class="container" style="display: none;">
+    <div class="order-form">
+      <div class="form-inputs">
+        <div class="config-btn-wrapper">
+          <button type="button" id="btnConfigBulk" class="btn-primary" style="display: none; padding: 10px 20px; font-size: 0.85rem;"
+            onclick="openBulkConfigModal()">
+            <i class="fas fa-cog"></i> Configurar Proveedores
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label for="bulkOrderDate">Fecha de Pedido</label>
+          <input type="date" id="bulkOrderDate" style="display: none;" />
+          <span id="bulkOrderDateText" style="font-weight: 700; font-size: 1.1rem; color: var(--primary);"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="bulkOrderId">ID Pedido</label>
+          <input type="text" id="bulkOrderId" readonly style="display: none;" />
+          <span id="bulkOrderIdText" style="font-weight: 700; font-size: 1.1rem; color: var(--primary);"></span>
+        </div>
+
+        <select id="bulkOrderSucursalSelect" style="display:none;" onchange="loadAllProvidersAndProducts()">
+          <option value="" disabled selected>-- Selecciona una Sucursal --</option>
+        </select>
       </div>
 
-      <div class="form-group">
-        <label for="avgProviderSelect">Proveedor</label>
-        <select id="avgProviderSelect" onchange="loadProductsForAverage(this.value)"></select>
+      <div class="form-logo" style="text-align: right;">
+        <img src="../resources/images/logo.png" alt="Logo" />
+      </div>
+    </div>
+
+    <div class="product-form-and-table">
+      <div class="table-wrapper">
+        <table id="bulkOrderTable">
+          <thead id="bulkOrderThead"></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="save-order-container">
+      <button class="save-order-button" onclick="saveBulkOrder()">
+        <i class="fas fa-paper-plane"></i> Procesar Pedidos Masivos
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal para selección de productos -->
+  <div id="productSelectionModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeProductSelectionModal()">&times;</span>
+      <h2 style="margin-bottom: 25px;"><i class="fas fa-box-open"></i> Catálogo de Productos</h2>
+      
+      <div class="form-group" style="margin-bottom: 20px;">
+        <input type="text" id="productSearch" onkeyup="filterProducts()" placeholder="🔍 Buscar por nombre de producto..." />
+      </div>
+
+      <div class="table-wrapper">
+        <table id="productSelectionTable">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Presentación</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Configuración de Promedios -->
+  <div id="usageAverageModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+      <span class="close" onclick="closeUsageAverageModal()">&times;</span>
+      <h2><i class="fas fa-chart-bar"></i> Promedios de Uso Semanal</h2>
+
+      <div class="form-inputs" style="margin: 25px 0;">
+        <div class="form-group">
+          <label>Sucursal</label>
+          <select id="avgSucursalSelect"></select>
+        </div>
+        <div class="form-group">
+          <label>Proveedor</label>
+          <select id="avgProviderSelect" onchange="loadProductsForAverage(this.value)"></select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 15px;">
+        <input type="text" id="avgProductSearch" onkeyup="filterAvgProducts()" placeholder="🔍 Filtrar productos..." />
       </div>
 
       <div class="table-wrapper">
@@ -130,101 +230,16 @@
               <th>Presentación</th>
               <th>Promedio Semanal</th>
             </tr>
-            <tr>
-              <th><input type="text" id="avgProductSearch" onkeyup="filterAvgProducts()"
-                  placeholder="Buscar Producto..." /></th>
-              <th></th>
-              <th></th>
-            </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
 
-      <div style="margin-top: 10px; text-align: right;">
-        <button onclick="saveUsageAverages()">Guardar Promedios</button>
+      <div style="margin-top: 25px; text-align: right;">
+        <button class="btn-primary" onclick="saveUsageAverages()">
+          <i class="fas fa-save"></i> Guardar Configuración
+        </button>
       </div>
-    </div>
-  </div>
-
-  <!-- Contenedor Pedido por Formulario -->
-  <div id="bulkOrderContainer" class="container" style="display: none;">
-    <div class="order-form">
-      <!-- Parte Izquierda -->
-      <div class="form-inputs">
-        <!-- Botón de Configuración (Solo Admin) -->
-        <div class="config-btn-wrapper">
-          <button type="button" id="btnConfigBulk" class="btn-secondary" style="display: none;"
-            onclick="openBulkConfigModal()">
-            <i class="fas fa-cog"></i> Configurar Proveedores
-          </button>
-        </div>
-
-        <!-- Proveedor eliminado: se cargan todos en la tabla -->
-
-        <div class="form-group">
-          <label for="bulkOrderDate">Fecha de Pedido</label>
-          <input type="date" id="bulkOrderDate" style="display: none;" />
-          <span id="bulkOrderDateText" style="display: none;"></span>
-        </div>
-
-        <div class="form-group">
-          <label for="bulkOrderId">ID Pedido</label>
-          <input type="text" id="bulkOrderId" placeholder="ID Pedido" readonly style="display: none;" />
-          <span id="bulkOrderIdText" style="display: none;"></span>
-        </div>
-
-        <!-- Sucursal oculta (solo para lógica interna si es admin) -->
-        <select id="bulkOrderSucursalSelect" class="form-input" style="display:none;"
-          onchange="loadAllProvidersAndProducts()">
-          <option value="" disabled selected>-- Selecciona una Sucursal --</option>
-        </select>
-        <span id="bulkOrderSucursalText" style="display:none;"></span>
-      </div>
-
-      <!-- Parte Derecha: Logo -->
-      <img src="../resources/images/logo.png" alt="Logo" />
-    </div>
-
-    <!-- Tabla de productos bulk -->
-    <div class="product-form-and-table">
-      <div class="table-wrapper">
-        <table id="bulkOrderTable">
-          <thead id="bulkOrderThead">
-            <!-- Headers inyectados dinamicamente desde JS -->
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="save-order-container">
-      <button class="save-order-button" onclick="saveBulkOrder()">
-        <i class="fas fa-check-double"></i> Guardar Pedido
-      </button>
-    </div>
-  </div>
-
-  <!-- Modal para selección de productos -->
-  <div id="productSelectionModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeProductSelectionModal()">&times;</span>
-      <h2>Seleccionar Productos</h2>
-      <table id="productSelectionTable">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Presentación</th>
-          </tr>
-          <tr>
-            <th>
-              <input type="text" id="productSearch" onkeyup="filterProducts()" placeholder="Buscar Producto..." />
-            </th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </div>
   </div>
 
@@ -232,51 +247,51 @@
   <div id="orderDetailsForImage" class="ticket" style="display: none; position: absolute; left: -9999px;">
     <div class="ticket-header">
       <img src="../resources/images/logo.png" alt="Logo" />
-      <h1>Pedido</h1>
-      <h2>ID Pedido: <span id="imgOrderId" class="order-id"></span></h2>
+      <h1>Comprobante de Pedido</h1>
+      <h2>ID: <span id="imgOrderId"></span></h2>
     </div>
     <div class="ticket-body">
       <p><strong>Proveedor:</strong> <span id="imgProviderName"></span></p>
       <p><strong>Sucursal:</strong> <span id="imgSucursalName"></span></p>
-      <p><strong>Entrega en:</strong> <span id="imgDestination"></span></p>
-      <p><strong>Fecha de Registro:</strong> <span id="imgSaveDate"></span></p>
-      <h3>Productos:</h3>
+      <p><strong>Destino:</strong> <span id="imgDestination"></span></p>
+      <p><strong>Fecha Registro:</strong> <span id="imgSaveDate"></span></p>
+      <h3>Lista de Productos</h3>
       <table class="products-table">
         <thead>
           <tr>
             <th>Producto</th>
-            <th>Presentación</th>
-            <th>Cantidad</th>
+            <th>Pres.</th>
+            <th>Cant.</th>
           </tr>
         </thead>
         <tbody id="imgProductsTableBody"></tbody>
       </table>
     </div>
     <div class="ticket-footer">
-      <p>Gracias por su pedido.</p>
+      <p>Generado automáticamente por el Sistema de Gestión</p>
     </div>
   </div>
+
   <!-- Modal Configuración Bulk -->
   <div id="bulkConfigModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
         <span class="close" onclick="document.getElementById('bulkConfigModal').style.display='none'">&times;</span>
-        <h2>Configurar Proveedores en Formulario</h2>
+        <h2><i class="fas fa-cogs"></i> Proveedores en Formulario</h2>
       </div>
-      <div class="modal-body">
-        <p>Seleccione los proveedores que desea mostrar en el formulario de pedido masivo:</p>
-        <div id="bulkConfigProviderList" style="max-height: 300px; overflow-y: auto; text-align: left;">
-          <!-- Checkboxes generated dynamically -->
+      <div class="modal-body" style="padding: 20px 0;">
+        <p style="margin-bottom: 15px; color: var(--text-muted);">Seleccione los proveedores a mostrar en el pedido masivo:</p>
+        <div id="bulkConfigProviderList" style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+          <!-- Dinámico -->
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn-secondary"
+      <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn-icon" style="background: #e2e8f0 !important; color: #475569 !important; border-radius: var(--radius-sm); min-width: auto; padding: 10px 20px !important;"
           onclick="document.getElementById('bulkConfigModal').style.display='none'">Cancelar</button>
-        <button class="btn-primary" onclick="saveBulkConfig()">Guardar Configuración</button>
+        <button class="btn-primary" onclick="saveBulkConfig()">Aplicar Cambios</button>
       </div>
     </div>
   </div>
-
 
 </body>
 

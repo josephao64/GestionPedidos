@@ -38,6 +38,8 @@ function hasUnsavedData() {
       if (input.value.trim() !== '') return true;
     }
   }
+
+
   return false;
 }
 
@@ -67,7 +69,7 @@ async function obtenerSucursalDelUsuario() {
     Swal.fire({
       icon: 'error',
       title: 'No Autenticado',
-      text: 'No has iniciado sesiÃ³n. Por favor, inicia sesiÃ³n para continuar.'
+      text: 'No has iniciado sesión. Por favor, inicia sesión para continuar.'
     }).then(() => {
       window.location.href = '../login.html';
     });
@@ -87,31 +89,52 @@ async function obtenerSucursalDelUsuario() {
       const sucursalDoc = await db.collection('sucursales').doc(userSucursalId).get();
       userSucursalName = sucursalDoc.exists ? sucursalDoc.data().name : 'Sucursal No Encontrada';
 
+      // Actualizar display de contexto
+      const contextDisplay = document.getElementById('userContextDisplay');
+      if (contextDisplay) {
+        contextDisplay.innerHTML = `<i class="fas fa-store"></i> ${userSucursalName} &nbsp; | &nbsp; <i class="fas fa-user-circle"></i> ${usuarioLogueado} (${userRole})`;
+      }
+
       if (userRole === 'administrador') {
-        document.getElementById('newOrderSucursalSelect').style.display = 'inline-block';
+        // Mostrar select de sucursal para admin
+        document.getElementById('sucursalGroup').style.display = 'block';
+        document.getElementById('newOrderSucursalSelect').style.display = 'block';
         document.getElementById('newOrderSucursalText').style.display = 'none';
-        document.getElementById('orderDate').style.display = 'inline-block';
+
+        // Mostrar inputs de fecha e ID para admin
+        document.getElementById('orderDate').style.display = 'block';
         document.getElementById('orderDateText').style.display = 'none';
-        document.getElementById('orderId').style.display = 'inline-block';
+        document.getElementById('orderId').style.display = 'block';
         document.getElementById('orderIdText').style.display = 'none';
-        document.getElementById('btnConfigAverages').style.display = ''; // Visible default
+        
+        document.getElementById('btnConfigAverages').style.display = 'flex'; // Visible default
+        
         cargarSucursalesSelectParaAdmin();
+        
         document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
       } else {
         document.getElementById('btnConfigAverages').style.display = 'none';
+        
+        // Ocultar select de sucursal para no-admin (usar texto)
+        document.getElementById('sucursalGroup').style.display = 'block'; // Mostrar el grupo
         document.getElementById('newOrderSucursalSelect').style.display = 'none';
-        document.getElementById('newOrderSucursalText').style.display = 'none';
+        document.getElementById('newOrderSucursalText').style.display = 'block';
+        document.getElementById('newOrderSucursalText').textContent = userSucursalName;
+
+        // Mostrar texto de fecha e ID para no-admin
         document.getElementById('orderDate').style.display = 'none';
-        document.getElementById('orderDateText').style.display = 'inline-block';
+        document.getElementById('orderDateText').style.display = 'block';
         document.getElementById('orderId').style.display = 'none';
-        document.getElementById('orderIdText').style.display = 'inline-block';
-        document.getElementById('orderDateText').textContent = new Date().toISOString().split('T')[0];
+        document.getElementById('orderIdText').style.display = 'block';
+        
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('orderDateText').textContent = today;
       }
     } else {
       Swal.fire({
         icon: 'error',
         title: 'Usuario No Encontrado',
-        text: 'No se encontrÃ³ informaciÃ³n del usuario.'
+        text: 'No se encontró información del usuario.'
       }).then(() => {
         window.location.href = '../login.html';
       });
@@ -120,7 +143,7 @@ async function obtenerSucursalDelUsuario() {
     Swal.fire({
       icon: 'error',
       title: 'Error',
-      text: 'Error al obtener la informaciÃ³n de la sucursal: ' + error.message
+      text: 'Error al obtener la información de la sucursal: ' + error.message
     });
   }
 }
@@ -1785,6 +1808,8 @@ async function saveBulkConfig() {
     btn.disabled = false;
   }
 }
+
+
 
 // ============================================
 // PREVENCIÓN DE PÉRDIDA DE DATOS
