@@ -1,0 +1,394 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+/* styles.css */
+
+/* Estilos Generales */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    margin: auto;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #00796b;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #00796b;
+}
+
+/* Mensaje de Selección de Sucursal */
+.select-sucursal-message {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background-color: #fff3e0;
+    border: 2px dashed #ff9800;
+    border-radius: 12px;
+    color: #ff9800;
+    font-size: 18px;
+}
+
+/* Botones por Sucursal */
+.sucursal-buttons {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.sucursal-btn {
+    background-color: #00796b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.sucursal-btn:hover {
+    background-color: #004d40;
+    transform: scale(1.05);
+}
+
+/* Estilos para la Sucursal Activa */
+.sucursal-btn.active {
+    background-color: #004d40;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Contenedor de Pedidos y Pagos */
+.split-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* Secciones */
+.section {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Controles de Filtrado, Búsqueda y Ordenamiento */
+.table-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.filters select, .filters input {
+    padding: 10px 15px;
+    border: 2px solid #b2dfdb;
+    border-radius: 25px;
+    outline: none;
+    transition: border 0.3s;
+    min-width: 150px;
+}
+
+.filters select:focus, .filters input:focus {
+    border-color: #00796b;
+}
+
+.actions-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.actions-buttons button {
+    background-color: #00796b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.actions-buttons button:hover:not(:disabled) {
+    background-color: #004d40;  
+    transform: scale(1.05);
+}
+
+.reset-filters-btn {
+    background-color: #d32f2f;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.reset-filters-btn:hover {
+    background-color: #9a0007;
+    transform: scale(1.05);
+}
+
+/* Resumen */
+.summary {
+    background-color: #f0f0f0;
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary p {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #004d40;
+}
+
+.summary strong {
+    color: #00796b;
+}
+
+/* Contenedor de Tabla para Mejor Control */
+.table-container {
+    overflow-x: auto;
+}
+
+/* Estilos para la Tabla */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid #00796b;
+    margin-top: 20px;
+    min-width: 600px; /* Asegura que la tabla no sea demasiado pequeña */
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #004d40;
+    color: white;
+    position: relative;
+    user-select: none;
+    font-size: 16px;
+}
+
+tr:nth-child(even) {
+    background-color: #e0f2f1;
+}
+
+tr:hover {
+    background-color: #b2dfdb;
+}
+
+tr.selected {
+    background-color: #80cbc4 !important;
+}
+
+/* Botones de Acción en la Tabla */
+.action-btn {
+    padding: 5px 10px;
+    margin-right: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    color: white;
+    font-size: 14px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.edit-btn {
+    background-color: #ffc107;
+}
+
+.edit-btn:hover {
+    background-color: #e0a800;
+    transform: scale(1.05);
+}
+
+.delete-btn {
+    background-color: #dc3545;
+}
+
+.delete-btn:hover {
+    background-color: #c82333;
+    transform: scale(1.05);
+}
+
+/* Botón Agregar Pedido y Registrar Pago */
+.add-task-btn {
+    background-color: #00796b;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.add-task-btn:hover {
+    background-color: #004d40;  
+    transform: scale(1.05);
+}
+
+/* Estilos del Modal */
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0,0,0,0.5); 
+    padding: 20px;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto; 
+    padding: 30px;
+    border: none;
+    width: 100%;
+    max-width: 600px; 
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.close {
+    color: #aaa;
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 30px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+}
+
+.modal form {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal form label {
+    margin: 15px 0 5px;
+    font-weight: bold;
+    color: #00796b;
+}
+
+.modal form input, 
+.modal form select,
+.modal form textarea {
+    padding: 10px 15px;
+    border: 2px solid #b2dfdb;
+    border-radius: 25px;
+    outline: none;
+    transition: border 0.3s;
+}
+
+.modal form input:focus, 
+.modal form select:focus,
+.modal form textarea:focus {
+    border-color: #00796b;
+}
+
+.modal form textarea {
+    resize: vertical;
+    height: 100px;
+}
+
+.modal form button {
+    margin-top: 25px;
+    padding: 12px;
+    background-color: #00796b;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.modal form button:hover {
+    background-color: #004d40;
+    transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .split-container {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 800px) {
+    .table-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .filters, .actions-buttons {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sucursal-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .sucursal-btn {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .modal-content {
+        width: 90%;
+    }
+}

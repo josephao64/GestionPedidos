@@ -1,0 +1,672 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* ==========================================================================
+   VARIABLES & GLOBAL STYLES
+   ========================================================================== */
+:root {
+  /* Premium Color Palette */
+  --primary: #0f766e;        /* Deep Teal */
+  --primary-hover: #115e59;
+  --primary-light: #ccfbf1;
+  
+  --secondary: #0ea5e9;      /* Ocean Blue */
+  --secondary-hover: #0284c7;
+  
+  --danger: #ef4444;         /* Red */
+  --danger-hover: #dc2626;
+  
+  --bg-color: #f8fafc;       /* Off-white modern background */
+  --surface: #ffffff;
+  
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  
+  --border-color: #e2e8f0;
+  
+  /* Status Colors */
+  --status-none-bg: #fee2e2;
+  --status-none-text: #991b1b;
+  
+  --status-prog-bg: #fef08a;
+  --status-prog-text: #854d0e;
+  
+  --status-rev-bg: #bae6fd;
+  --status-rev-text: #075985;
+  
+  --status-comp-bg: #bbf7d0;
+  --status-comp-text: #166534;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+  
+  /* Borders */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 9999px;
+  
+  /* Transitions */
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  line-height: 1.6;
+  padding-bottom: 40px;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   HEADER & NAVIGATION
+   ========================================================================== */
+.header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 16px 32px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 900;
+}
+
+.login-btn, .logout-btn {
+  padding: 10px 20px;
+  background-color: var(--primary);
+  border: none;
+  color: white;
+  border-radius: var(--radius-pill);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.3);
+}
+
+.login-btn:hover, .logout-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.4);
+}
+
+.logout-btn {
+  background-color: var(--danger);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.logout-btn:hover {
+  background-color: var(--danger-hover);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* ==========================================================================
+   LAYOUT CONTAINERS
+   ========================================================================== */
+.container {
+  width: 95%;
+  max-width: 1400px;
+  margin: 32px auto;
+  background-color: var(--surface);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.container h1 {
+  text-align: center;
+  margin-bottom: 32px;
+  color: var(--primary);
+  font-size: 2.5rem;
+}
+
+.container h2 {
+  margin-bottom: 24px;
+  font-size: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   USER STATS
+   ========================================================================== */
+#userStatsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  list-style: none;
+}
+
+#userStatsList li {
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  padding: 16px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 1.1rem;
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(15, 118, 110, 0.1);
+  transition: var(--transition);
+}
+
+#userStatsList li:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+#userStatsList li span {
+  font-size: 1.8rem;
+  font-weight: 700;
+  display: block;
+  margin-top: 8px;
+  color: var(--primary);
+}
+
+/* ==========================================================================
+   CONTROLS & FILTERS
+   ========================================================================== */
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 20px;
+  background: var(--bg-color);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+}
+
+.filters input, .filters select {
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  outline: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  color: var(--text-main);
+  background-color: var(--surface);
+  transition: var(--transition);
+  min-width: 160px;
+}
+
+.filters input:focus, .filters select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.actions-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+button {
+  font-family: 'Outfit', sans-serif;
+  transition: var(--transition);
+}
+
+.add-task-btn, .reset-filters-btn, .danger-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.add-task-btn {
+  background-color: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+}
+
+.add-task-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 118, 110, 0.35);
+}
+
+.reset-filters-btn {
+  background-color: var(--text-muted);
+  color: white;
+}
+
+.reset-filters-btn:hover {
+  background-color: var(--text-main);
+}
+
+.danger-btn {
+  background-color: var(--danger);
+  color: white;
+}
+
+.danger-btn:hover {
+  background-color: var(--danger-hover);
+}
+
+.actions-buttons button[disabled] {
+  background-color: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+#editarBtn, #eliminarBtn {
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  color: white;
+}
+
+#editarBtn { background-color: var(--secondary); }
+#editarBtn:hover:not(:disabled) { background-color: var(--secondary-hover); }
+
+#eliminarBtn { background-color: var(--danger); }
+#eliminarBtn:hover:not(:disabled) { background-color: var(--danger-hover); }
+
+/* ==========================================================================
+   STATUS FILTERS (CHIPS)
+   ========================================================================== */
+#filterEstadoCheckboxes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 100%;
+}
+
+#filterEstadoCheckboxes strong {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-right: 8px;
+}
+
+#filterEstadoCheckboxes label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+
+#filterEstadoCheckboxes label:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+#filterEstadoCheckboxes input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+#filterEstadoCheckboxes label:has(input:checked) {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+/* ==========================================================================
+   TABS
+   ========================================================================== */
+.tabs {
+  display: flex;
+  gap: 12px;
+  border-bottom: 2px solid var(--border-color);
+  margin-top: 32px;
+  margin-bottom: 24px;
+}
+
+.tab-button {
+  background: transparent;
+  border: none;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: var(--transition);
+}
+
+.tab-button:hover {
+  color: var(--primary);
+}
+
+.tab-button.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* ==========================================================================
+   TABLES
+   ========================================================================== */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+th, td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 15px;
+}
+
+th {
+  background-color: var(--primary);
+  color: white;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr {
+  background-color: var(--surface);
+  transition: var(--transition);
+}
+
+tr:hover {
+  background-color: #f1f5f9;
+}
+
+tr.selected {
+  background-color: var(--primary-light) !important;
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+
+/* STATUS COLORS IN TABLE */
+.estado-no-iniciado { background-color: var(--status-none-bg); color: var(--status-none-text); font-weight: 600; }
+.estado-en-progreso { background-color: var(--status-prog-bg); color: var(--status-prog-text); font-weight: 600; }
+.estado-revision    { background-color: var(--status-rev-bg); color: var(--status-rev-text); font-weight: 600; }
+.estado-completado  { background-color: var(--status-comp-bg); color: var(--status-comp-text); font-weight: 600; }
+
+td[class^="estado-"] {
+  border-radius: var(--radius-pill);
+  text-align: center;
+  padding: 8px 12px;
+  display: inline-block;
+  margin: 8px;
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   MODALS
+   ========================================================================== */
+.modal, .modal-login {
+  display: none; 
+  position: fixed; 
+  z-index: 1000; 
+  inset: 0;
+  width: 100%; 
+  height: 100%; 
+  overflow: auto; 
+  background-color: rgba(15, 23, 42, 0.6); 
+  backdrop-filter: blur(4px);
+  padding: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content, .modal-content-login {
+  background-color: var(--surface);
+  margin: 5vh auto; 
+  padding: 40px;
+  width: 100%;
+  max-width: 600px; 
+  border-radius: var(--radius-lg);
+  position: relative;
+  box-shadow: var(--shadow-glass);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-content-login {
+  max-width: 400px;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.close, .close-login {
+  color: var(--text-muted);
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition);
+  line-height: 1;
+}
+
+.close:hover, .close-login:hover {
+  color: var(--danger);
+  transform: scale(1.1);
+}
+
+.modal form {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal form label, .modal-content-login label {
+  margin: 20px 0 8px;
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.modal form input, 
+.modal form select,
+.modal form textarea,
+.modal-content-login input,
+.modal-content-login select {
+  padding: 14px 18px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  outline: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  background-color: var(--bg-color);
+  transition: var(--transition);
+  width: 100%;
+}
+
+.modal form input:focus, 
+.modal form select:focus,
+.modal form textarea:focus,
+.modal-content-login input:focus,
+.modal-content-login select:focus {
+  border-color: var(--primary);
+  background-color: var(--surface);
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
+}
+
+.modal form textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.modal form button, .modal-content-login button {
+  margin-top: 32px;
+  padding: 16px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+}
+
+.modal form button:hover, .modal-content-login button:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.35);
+}
+
+.tipo-container {
+  display: flex;
+  gap: 12px;
+}
+
+.tipo-container button {
+  margin-top: 0 !important;
+  padding: 0 20px !important;
+  border-radius: var(--radius-md) !important;
+  white-space: nowrap;
+}
+
+#responsableCheckboxes, #permisosCheckboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+#responsableCheckboxes label, #permisosCheckboxes label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+  background: var(--bg-color);
+}
+
+#responsableCheckboxes label:hover, #permisosCheckboxes label:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+#responsableCheckboxes input, #permisosCheckboxes input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
+@media (max-width: 900px) {
+  .table-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filters {
+    flex-direction: column;
+  }
+  
+  .actions-buttons {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  
+  .container {
+    width: 100%;
+    border-radius: 0;
+    padding: 20px;
+    margin: 0;
+  }
+  
+  #userStatsList {
+    flex-direction: column;
+  }
+  
+  .table-wrapper {
+    overflow-x: auto;
+  }
+  
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

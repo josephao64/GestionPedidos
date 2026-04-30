@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cierre de Mes - Reporte de Facturas y Pagos (Pricesmart)</title>
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    
+    <!-- jsPDF y jsPDF-AutoTable CDN (versión UMD) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1, h2, h3 {
+            color: #004d40;
+            text-align: center;
+        }
+
+        .report-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .report-controls label {
+            margin-right: 5px;
+            font-weight: bold;
+        }
+
+        .report-controls input,
+        .report-controls select {
+            padding: 5px;
+            font-size: 14px;
+        }
+
+        .report-controls button {
+            padding: 8px 12px;
+            font-size: 14px;
+            background-color: #00796b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .report-controls button:disabled {
+            background-color: #b2dfdb;
+            cursor: not-allowed;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Contenedor del reporte en pantalla */
+        .report-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .general-summary,
+        .sucursal-report {
+            margin-bottom: 30px;
+        }
+
+        /* Contenedor del Resumen General */
+        .general-summary {
+            background-color: #e0f7fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #00796b;
+        }
+
+        .general-summary h3 {
+            margin-bottom: 10px;
+            color: #004d40;
+        }
+
+        .general-summary p {
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #00695c;
+        }
+
+        .general-summary strong {
+            color: #004d40;
+        }
+
+        /* Contenedores para Facturas y Pagos */
+        .sucursal-report {
+            background-color: #fffde7;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #fbc02d;
+            page-break-before: always; /* Inicia en nueva página en PDF */
+        }
+
+        .sucursal-report h2 {
+            color: #2e7d32;
+        }
+
+        .sucursal-report h3 {
+            color: #388e3c;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            table-layout: fixed;
+            word-wrap: break-word;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        th {
+            background-color: #f57f17;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fff9c4;
+        }
+
+        tr:hover {
+            background-color: #fff59d;
+        }
+
+        .summary-report {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #004d40;
+        }
+
+        .summary-report.total-section {
+            font-weight: bold;
+            color: #f57f17;
+        }
+
+        @media print {
+            .export-buttons {
+                display: none;
+            }
+        }
+
+        @media (max-width: 800px) {
+            .report-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="cierreMesApp">
+        <h1>Cierre de Mes - Reporte de Facturas y Pagos (Pricesmart)</h1>
+
+        <div class="report-controls">
+            <div>
+                <label for="reportMes">Selecciona el Mes:</label>
+                <input type="month" id="reportMes">
+            </div>
+
+            <div>
+                <label for="reportSucursal">Selecciona la Sucursal:</label>
+                <select id="reportSucursal">
+                    <option value="">Todas las Sucursales</option>
+                    <option value="jalapa">Jalapa</option>
+                    <option value="poptun">Poptún</option>
+                    <option value="zacapa">Zacapa</option>
+                    <option value="santa elena">Santa Elena</option>
+                    <option value="pinula">Pinula</option>
+                    <option value="eskala">Eskala</option>
+                </select>
+            </div>
+
+            <button id="generarReporteBtn">Generar Reporte</button>
+            <div class="export-buttons">
+                <button id="exportarReporteCSVBtn" disabled>Exportar a CSV</button>
+                <button id="exportarReportePDFBtn" disabled>Exportar a PDF</button>
+            </div>
+        </div>
+
+        <div class="report-content" id="reportContent">
+            <!-- El reporte en pantalla se generará aquí, usando tablas HTML -->
+        </div>
+    </div>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- jsPDF y AutoTable ya incluidos en el head -->
+    <script>
+        // ---------------------------------------------------------------------------------------
+        // LECTURA DE DATOS DESDE LOCALSTORAGE
+        // ---------------------------------------------------------------------------------------
+        let facturas = JSON.parse(localStorage.getItem('facturas_pricesmart')) || [];
+        let pagos = JSON.parse(localStorage.getItem('pagos_pricesmart')) || [];
+
+        // Verificar que cada pago tenga campo 'mes' (por compatibilidad con versiones anteriores)
+        function limpiarPagos() {
+            let actualizados = false;
+            pagos = pagos.map(pago => {
+                if (!pago.mes) {
+                    if (pago.fechaPago) {
+                        const [year, month] = pago.fechaPago.split('-');
+                        pago.mes = `${year}-${month}`;
+                        actualizados = true;
+                    } else {
+                        pago.mes = 'Desconocido';
+                        actualizados = true;
+                    }
+                }
+                return pago;
+            });
+            if (actualizados) {
+                localStorage.setItem('pagos_pricesmart', JSON.stringify(pagos));
+            }
+        }
+        limpiarPagos();
+
+        // ---------------------------------------------------------------------------------------
+        // REFERENCIAS A ELEMENTOS DEL DOM
+        // ---------------------------------------------------------------------------------------
+        const reportMesInput           = document.getElementById('reportMes');
+        const reportSucursalSelect     = document.getElementById('reportSucursal');
+        const generarReporteBtn        = document.getElementById('generarReporteBtn');
+        const exportarReporteCSVBtn    = document.getElementById('exportarReporteCSVBtn');
+        const exportarReportePDFBtn    = document.getElementById('exportarReportePDFBtn');
+        const reportContent            = document.getElementById('reportContent');
+
+        // ---------------------------------------------------------------------------------------
+        // FUNCIONES DE APOYO
+        // ---------------------------------------------------------------------------------------
+        // Capitaliza la primera letra de una cadena
+        function capitalizeFirstLetter(string) {
+            if (!string) return '';
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        // Generar el HTML del reporte en pantalla
+        function generarReporte() {
+            const mesSeleccionado = reportMesInput.value;
+            const sucursalSeleccionada = reportSucursalSelect.value.toLowerCase();
+            reportContent.innerHTML = ''; // Limpia contenido anterior
+
+            if (!mesSeleccionado) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Por favor, selecciona un Mes para generar el reporte.',
+                });
+                return;
+            }
+
+            // Convertir a mes textual para el título
+            const [year, month] = mesSeleccionado.split('-');
+            const fechaTitulo = new Date(year, month - 1)
+                .toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+
+            // Filtrar Facturas por Mes y Sucursal usando substring
+            let facturasFiltradas = facturas.filter(f => {
+                const coincideMes = f.Fecha.substr(0,7) === mesSeleccionado;
+                const coincideSucursal = sucursalSeleccionada ? (f.Sucursal.toLowerCase() === sucursalSeleccionada) : true;
+                return coincideMes && coincideSucursal;
+            });
+
+            // Filtrar Pagos por Mes y Sucursal
+            let pagosFiltrados = pagos.filter(pg => {
+                const coincideMes = pg.mes === mesSeleccionado;
+                const coincideSucursal = sucursalSeleccionada ? (pg.Sucursal.toLowerCase() === sucursalSeleccionada) : true;
+                return coincideMes && coincideSucursal;
+            });
+
+            // Obtener lista de sucursales a reportar
+            let sucursalesReport = [];
+            if (sucursalSeleccionada) {
+                sucursalesReport = [sucursalSeleccionada];
+            } else {
+                const sucursalesFact = facturasFiltradas.map(f => f.Sucursal.toLowerCase());
+                const sucursalesPagos = pagosFiltrados.map(pg => pg.Sucursal.toLowerCase());
+                const todasSucursales = [...new Set([...sucursalesFact, ...sucursalesPagos])];
+                sucursalesReport = todasSucursales;
+            }
+
+            // Cálculos generales
+            const totalFacturas   = facturasFiltradas.reduce((sum, f) => sum + f.Total, 0);
+            const totalPagado     = pagosFiltrados.reduce((sum, pg) => sum + pg.precioTotalPagado, 0);
+            const totalPendiente  = totalFacturas - totalPagado > 0 ? totalFacturas - totalPagado : 0;
+            const saldo           = totalPagado - totalFacturas > 0 ? totalPagado - totalFacturas : 0;
+
+            // Construir el HTML del Resumen General
+            let reporteHTML = `
+                <h2>Reporte de Facturas y Pagos - ${fechaTitulo}</h2>
+                <div class="general-summary">
+                    <h3>Resumen General</h3>
+                    <p><strong>Total Facturas:</strong> Q${totalFacturas.toFixed(2)}</p>
+                    <p><strong>Total Pagado:</strong> Q${totalPagado.toFixed(2)}</p>
+                    <p><strong>Total Pendiente:</strong> Q${totalPendiente.toFixed(2)}</p>
+                    <p><strong>Saldo:</strong> ${saldo > 0 ? `Q${saldo.toFixed(2)}` : 'Q0.00'}</p>
+                </div>
+            `;
+
+            // Construir Reporte por cada Sucursal
+            sucursalesReport.forEach(suc => {
+                const facturasSucursal = facturasFiltradas.filter(f => f.Sucursal.toLowerCase() === suc);
+                const pagosSucursal    = pagosFiltrados.filter(pg => pg.Sucursal.toLowerCase() === suc);
+
+                const totalFacturasSuc = facturasSucursal.reduce((sum, f) => sum + f.Total, 0);
+                const totalPagosSuc    = pagosSucursal.reduce((sum, pg) => sum + pg.precioTotalPagado, 0);
+                const pendienteSuc     = totalFacturasSuc - totalPagosSuc > 0
+                                         ? totalFacturasSuc - totalPagosSuc
+                                         : 0;
+                const saldoSuc         = totalPagosSuc - totalFacturasSuc > 0
+                                         ? totalPagosSuc - totalFacturasSuc
+                                         : 0;
+
+                reporteHTML += `
+                    <div class="sucursal-report">
+                        <h2>Reporte - ${capitalizeFirstLetter(suc)}</h2>
+                        
+                        <h3>Facturas</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Fecha</th>
+                                    <th>Proveedor</th>
+                                    <th>Número de Factura</th>
+                                    <th>Total (Q)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${
+                                    facturasSucursal.length > 0
+                                    ? facturasSucursal.map(f => `
+                                        <tr>
+                                            <td>${f.id}</td>
+                                            <td>${f.Fecha}</td>
+                                            <td>${f.Proveedor}</td>
+                                            <td>${f.NoFactura}</td>
+                                            <td>Q${f.Total.toFixed(2)}</td>
+                                        </tr>
+                                      `).join('')
+                                    : `
+                                        <tr>
+                                            <td colspan="5" style="text-align:center;">
+                                                No hay facturas para esta sucursal en el mes seleccionado.
+                                            </td>
+                                        </tr>
+                                      `
+                                }
+                            </tbody>
+                        </table>
+
+                        <h3>Pagos</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Fecha Pago</th>
+                                    <th>Número de Boleta</th>
+                                    <th>Total Boleta (Q)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${
+                                    pagosSucursal.length > 0
+                                    ? pagosSucursal.map(pg => `
+                                        <tr>
+                                            <td>${pg.id}</td>
+                                            <td>${pg.fechaPago}</td>
+                                            <td>${pg.boletaPago}</td>
+                                            <td>Q${pg.precioTotalPagado.toFixed(2)}</td>
+                                        </tr>
+                                      `).join('')
+                                    : `
+                                        <tr>
+                                            <td colspan="4" style="text-align:center;">
+                                                No hay pagos para esta sucursal en el mes seleccionado.
+                                            </td>
+                                        </tr>
+                                      `
+                                }
+                            </tbody>
+                        </table>
+
+                        <h3>Resumen</h3>
+                        <p class="summary-report"><strong>Total Facturas:</strong> Q${totalFacturasSuc.toFixed(2)}</p>
+                        <p class="summary-report"><strong>Total Pagado:</strong> Q${totalPagosSuc.toFixed(2)}</p>
+                        <p class="summary-report"><strong>Total Pendiente:</strong> Q${pendienteSuc.toFixed(2)}</p>
+                        <p class="summary-report"><strong>Saldo:</strong> ${saldoSuc > 0 ? `Q${saldoSuc.toFixed(2)}` : 'Q0.00'}</p>
+                    </div>
+                `;
+            });
+
+            // Mostrar en Pantalla
+            reportContent.innerHTML = reporteHTML;
+
+            // Habilitar o deshabilitar botones de exportación según haya o no datos
+            if (facturasFiltradas.length > 0 || pagosFiltrados.length > 0) {
+                exportarReporteCSVBtn.disabled = false;
+                exportarReportePDFBtn.disabled = false;
+            } else {
+                exportarReporteCSVBtn.disabled = true;
+                exportarReportePDFBtn.disabled = true;
+            }
+        }
+
+        // Exportar a CSV (Placeholder - Implementar según necesidad)
+        function exportarCSV() {
+            Swal.fire({
+                icon: 'info',
+                title: 'En desarrollo',
+                text: 'Aquí puedes implementar la lógica de exportación a CSV (si lo requieres).',
+            });
+        }
+
+        // Exportar a PDF usando jsPDF + AutoTable (Texto real, NO imágenes)
+        function exportarPDF() {
+            const mesSeleccionado = reportMesInput.value;
+            const sucursalSeleccionada = reportSucursalSelect.value.toLowerCase();
+
+            if (!mesSeleccionado) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Por favor, selecciona un Mes para exportar el reporte.',
+                });
+                return;
+            }
+
+            // Filtrar Facturas por Mes y Sucursal usando substring
+            let facturasFiltradas = facturas.filter(f => {
+                const coincideMes = f.Fecha.substr(0,7) === mesSeleccionado;
+                const coincideSucursal = sucursalSeleccionada ? (f.Sucursal.toLowerCase() === sucursalSeleccionada) : true;
+                return coincideMes && coincideSucursal;
+            });
+
+            // Filtrar Pagos por Mes y Sucursal
+            let pagosFiltrados = pagos.filter(pg => {
+                const coincideMes = pg.mes === mesSeleccionado;
+                const coincideSucursal = sucursalSeleccionada ? (pg.Sucursal.toLowerCase() === sucursalSeleccionada) : true;
+                return coincideMes && coincideSucursal;
+            });
+
+            // Obtener lista de sucursales a reportar
+            let sucursalesReport = [];
+            if (sucursalSeleccionada) {
+                sucursalesReport = [sucursalSeleccionada];
+            } else {
+                const sucursalesFact = facturasFiltradas.map(f => f.Sucursal.toLowerCase());
+                const sucursalesPagos = pagosFiltrados.map(pg => pg.Sucursal.toLowerCase());
+                const todasSucursales = [...new Set([...sucursalesFact, ...sucursalesPagos])];
+                sucursalesReport = todasSucursales;
+            }
+
+            // Calcular Totales Generales
+            const totalFacturas   = facturasFiltradas.reduce((sum, f) => sum + f.Total, 0);
+            const totalPagado     = pagosFiltrados.reduce((sum, pg) => sum + pg.precioTotalPagado, 0);
+            const totalPendiente  = totalFacturas - totalPagado > 0 ? totalFacturas - totalPagado : 0;
+            const saldo           = totalPagado - totalFacturas > 0 ? totalPagado - totalFacturas : 0;
+
+            // Crear un nuevo PDF
+            const { jsPDF } = window.jspdf; // Tomado del script UMD
+            const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+
+            // Título principal
+            const [year, month] = mesSeleccionado.split('-');
+            const fechaTitulo = new Date(year, month - 1).toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+            doc.setFontSize(16);
+            doc.text(`Reporte de Facturas y Pagos - ${fechaTitulo}`, 40, 40);
+
+            // Resumen General
+            doc.setFontSize(12);
+            doc.text('Resumen General:', 40, 60);
+
+            // Resumen General con AutoTable
+            doc.autoTable({
+                startY: 65,
+                margin: { left: 40, right: 40 },
+                theme: 'grid',
+                head: [['Concepto', 'Monto (Q)']],
+                body: [
+                    ['Total Facturas',  totalFacturas.toFixed(2)],
+                    ['Total Pagado',    totalPagado.toFixed(2)],
+                    ['Total Pendiente', totalPendiente.toFixed(2)],
+                    ['Saldo',           saldo > 0 ? saldo.toFixed(2) : '0.00'],
+                ],
+                styles: { halign: 'left' },
+            });
+
+            // Iniciar en nueva página para el primer reporte de sucursal
+            sucursalesReport.forEach((suc, index) => {
+                // Añadir una nueva página para cada sucursal
+                doc.addPage();
+
+                const facturasSucursal = facturasFiltradas.filter(f => f.Sucursal.toLowerCase() === suc);
+                const pagosSucursal    = pagosFiltrados.filter(pg => pg.Sucursal.toLowerCase() === suc);
+
+                const totalFacturasSuc = facturasSucursal.reduce((sum, f) => sum + f.Total, 0);
+                const totalPagosSuc    = pagosSucursal.reduce((sum, pg) => sum + pg.precioTotalPagado, 0);
+                const pendienteSuc     = totalFacturasSuc - totalPagosSuc > 0
+                                         ? totalFacturasSuc - totalPagosSuc
+                                         : 0;
+                const saldoSuc         = totalPagosSuc - totalFacturasSuc > 0
+                                         ? totalPagosSuc - totalFacturasSuc
+                                         : 0;
+
+                // Título de la Sucursal
+                doc.setFontSize(14);
+                doc.text(`Reporte - ${capitalizeFirstLetter(suc)}`, 40, 50);
+
+                // Facturas de la Sucursal
+                doc.setFontSize(12);
+                doc.text('Facturas:', 40, 70);
+
+                const facturasBody = facturasSucursal.map(f => [
+                    f.id,
+                    f.Fecha,
+                    f.Proveedor,
+                    f.NoFactura,
+                    f.Total.toFixed(2)
+                ]);
+
+                doc.autoTable({
+                    startY: 75,
+                    margin: { left: 40, right: 40 },
+                    head: [['ID', 'Fecha', 'Proveedor', 'Número de Factura', 'Total (Q)']],
+                    body: facturasBody,
+                    styles: { fontSize: 10 },
+                    headStyles: { fillColor: [245, 127, 23] },
+                });
+
+                // Pagos de la Sucursal
+                doc.setFontSize(12);
+                doc.text('Pagos:', 40, doc.lastAutoTable.finalY + 20);
+
+                const pagosBody = pagosSucursal.map(pg => [
+                    pg.id,
+                    pg.fechaPago,
+                    pg.boletaPago,
+                    pg.precioTotalPagado.toFixed(2)
+                ]);
+
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 25,
+                    margin: { left: 40, right: 40 },
+                    head: [['ID', 'Fecha Pago', 'Número de Boleta', 'Total Boleta (Q)']],
+                    body: pagosBody,
+                    styles: { fontSize: 10 },
+                    headStyles: { fillColor: [245, 127, 23] },
+                });
+
+                // Resumen de la Sucursal
+                doc.setFontSize(12);
+                doc.text('Resumen:', 40, doc.lastAutoTable.finalY + 20);
+
+                const resumenBody = [
+                    ['Total Facturas', totalFacturasSuc.toFixed(2)],
+                    ['Total Pagado',   totalPagosSuc.toFixed(2)],
+                    ['Total Pendiente', pendienteSuc.toFixed(2)],
+                    ['Saldo',          saldoSuc > 0 ? saldoSuc.toFixed(2) : '0.00'],
+                ];
+
+                doc.autoTable({
+                    startY: doc.lastAutoTable.finalY + 25,
+                    margin: { left: 40, right: 40 },
+                    head: [['Concepto', 'Monto (Q)']],
+                    body: resumenBody,
+                    styles: { halign: 'left', fontSize: 10 },
+                    headStyles: { fillColor: [245, 127, 23] },
+                });
+            });
+
+            // Guardar PDF
+            const filename = `Reporte_Facturas_Pagos_Pricesmart_${mesSeleccionado}.pdf`;
+            doc.save(filename);
+        }
+
+        // ---------------------------------------------------------------------------------------
+        // EVENTOS DE BOTONES
+        // ---------------------------------------------------------------------------------------
+        generarReporteBtn.addEventListener('click', generarReporte);
+        exportarReporteCSVBtn.addEventListener('click', exportarCSV);
+        exportarReportePDFBtn.addEventListener('click', exportarPDF);
+    </script>
+</body>
+</html>

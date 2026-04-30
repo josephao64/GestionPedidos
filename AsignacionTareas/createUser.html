@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Crear Usuario - Asignación de Tareas</title>
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- Enlace al archivo CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Crear Nuevo Usuario</h1>
+        <form id="createUserForm">
+            <label for="username">Nombre de Usuario:</label>
+            <input type="text" id="username" required placeholder="Ingrese nombre de usuario">
+    
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" placeholder="Contraseña (por defecto: 1)">
+    
+            <label for="role">Rol:</label>
+            <select id="role" required>
+                <option value="">Selecciona un rol</option>
+                <option value="admin">Administrador</option>
+                <option value="usuario">Usuario</option>
+            </select>
+    
+            <label>Permisos:</label>
+            <div id="permisosCheckboxes">
+                <label><input type="checkbox" name="permisos" value="No Iniciado"> No Iniciado</label>
+                <label><input type="checkbox" name="permisos" value="En Proceso"> En Proceso</label>
+                <label><input type="checkbox" name="permisos" value="Revisión"> Revisión</label>
+                <label><input type="checkbox" name="permisos" value="Completado"> Completado</label>
+            </div>
+    
+            <button type="submit">Crear Usuario</button>
+        </form>
+    </div>
+    
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Importa Firebase y sus módulos
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+    
+        // Tu configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCc_XNSGWjrl8eOmOvbSpxvsmgoLunI_pk",
+            authDomain: "tareasdb-193f4.firebaseapp.com",
+            projectId: "tareasdb-193f4",
+            storageBucket: "tareasdb-193f4.appspot.com",
+            messagingSenderId: "654977996103",
+            appId: "1:654977996103:web:9c246d4d16c1d3c943e862"
+        };
+    
+        // Inicializa Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+    
+        // Exporta db para usarlo en otros scripts
+        export { db };
+    </script>
+    
+    <!-- Enlace al archivo JS -->
+    <script type="module" src="createUser.js"></script>
+</body>
+</html>

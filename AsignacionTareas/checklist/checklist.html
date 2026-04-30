@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Checklists</title>
+    <!-- Enlace a tu archivo CSS -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- Opcional: Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <h1>Gestión de Checklists</h1>
+
+    <!-- Botón para abrir el modal de crear checklist -->
+    <button id="openChecklistModal">Crear Nuevo Checklist</button>
+
+    <!-- **ELIMINAR** la tabla de checklists existente
+    <table id="checklistTable">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Fecha</th>
+                <th>Responsables</th>
+                <th>Progreso</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Filas de checklists serán insertadas dinámicamente aquí -->
+        </tbody>
+    </table>
+    -->
+
+    <!-- **AGREGAR** el nuevo contenedor para columnas de responsables -->
+    <div id="checklistsContainer" class="checklists-container">
+        <!-- Columnas de responsables serán insertadas dinámicamente aquí -->
+    </div>
+
+    <!-- Modal para Crear/Editar Checklist -->
+    <div id="checklistModal" class="modal">
+        <div class="modal-content">
+            <span id="closeChecklistModal" class="close">&times;</span>
+            <h2 id="modalTitle">Crear Nuevo Checklist</h2>
+            <form id="checklistForm" class="modal-form">
+                <label for="checklistTitulo">Título:</label>
+                <input type="text" id="checklistTitulo" name="checklistTitulo" required>
+
+                <label for="checklistFecha">Fecha:</label>
+                <input type="date" id="checklistFecha" name="checklistFecha" required>
+
+                <label for="checklistResponsables">Responsables:</label>
+                <select id="checklistResponsables" name="checklistResponsables" multiple required>
+                    <!-- Opciones de responsables serán cargadas dinámicamente -->
+                </select>
+
+                <!-- Botón y Contenedor para Agregar Tareas Manuales -->
+                <button type="button" id="addManualTaskBtn" class="add-manual-task-btn">Agregar Tarea Manual</button>
+                <div id="manualTasksContainer" class="manual-tasks-container" style="margin-top: 10px;">
+                    <!-- Campos para tareas manuales serán agregados aquí -->
+                </div>
+
+                <label for="checklistTareas">Tareas Disponibles:</label>
+                <div id="checklistTareas">
+                    <p class="info-message">Selecciona uno o más responsables primero</p>
+                </div>
+
+                <button type="submit">Guardar Checklist</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Ver Checklist -->
+    <div id="viewChecklistModal" class="modal">
+        <div class="modal-content">
+            <span id="closeViewChecklistModal" class="close">&times;</span>
+            <h2 id="viewChecklistTitulo">Título del Checklist</h2>
+            <p id="viewChecklistFecha">Fecha: </p>
+            <p id="viewChecklistResponsables">Responsables: </p>
+            <div class="progress-container">
+                <div id="viewProgressBar" class="progress-bar"></div>
+            </div>
+            <p id="viewProgressText">0% Completado</p>
+            <ul id="viewChecklistTareas">
+                <!-- Lista de tareas será insertada dinámicamente aquí -->
+            </ul>
+            <!-- Botón para agregar tareas manuales en la vista del checklist -->
+            <button type="button" id="addManualTaskViewBtn" class="add-manual-task-btn">Agregar Tarea Manual</button>
+            <div id="manualTasksViewContainer" class="manual-tasks-container" style="margin-top: 10px;">
+                <!-- Campos para tareas manuales serán agregados aquí -->
+            </div>
+            <!-- Botón para guardar las nuevas tareas manuales añadidas desde la vista -->
+            <button type="button" id="saveManualTasksViewBtn" class="add-manual-task-btn" style="background-color: #28a745; margin-top: 10px;">Guardar Tareas Manuales</button>
+        </div>
+    </div>
+
+    <!-- Enlace a Firebase SDK (Asegúrate de que firebase-config.js está correctamente configurado) -->
+    <script type="module" src="checklist.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
+</body>
+</html>

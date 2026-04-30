@@ -1,0 +1,429 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* ==========================================================================
+   VARIABLES & GLOBAL STYLES (PREMIUM THEME)
+   ========================================================================== */
+:root {
+  --cal-gap: 12px;
+  --day-min-w: 180px;
+  --day-row-h: 140px;
+  --day-row-h-lg: 160px;
+
+  /* Premium Color Palette */
+  --primary: #0f766e;        /* Deep Teal */
+  --primary-hover: #115e59;
+  --primary-light: #ccfbf1;
+  
+  --secondary: #0ea5e9;      /* Ocean Blue */
+  --secondary-hover: #0284c7;
+  
+  --danger: #ef4444;         /* Red */
+  
+  --bg-color: #f8fafc;       /* Off-white modern background */
+  --surface: #ffffff;
+  
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  
+  --border-color: #e2e8f0;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-glass: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 9999px;
+}
+
+/* Global Typography & Background */
+body {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif !important;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif !important;
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: -0.02em;
+}
+
+.container-fluid {
+  padding-left: clamp(16px, 3vw, 40px);
+  padding-right: clamp(16px, 3vw, 40px);
+  padding-top: 24px;
+}
+
+/* ==========================================================================
+   BOOTSTRAP OVERRIDES
+   ========================================================================== */
+.btn-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  border-radius: var(--radius-pill);
+  padding: 8px 20px;
+  font-weight: 500;
+  box-shadow: 0 4px 10px rgba(15, 118, 110, 0.25);
+  transition: all 0.3s ease;
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.35);
+}
+
+.btn-success {
+  border-radius: var(--radius-pill);
+  padding: 8px 20px;
+  font-weight: 500;
+  box-shadow: 0 4px 10px rgba(25, 135, 84, 0.25);
+  transition: all 0.3s ease;
+}
+.btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(25, 135, 84, 0.35);
+}
+
+.btn-outline-primary {
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+}
+.btn-outline-primary:hover {
+  background-color: var(--primary) !important;
+  color: white !important;
+}
+
+.nav-tabs {
+  border-bottom: 2px solid var(--border-color);
+  margin-top: 20px;
+  gap: 8px;
+}
+.nav-tabs .nav-link {
+  border: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 12px 24px;
+  background: transparent;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s;
+}
+.nav-tabs .nav-link:hover {
+  color: var(--primary);
+  border-color: transparent;
+}
+.nav-tabs .nav-link.active {
+  color: var(--primary);
+  background: transparent;
+  border-bottom-color: var(--primary);
+}
+
+.form-control, .form-select {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  padding: 10px 16px;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text-main);
+  box-shadow: none;
+  transition: all 0.3s;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
+}
+
+/* Modals */
+.modal-content {
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+}
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.modal-footer {
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* ==========================================================================
+   CALENDAR TOOLBAR
+   ========================================================================== */
+.calendar-toolbar {
+  background: var(--surface);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+.calendar-title {
+  min-width: 180px;
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+.calendar-toolbar .btn-group > .btn {
+  min-width: 80px;
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+.calendar-toolbar .btn-group > .btn:hover {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* ==========================================================================
+   CALENDAR GRID (MONTH VIEW)
+   ========================================================================== */
+.calendar-container { width: 100%; }
+
+/* Header Days */
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(var(--day-min-w), 1fr));
+  gap: var(--cal-gap);
+  padding: 0 2px;
+  margin-bottom: 8px;
+  user-select: none;
+  font-weight: 600;
+  color: white;
+}
+.weekday-header > div {
+  text-align: center;
+  background: var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 8px 0;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+/* Grid */
+#calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(var(--day-min-w), 1fr));
+  gap: var(--cal-gap);
+  width: 100%;
+  grid-auto-rows: var(--day-row-h);
+}
+
+/* Individual Day Cell */
+.day {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+.day:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--primary-light);
+}
+.day.empty {
+  background: var(--bg-color);
+  border-style: dashed;
+  box-shadow: none;
+}
+.day .date {
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+.day.today {
+  outline: 2px solid var(--secondary);
+  outline-offset: -2px;
+  background: #f0f9ff; /* extremely light blue */
+}
+.day.has-task {
+  border-top: 4px solid var(--primary);
+}
+
+/* Tasks inside cell */
+.day .tasks {
+  overflow: hidden;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.task-title {
+  display: block;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+.task-title:hover {
+  filter: brightness(0.95);
+  transform: translateX(2px);
+}
+.task-title.completed {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* Chips/Badges */
+.cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-color);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.more-tasks {
+  display: inline-block;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--text-muted);
+  background: var(--bg-color);
+  color: var(--text-muted);
+  cursor: default;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   YEAR VIEW
+   ========================================================================== */
+.year-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+.small-calendar {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.small-calendar .month-name {
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--primary);
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+.small-calendar .days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.small-calendar .day {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  height: 28px;
+  font-size: 0.8rem;
+  padding: 2px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+.small-calendar .day.empty {
+  background: transparent;
+  border: none;
+}
+
+/* ==========================================================================
+   COLOR PALETTE
+   ========================================================================== */
+#color-palette, #category-color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.color-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.color-option input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  box-shadow: inset 0 0 0 2px #fff;
+  display: inline-block;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+.color-option input:checked + .color-swatch {
+  outline: 3px solid var(--primary);
+  border-color: transparent;
+  transform: scale(1.1);
+}
+.color-option input:focus-visible + .color-swatch {
+  outline: 3px solid var(--secondary);
+}
+
+/* ==========================================================================
+   RESPONSIVE OVERRIDES
+   ========================================================================== */
+@media (min-width: 1400px) {
+  :root { --day-row-h: var(--day-row-h-lg); }
+}
+@media (max-width: 992px) {
+  :root { --day-min-w: 140px; --day-row-h: 120px; }
+}
+@media (max-width: 576px) {
+  :root { --day-min-w: 110px; --day-row-h: 100px; }
+  .weekday-header > div { font-size: 0.75rem; padding: 4px 0; }
+  .day .date { font-size: 0.9rem; }
+  .task-title { font-size: 0.75rem; padding: 4px; }
+}

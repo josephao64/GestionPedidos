@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Servicios</title>
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- Enlace al archivo CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Cabecera con Botones de Navegación -->
+    <div class="header">
+        <!-- Botón de Tareas -->
+        <button id="tareasBtn" class="nav-btn" onclick="location.href='../index.html'">Tareas</button>
+        <!-- Botón de Servicios -->
+        <button id="serviciosBtn" class="nav-btn" onclick="location.href='servicios.html'">Servicios</button>
+    </div>
+
+    <div class="container">
+        <h1>Gestión de Servicios</h1>
+        
+        <div class="table-controls">
+            <div class="filters">
+                <!-- Selector de Año -->
+                <label for="yearSelector">Año:</label>
+                <input type="number" id="yearSelector" min="2000" max="2100" step="1">
+
+                <input type="text" id="searchInput" placeholder="Buscar servicios...">
+                
+                <select id="filterSucursal">
+                    <option value="">Todas las Sucursales</option>
+                    <option value="Jalapa">Jalapa</option>
+                    <option value="Pinula">Pinula</option>
+                    <option value="Zacapa">Zacapa</option>
+                    <option value="Eskala">Eskala</option>
+                    <option value="Poptun">Poptun</option>
+                    <option value="Santa Elena">Santa Elena</option>
+                </select>
+
+                <div class="servicio-container">
+                    <select id="filterServicio">
+                        <option value="">Todos los Servicios</option>
+                        <!-- Las opciones se cargarán dinámicamente desde Firestore -->
+                    </select>
+                    <button id="gestionarTiposServicioBtn" class="manage-types-btn">Gestionar Tipos de Servicio</button>
+                </div>
+
+                <select id="filterEstadoPago">
+                    <option value="">Todos los Estados de Pago</option>
+                    <option value="Pagado">Pagado</option>
+                    <option value="Pendiente">Pendiente</option>
+                </select>
+
+                <input type="date" id="filterFechaDesde" placeholder="Fecha Desde">
+                <input type="date" id="filterFechaHasta" placeholder="Fecha Hasta">
+
+                <!-- Ordenamiento por fecha de pago y fecha de creación -->
+                <select id="sortOrder">
+                    <option value="fechaPagoAsc">Pago Más Reciente</option>
+                    <option value="fechaPagoDesc">Pago Más Antiguo</option>
+                    <option value="fechaCreacionDesc">Registro Más Reciente</option>
+                    <option value="fechaCreacionAsc">Registro Más Antiguo</option>
+                </select>
+                
+                <button id="resetFilters" class="resetFiltersBtn">Resetear Filtros</button>
+            </div>
+            <div class="actions-buttons">
+                <button id="editarBtn" disabled>Editar</button>
+                <button id="eliminarBtn" disabled>Eliminar</button>
+                <button class="add-task-btn" onclick="abrirModal()">Agregar Servicio</button>
+                <!-- Nuevo Botón de Reportes -->
+                <button class="report-btn" onclick="location.href='reporte/reportesServices.html'">Reportes</button>
+            </div>
+        </div>
+
+        <table id="servicioTable">
+            <thead>
+                <tr>
+                    <th>Sucursal</th>
+                    <th>Servicio</th>
+                    <th>Proveedor del Servicio</th>
+                    <th>Ubicación</th>
+                    <th>Tipo de Pago</th>
+                    <th>Estado de Pago</th>
+                    <th>Lapso de Pago</th>
+                    <!-- Columnas para cada mes con ancho reducido -->
+                    <th class="month-column">E</th>
+                    <th class="month-column">F</th>
+                    <th class="month-column">M</th>
+                    <th class="month-column">A</th>
+                    <th class="month-column">M</th>
+                    <th class="month-column">J</th>
+                    <th class="month-column">J</th>
+                    <th class="month-column">A</th>
+                    <th class="month-column">S</th>
+                    <th class="month-column">O</th>
+                    <th class="month-column">N</th>
+                    <th class="month-column">D</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Ejemplo de una fila estática con checkboxes coloreados -->
+                <!-- En producción, estas filas se generarán dinámicamente con JavaScript -->
+                <tr>
+                    <td>Jalapa</td>
+                    <td>Limpieza</td>
+                    <td>Proveedor A</td>
+                    <td>Oficina Central</td>
+                    <td>Fijo</td>
+                    <td>Pagado</td>
+                    <td>Del día 5 al 15</td>
+                    <!-- Checkboxes para cada mes -->
+                    <td><input type="checkbox" class="status-paid" disabled checked></td>
+                    <td><input type="checkbox" class="status-pending" disabled></td>
+                    <td><input type="checkbox" class="status-paid" disabled checked></td>
+                    <td><input type="checkbox" class="status-none" disabled></td>
+                    <td><input type="checkbox" class="status-paid" disabled checked></td>
+                    <td><input type="checkbox" class="status-pending" disabled></td>
+                    <td><input type="checkbox" class="status-paid" disabled checked></td>
+                    <td><input type="checkbox" class="status-none" disabled></td>
+                    <td><input type="checkbox" class="status-paid" disabled checked></td>
+                    <td><input type="checkbox" class="status-pending" disabled></td>
+                    <td><input type="checkbox" class="status-paid" disabled checked></td>
+                    <td><input type="checkbox" class="status-none" disabled></td>
+                    <td>
+                        <button class="ver-recibos-btn" onclick="abrirVerRecibosModal('servicioId1')">Ver Recibos</button>
+                        <button class="registrar-recibo-btn" onclick="abrirRegistrarReciboModal('servicioId1')">Registrar Recibo</button>
+                    </td>
+                </tr>
+                <!-- Agrega más filas según sea necesario -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal para Agregar/Editar Servicio -->
+    <div id="servicioModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h2 id="modalTitle">Agregar Servicio</h2>
+            <form id="servicioForm">
+                <!-- Información del Servicio -->
+                <fieldset>
+                    <legend>Información del Servicio</legend>
+
+                    <label for="sucursal">Sucursal:</label>
+                    <select id="sucursal" required>
+                        <option value="">Selecciona una sucursal</option>
+                        <option value="Jalapa">Jalapa</option>
+                        <option value="Pinula">Pinula</option>
+                        <option value="Zacapa">Zacapa</option>
+                        <option value="Eskala">Eskala</option>
+                        <option value="Poptun">Poptun</option>
+                        <option value="Santa Elena">Santa Elena</option>
+                    </select>
+
+                    <label for="servicio">Servicio:</label>
+                    <div class="servicio-container">
+                        <select id="servicio" required>
+                            <option value="">Selecciona un servicio</option>
+                            <!-- Las opciones se cargarán dinámicamente desde Firestore -->
+                        </select>
+                        <button type="button" id="agregarTipoServicioBtn" class="add-type-btn">Agregar Tipo</button>
+                    </div>
+
+                    <label for="ubicacion">Ubicación:</label>
+                    <input type="text" id="ubicacion" required placeholder="Ubicación del Servicio">
+
+                    <label for="tipoPago">Tipo de Pago:</label>
+                    <select id="tipoPago" required>
+                        <option value="">Selecciona el tipo de pago</option>
+                        <option value="Fijo">Fijo</option>
+                        <option value="Variable">Variable</option>
+                    </select>
+
+                    <!-- Campos que se mostrarán solo si el Tipo de Pago es "Fijo" -->
+                    <div id="tipoPagoFijoFields" style="display: none;">
+                        <label for="fechaPagoFijo">Fecha de Pago:</label>
+                        <input type="date" id="fechaPagoFijo">
+
+                        <label for="montoAPagar">Monto a Pagar:</label>
+                        <input type="number" id="montoAPagar" min="0" step="0.01">
+                    </div>
+                </fieldset>
+
+                <!-- Nuevo Fieldset para Lapso de Pago General -->
+                <fieldset>
+                    <legend>Lapso de Pago</legend>
+                    <div id="lapsoPagoContainer">
+                        <label for="lapsoPagoDesde">Desde el día:</label>
+                        <input type="number" id="lapsoPagoDesde" min="1" max="31" required>
+
+                        <label for="lapsoPagoHasta">Hasta el día:</label>
+                        <input type="number" id="lapsoPagoHasta" min="1" max="31" required>
+                    </div>
+                </fieldset>
+
+                <!-- Información del Proveedor del Servicio -->
+                <fieldset>
+                    <legend>Proveedor del Servicio</legend>
+
+                    <label for="proveedorServicio">Proveedor del Servicio:</label>
+                    <input type="text" id="proveedorServicio" required>
+                </fieldset>
+
+                <button type="submit">Guardar Servicio</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Registrar Recibo -->
+    <div id="registrarReciboModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarReciboModal()">&times;</span>
+            <h2>Registrar Recibo</h2>
+            <form id="reciboForm">
+                <!-- Información del Servicio Seleccionado -->
+                <div id="servicioSeleccionado" class="servicio-seleccionado">
+                    <label>Servicio:</label>
+                    <span id="nombreServicio">-</span>
+                </div>
+
+                <label for="mesesARegistrar">Meses a Registrar Pago:</label>
+                <div id="mesesARegistrar" class="checklist-meses">
+                    <!-- Checklist de meses se generará aquí dinámicamente -->
+                </div>
+
+                <button type="button" id="confirmarMesesBtn">Confirmar Meses</button>
+            </form>
+
+            <!-- Formulario para ingresar detalles de cada mes seleccionado -->
+            <form id="detalleReciboForm" style="display: none; margin-top: 20px;">
+                <h3>Detalles de Pagos Seleccionados</h3>
+                <div id="detallesPagosContainer">
+                    <!-- Detalles de pagos se generarán aquí dinámicamente -->
+                </div>
+                <button type="submit">Registrar Recibos</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Ver Recibos -->
+    <div id="verRecibosModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarVerRecibosModal()">&times;</span>
+            <h2>Ver Recibos</h2>
+
+            <!-- Lista de Recibos por Mes -->
+            <div id="listaRecibosPorMes" class="lista-recibos-por-mes">
+                <!-- Recibos se generarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Gestionar Tipos de Servicio -->
+    <div id="tiposServiciosModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarTiposServiciosModal()">&times;</span>
+            <h2>Gestionar Tipos de Servicio</h2>
+            <form id="tipoServicioForm">
+                <input type="text" id="nuevoTipoServicio" placeholder="Nuevo Tipo de Servicio" required>
+                <button type="submit">Agregar Tipo</button>
+            </form>
+            <table id="tiposServiciosTable">
+                <thead>
+                    <tr>
+                        <th>Tipo de Servicio</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Tipos de servicio se cargarán aquí dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Enlace al archivo JS -->
+    <script type="module" src="servicios.js"></script>
+</body>
+</html>

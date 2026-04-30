@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+/* estadisticas.css */
+
+/* Reset básico */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Estilos globales */
+body {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  background-color: #f8fafc;
+  color: #333;
+}
+
+.container-fluid {
+  padding: 0;
+}
+
+/* Menú */
+.navbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0.5rem 1rem;
+  margin-bottom: 20px;
+}
+
+/* Layout principal */
+main {
+  padding: 20px;
+}
+
+/* Cards */
+.card {
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Tablas */
+.table {
+  background-color: #ffffff;
+}
+.table th,
+.table td {
+  vertical-align: middle;
+}
+
+/* Modal */
+.modal .modal-content {
+  border-radius: 5px;
+  padding: 20px;
+}
+
+/* Gráficos */
+canvas {
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+/* Secciones */
+section {
+  margin-bottom: 40px;
+}
+h1,
+h2,
+h3 {
+  margin-bottom: 20px;
+}
+
+/* ============================= */
+/* Estilos para el Dashboard */
+/* ============================= */
+
+/* Contenedor de tipos de venta */
+#typeButtonsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Botones de tipo de venta */
+.type-btn {
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 5px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: #000;
+}
+.type-btn:hover {
+  opacity: 0.9;
+}

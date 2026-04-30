@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>RESULTADOS INVENTARIO DE CAJAS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 50px auto;
+            background: #fff;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        h1, h2, h3, h4 {
+            text-align: center;
+            color: #333;
+            margin: 20px 0;
+        }
+        .form-section, .result-section {
+            margin-top: 30px;
+        }
+        .stock-message {
+            background-color: #e2e6ea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="number"], input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+            text-align: center;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .export-button {
+            background-color: #17a2b8;
+            margin-top: 20px;
+            width: auto;
+        }
+        .export-button:hover {
+            background-color: #138496;
+        }
+        .result {
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            table-layout: fixed;
+            font-size: 14px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+        th {
+            background-color: #16a085;
+            color: #fff;
+        }
+        .fecha-agotamiento {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .recomendacion-pedido, .producto-agotamiento {
+            width: 45%;
+            margin-bottom: 20px;
+            background-color: #d1f2eb;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        p {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        .page-section {
+            margin-top: 40px;
+            page-break-inside: avoid;
+        }
+        @media (max-width: 768px) {
+            .fecha-agotamiento {
+                flex-direction: column;
+                align-items: center;
+            }
+            .recomendacion-pedido, .producto-agotamiento {
+                width: 90%;
+            }
+        }
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+            }
+            .form-section, #inventoryForm, .export-button, #pedidoForm, #pedidoRangoForm {
+                display: none !important;
+            }
+            .page-section {
+                page-break-after: always;
+            }
+            /* La última página no agrega página en blanco */
+            #page3 {
+                page-break-after: auto;
+            }
+            table {
+                page-break-inside: avoid;
+            }
+        }
+        /* Nuevos estilos para las secciones de pedido */
+        .pedido-section, .pedido-rango-section {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+        .pedido-result, .pedido-rango-result {
+            margin-top: 20px;
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ffeeba;
+        }
+        .pedido-result table, .pedido-rango-result table {
+            margin-top: 10px;
+        }
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="mainContent">
+        <h1>RESULTADOS INVENTARIO DE CAJAS <span id="fechaInventarioDisplay"></span></h1>
+        
+        <div class="form-section">
+            <div class="stock-message">
+                <p><strong>Ingrese datos para calcular (opcional, si se cuenta con inventario):</strong></p>
+            </div>
+            <form id="inventoryForm">
+                <div class="input-group">
+                    <label for="fechaInventario">Fecha del Inventario:</label>
+                    <input type="date" id="fechaInventario" name="fechaInventario">
+                </div>
+                <div class="input-group">
+                    <label for="cajasPizzaAmerican">Pizza American Pizza:</label>
+                    <input type="number" id="cajasPizzaAmerican" name="cajasPizzaAmerican" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="cajasPizzaVipizza">Pizza VIPIZZA:</label>
+                    <input type="number" id="cajasPizzaVipizza" name="cajasPizzaVipizza" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="cajasFingersAmerican">FINGERS American Pizza:</label>
+                    <input type="number" id="cajasFingersAmerican" name="cajasFingersAmerican" min="0">
+                </div>
+                <div class="input-group">
+                    <label for="cajasFingersVipizza">FINGERS VIPIZZA:</label>
+                    <input type="number" id="cajasFingersVipizza" name="cajasFingersVipizza" min="0">
+                </div>
+                <button type="submit">Calcular Inventario</button>
+            </form>
+        </div>
+
+        <!-- Página 1: Aproximación de Cajas en Stock (si se ingresan datos) -->
+        <div id="page1" class="page-section" style="display:none;">
+            <h2>Aproximación de Cajas en Stock</h2>
+            <p><strong>Fecha del Inventario:</strong> <span id="fechaInventarioPage1"></span></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad en Stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cajas Pizza American Pizza</td>
+                        <td id="stockPizzaAmerican"></td>
+                    </tr>
+                    <tr>
+                        <td>Cajas Pizza VIPIZZA</td>
+                        <td id="stockPizzaVipizza"></td>
+                    </tr>
+                    <tr>
+                        <td>Cajas FINGERS American Pizza</td>
+                        <td id="stockFingersAmerican"></td>
+                    </tr>
+                    <tr>
+                        <td>Cajas FINGERS VIPIZZA</td>
+                        <td id="stockFingersVipizza"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Página 2: Proyección de Cajas -->
+        <div id="page2" class="page-section" style="display:none;">
+            <h2>Proyección de Cajas</h2>
+
+            <h3>Consumo Diario Total</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Consumo Diario (cajas/día)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cajas Pizza American Pizza</td>
+                        <td id="consumoPizzaAmerican">0</td>
+                    </tr>
+                    <tr>
+                        <td>Cajas Pizza VIPIZZA</td>
+                        <td id="consumoPizzaVipizza">0</td>
+                    </tr>
+                    <tr>
+                        <td>Cajas FINGERS American Pizza</td>
+                        <td id="consumoFingersAmerican">0</td>
+                    </tr>
+                    <tr>
+                        <td>Cajas FINGERS VIPIZZA</td>
+                        <td id="consumoFingersVipizza">0</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Consumo por Sucursal</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sucursal</th>
+                        <th>Producto</th>
+                        <th>Consumo Mensual (cajas)</th>
+                        <th>Consumo Diario (cajas)</th>
+                    </tr>
+                </thead>
+                <tbody id="consumoTable">
+                    <!-- Filas generadas dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Página 3: Fecha Estimada Agotamiento y Fechas Recomendadas -->
+        <div id="page3" class="page-section" style="display:none;">
+            <h2>Fecha Estimada Agotamiento de Cajas</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Fecha de Agotamiento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cajas Pizza American Pizza</td>
+                        <td id="fechaAgotamientoPizzaAmerican">-</td>
+                    </tr>
+                    <tr>
+                        <td>Cajas Pizza VIPIZZA</td>
+                        <td id="fechaAgotamientoPizzaVipizza">-</td>
+                    </tr>
+                    <tr>
+                        <td>Cajas FINGERS American Pizza</td>
+                        <td id="fechaAgotamientoFingersAmerican">-</td>
+                    </tr>
+                    <tr>
+                        <td>Cajas FINGERS VIPIZZA</td>
+                        <td id="fechaAgotamientoFingersVipizza">-</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>Fechas Recomendadas para los Próximos Pedidos</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Fecha Recomendada</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cajas</td>
+                        <td id="fechaRecomendadoCajas">-</td>
+                    </tr>
+                    <tr>
+                        <td>Fingers</td>
+                        <td id="fechaRecomendadoFingers">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sección: Realizar Pedido con Fecha Estipulada -->
+        <div class="pedido-section">
+            <h2>Realizar Pedido con Fecha Estipulada</h2>
+            <form id="pedidoForm">
+                <div class="input-group">
+                    <label for="fechaPedido">Seleccione la Fecha Deseada:</label>
+                    <input type="date" id="fechaPedido" name="fechaPedido" required>
+                </div>
+                <button type="submit">Calcular Pedido</button>
+            </form>
+            <div id="pedidoResult" class="pedido-result" style="display:none;">
+                <h3>Recomendación de Pedido</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cajas Necesarias para la Fecha</th>
+                            <th>Cajas a Pedir</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pedidoTable">
+                        <!-- Filas generadas dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="pedidoError" class="error-message" style="display:none;">
+                <!-- Mensajes de error -->
+            </div>
+        </div>
+
+        <!-- Sección: Realizar Pedido con Fecha de Inicio y Fin -->
+        <div class="pedido-rango-section">
+            <h2>Realizar Pedido con Fecha de Inicio y Fin</h2>
+            <form id="pedidoRangoForm">
+                <div class="input-group">
+                    <label for="fechaInicioPedido">Seleccione la Fecha de Inicio:</label>
+                    <input type="date" id="fechaInicioPedido" name="fechaInicioPedido" required>
+                </div>
+                <div class="input-group">
+                    <label for="fechaFinPedido">Seleccione la Fecha de Fin:</label>
+                    <input type="date" id="fechaFinPedido" name="fechaFinPedido" required>
+                </div>
+                <button type="submit">Calcular Pedido</button>
+            </form>
+            <div id="pedidoRangoResult" class="pedido-rango-result" style="display:none;">
+                <!-- Bloques de 3 secciones: American Pizza, Vipizza S.A, Corporación de Alimentos SA -->
+            </div>
+            <div id="pedidoRangoError" class="error-message" style="display:none;">
+                <!-- Mensajes de error -->
+            </div>
+        </div>
+
+        <!-- Botón para generar reporte general -->
+        <div class="result">
+            <button type="button" class="export-button" onclick="generarReporte()">Generar Reporte</button>
+        </div>
+    </div>
+
+    <script>
+    // Variable global para almacenar los datos de productos (si se ingresan mediante inventario)
+    let globalProducts = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // No es obligatorio ingresar datos de inventario para calcular el pedido por rango
+    });
+
+    // Evento para calcular inventario (opcional)
+    document.getElementById('inventoryForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const fechaInventarioInput = document.getElementById('fechaInventario').value;
+        const fechaInventario = new Date(fechaInventarioInput);
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+
+        const fechaInventarioDisplay = document.getElementById('fechaInventarioDisplay');
+        const fechaInventarioPage1 = document.getElementById('fechaInventarioPage1');
+
+        if (isNaN(fechaInventario.getTime())) {
+            alert('Por favor, seleccione una fecha válida para el inventario.');
+            return;
+        }
+
+        if (fechaInventario > hoy) {
+            alert('La fecha del inventario no puede estar en el futuro.');
+            return;
+        }
+
+        const cajasPizzaAmerican = parseInt(document.getElementById('cajasPizzaAmerican').value) || 0;
+        const cajasPizzaVipizza = parseInt(document.getElementById('cajasPizzaVipizza').value) || 0;
+        const cajasFingersAmerican = parseInt(document.getElementById('cajasFingersAmerican').value) || 0;
+        const cajasFingersVipizza = parseInt(document.getElementById('cajasFingersVipizza').value) || 0;
+
+        document.getElementById('stockPizzaAmerican').textContent = cajasPizzaAmerican;
+        document.getElementById('stockPizzaVipizza').textContent = cajasPizzaVipizza;
+        document.getElementById('stockFingersAmerican').textContent = cajasFingersAmerican;
+        document.getElementById('stockFingersVipizza').textContent = cajasFingersVipizza;
+
+        // Mostrar la fecha del inventario
+        const fechaStr = formatDate(fechaInventario);
+        fechaInventarioDisplay.textContent = fechaStr;
+        fechaInventarioPage1.textContent = fechaStr;
+
+        // ============================================================================
+        // NUEVOS DATOS MENSUALES = CONSUMO DIARIO * 30 (según tu tabla proporcionada)
+        // ============================================================================
+        const products = [
+            // PIZZA AMERICAN PIZZA (Eskala, Pinula, Santa Elena)
+            {
+                name: "Cajas Pizza American Pizza",
+                totalMonthly: 2640 + 4980 + 6300, // eskala=2640, pinula=4980, santa elena=6300
+                branches: [
+                    { name: "Eskala", monthly: 2640 },
+                    { name: "Pinula", monthly: 4980 },
+                    { name: "Santa Elena", monthly: 6300 }
+                ],
+                total: cajasPizzaAmerican
+            },
+            // PIZZA VIPIZZA (Poptun, Zacapa, Jalapa)
+            {
+                name: "Cajas Pizza VIPIZZA",
+                totalMonthly: 4290 + 6120 + 3720, // poptun=4290, zacapa=6120, jalapa=3720
+                branches: [
+                    { name: "Poptun", monthly: 4290 },
+                    { name: "Zacapa", monthly: 6120 },
+                    { name: "Jalapa", monthly: 3720 }
+                ],
+                total: cajasPizzaVipizza
+            },
+            // FINGERS AMERICAN PIZZA (Eskala, Pinula, Santa Elena)
+            {
+                name: "Cajas FINGERS American Pizza",
+                totalMonthly: 240 + 420 + 300, // eskala=240, pinula=420, santa elena=300
+                branches: [
+                    { name: "Eskala", monthly: 240 },
+                    { name: "Pinula", monthly: 420 },
+                    { name: "Santa Elena", monthly: 300 }
+                ],
+                total: cajasFingersAmerican
+            },
+            // FINGERS VIPIZZA (Poptun, Zacapa, Jalapa)
+            {
+                name: "Cajas FINGERS VIPIZZA",
+                totalMonthly: 330 + 660 + 390, // poptun=330, zacapa=660, jalapa=390
+                branches: [
+                    { name: "Poptun", monthly: 330 },
+                    { name: "Zacapa", monthly: 660 },
+                    { name: "Jalapa", monthly: 390 }
+                ],
+                total: cajasFingersVipizza
+            }
+        ];
+
+        // Guardamos la información en la variable global (opcional)
+        globalProducts = products;
+
+        // Calcular el consumo diario total para cada "producto" (sumando sus sucursales / 30)
+        const consumoDiarioTotal = products.map(product => ({
+            name: product.name,
+            daily: Math.round(product.totalMonthly / 30)
+        }));
+
+        // Llenar la tabla de consumo por sucursal
+        const consumoTable = document.getElementById('consumoTable');
+        consumoTable.innerHTML = '';
+
+        products.forEach(product => {
+            product.branches.forEach(branch => {
+                const row = document.createElement('tr');
+
+                const sucursalCell = document.createElement('td');
+                sucursalCell.textContent = branch.name;
+                row.appendChild(sucursalCell);
+
+                const productoCell = document.createElement('td');
+                productoCell.textContent = product.name;
+                row.appendChild(productoCell);
+
+                const consumoMensualCell = document.createElement('td');
+                consumoMensualCell.textContent = branch.monthly;
+                row.appendChild(consumoMensualCell);
+
+                const consumoDiarioCell = document.createElement('td');
+                consumoDiarioCell.textContent = Math.round(branch.monthly / 30);
+                row.appendChild(consumoDiarioCell);
+
+                consumoTable.appendChild(row);
+            });
+        });
+
+        // Calcular fecha estimada de agotamiento
+        const resultados = products.map(product => {
+            const mesesLeft = product.totalMonthly > 0 
+                ? (product.total / product.totalMonthly) 
+                : 0; // para evitar NaN si totalMonthly = 0
+            const fechaAgotamiento = addMonths(fechaInventario, mesesLeft);
+            return {
+                name: product.name,
+                mesesLeft: mesesLeft,
+                fechaAgotamiento: fechaAgotamiento
+            };
+        });
+
+        // Mostrar consumo diario en la tabla de "Consumo Diario Total"
+        consumoDiarioTotal.forEach(item => {
+            let elementId;
+            switch(item.name) {
+                case "Cajas Pizza American Pizza":
+                    elementId = "consumoPizzaAmerican";
+                    break;
+                case "Cajas Pizza VIPIZZA":
+                    elementId = "consumoPizzaVipizza";
+                    break;
+                case "Cajas FINGERS American Pizza":
+                    elementId = "consumoFingersAmerican";
+                    break;
+                case "Cajas FINGERS VIPIZZA":
+                    elementId = "consumoFingersVipizza";
+                    break;
+            }
+            if (elementId) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = item.daily;
+                }
+            }
+        });
+
+        // Mostrar fechas de agotamiento en la Página 3
+        resultados.forEach(result => {
+            let fechaId;
+            switch(result.name) {
+                case "Cajas Pizza American Pizza":
+                    fechaId = "fechaAgotamientoPizzaAmerican";
+                    break;
+                case "Cajas Pizza VIPIZZA":
+                    fechaId = "fechaAgotamientoPizzaVipizza";
+                    break;
+                case "Cajas FINGERS American Pizza":
+                    fechaId = "fechaAgotamientoFingersAmerican";
+                    break;
+                case "Cajas FINGERS VIPIZZA":
+                    fechaId = "fechaAgotamientoFingersVipizza";
+                    break;
+            }
+            if (fechaId) {
+                const dateSpan = document.getElementById(fechaId);
+                if (dateSpan) {
+                    dateSpan.textContent = isNaN(result.fechaAgotamiento.getTime())
+                        ? "-"
+                        : formatDate(result.fechaAgotamiento);
+                }
+            }
+        });
+
+        // Fechas recomendadas
+        const fechasCajas = resultados.filter(r => r.name.includes("Pizza"));
+        const fechasFingers = resultados.filter(r => r.name.includes("FINGERS"));
+
+        let fechaAgotamientoCajas = null;
+        let fechaAgotamientoFingers = null;
+
+        if (fechasCajas.length > 0) {
+            fechaAgotamientoCajas = fechasCajas.reduce((minDate, current) => {
+                return current.fechaAgotamiento < minDate ? current.fechaAgotamiento : minDate;
+            }, fechasCajas[0].fechaAgotamiento);
+        }
+
+        if (fechasFingers.length > 0) {
+            fechaAgotamientoFingers = fechasFingers.reduce((minDate, current) => {
+                return current.fechaAgotamiento < minDate ? current.fechaAgotamiento : minDate;
+            }, fechasFingers[0].fechaAgotamiento);
+        }
+
+        // Restar 15 días como fecha recomendada
+        if (fechaAgotamientoCajas && !isNaN(fechaAgotamientoCajas.getTime())) {
+            const fechaRecomendadoCajas = new Date(fechaAgotamientoCajas);
+            fechaRecomendadoCajas.setDate(fechaRecomendadoCajas.getDate() - 15);
+            document.getElementById('fechaRecomendadoCajas').textContent = formatDate(fechaRecomendadoCajas);
+        }
+        if (fechaAgotamientoFingers && !isNaN(fechaAgotamientoFingers.getTime())) {
+            const fechaRecomendadoFingers = new Date(fechaAgotamientoFingers);
+            fechaRecomendadoFingers.setDate(fechaRecomendadoFingers.getDate() - 15);
+            document.getElementById('fechaRecomendadoFingers').textContent = formatDate(fechaRecomendadoFingers);
+        }
+
+        // Mostrar secciones
+        document.getElementById('page1').style.display = 'block';
+        document.getElementById('page2').style.display = 'block';
+        document.getElementById('page3').style.display = 'block';
+    });
+
+    // Funcionalidad para el pedido con fecha estipulada
+    document.getElementById('pedidoForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const fechaPedidoInput = document.getElementById('fechaPedido').value;
+        const fechaPedido = new Date(fechaPedidoInput);
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+
+        const pedidoResult = document.getElementById('pedidoResult');
+        const pedidoTable = document.getElementById('pedidoTable');
+        const pedidoError = document.getElementById('pedidoError');
+
+        // Limpiar resultados anteriores
+        pedidoTable.innerHTML = '';
+        pedidoResult.style.display = 'none';
+        pedidoError.style.display = 'none';
+        pedidoError.textContent = '';
+
+        if (isNaN(fechaPedido.getTime())) {
+            pedidoError.textContent = 'Por favor, seleccione una fecha válida.';
+            pedidoError.style.display = 'block';
+            return;
+        }
+
+        // Obtener datos actuales de stock y consumo (si existen)
+        const cajasPizzaAmerican = parseInt(document.getElementById('stockPizzaAmerican').textContent) || 0;
+        const cajasPizzaVipizza = parseInt(document.getElementById('stockPizzaVipizza').textContent) || 0;
+        const cajasFingersAmerican = parseInt(document.getElementById('stockFingersAmerican').textContent) || 0;
+        const cajasFingersVipizza = parseInt(document.getElementById('stockFingersVipizza').textContent) || 0;
+
+        // Consumimos el valor "Consumo Diario" que se ve en la tabla de la página 2
+        const consumoDiario = {
+            "Cajas Pizza American Pizza": parseInt(document.getElementById('consumoPizzaAmerican').textContent) || 0,
+            "Cajas Pizza VIPIZZA": parseInt(document.getElementById('consumoPizzaVipizza').textContent) || 0,
+            "Cajas FINGERS American Pizza": parseInt(document.getElementById('consumoFingersAmerican').textContent) || 0,
+            "Cajas FINGERS VIPIZZA": parseInt(document.getElementById('consumoFingersVipizza').textContent) || 0
+        };
+
+        const productos = [
+            {
+                name: "Cajas Pizza American Pizza",
+                stock: cajasPizzaAmerican,
+                dailyConsumption: consumoDiario["Cajas Pizza American Pizza"]
+            },
+            {
+                name: "Cajas Pizza VIPIZZA",
+                stock: cajasPizzaVipizza,
+                dailyConsumption: consumoDiario["Cajas Pizza VIPIZZA"]
+            },
+            {
+                name: "Cajas FINGERS American Pizza",
+                stock: cajasFingersAmerican,
+                dailyConsumption: consumoDiario["Cajas FINGERS American Pizza"]
+            },
+            {
+                name: "Cajas FINGERS VIPIZZA",
+                stock: cajasFingersVipizza,
+                dailyConsumption: consumoDiario["Cajas FINGERS VIPIZZA"]
+            }
+        ];
+
+        const daysDiff = Math.ceil((fechaPedido - hoy) / (1000 * 60 * 60 * 24));
+        if (daysDiff <= 0) {
+            pedidoError.textContent = 'La fecha seleccionada debe ser igual o posterior al día de hoy.';
+            pedidoError.style.display = 'block';
+            return;
+        }
+
+        let necesitaPedido = false;
+
+        productos.forEach(product => {
+            const totalRequerido = product.dailyConsumption * daysDiff;
+            const aPedir = totalRequerido - product.stock;
+
+            // Creamos la fila
+            const row = document.createElement('tr');
+
+            // Producto
+            const productoCell = document.createElement('td');
+            productoCell.textContent = product.name;
+            row.appendChild(productoCell);
+
+            // Necesario
+            const necesarioCell = document.createElement('td');
+            necesarioCell.textContent = totalRequerido;
+            row.appendChild(necesarioCell);
+
+            // A pedir
+            const aPedirCell = document.createElement('td');
+            aPedirCell.textContent = (aPedir > 0) ? aPedir : 0;
+            row.appendChild(aPedirCell);
+
+            pedidoTable.appendChild(row);
+
+            if (aPedir > 0) {
+                necesitaPedido = true;
+            }
+        });
+
+        if (!necesitaPedido) {
+            pedidoError.textContent = 'No es necesario realizar un pedido para la fecha seleccionada.';
+            pedidoError.style.display = 'block';
+            return;
+        }
+
+        pedidoResult.style.display = 'block';
+    });
+
+    // PEDIDO CON FECHA DE INICIO Y FIN (FORMATO TIPO CAPTURA)
+    document.getElementById('pedidoRangoForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const fechaInicioInput = document.getElementById('fechaInicioPedido').value;
+        const fechaFinInput = document.getElementById('fechaFinPedido').value;
+
+        const fechaInicio = new Date(fechaInicioInput);
+        const fechaFin = new Date(fechaFinInput);
+
+        const pedidoRangoResult = document.getElementById('pedidoRangoResult');
+        const pedidoRangoError = document.getElementById('pedidoRangoError');
+
+        // Limpiar resultados anteriores
+        pedidoRangoResult.innerHTML = '';
+        pedidoRangoResult.style.display = 'none';
+        pedidoRangoError.style.display = 'none';
+        pedidoRangoError.textContent = '';
+
+        if (isNaN(fechaInicio.getTime()) || isNaN(fechaFin.getTime())) {
+            pedidoRangoError.textContent = 'Por favor, seleccione fechas válidas para el rango.';
+            pedidoRangoError.style.display = 'block';
+            return;
+        }
+
+        if (fechaFin < fechaInicio) {
+            pedidoRangoError.textContent = 'La fecha de fin debe ser posterior a la fecha de inicio.';
+            pedidoRangoError.style.display = 'block';
+            return;
+        }
+
+        // Calcular cantidad de días (incluyendo el día final)
+        const timeDiff = fechaFin - fechaInicio;
+        const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+
+        if (daysDiff <= 0) {
+            pedidoRangoError.textContent = 'El rango de fechas seleccionado no es válido.';
+            pedidoRangoError.style.display = 'block';
+            return;
+        }
+
+        // Mostrar el rango de fechas y cantidad de días
+        const rangeParagraph = document.createElement('p');
+        rangeParagraph.textContent = `Rango de fechas: ${formatDate(fechaInicio)} a ${formatDate(fechaFin)} (${daysDiff} días)`;
+        pedidoRangoResult.appendChild(rangeParagraph);
+
+        // Si no existen datos de inventario, se usa un arreglo por defecto con sucursales
+        const productsForPedido = (globalProducts && globalProducts.length > 0) ? globalProducts : [
+            {
+                name: "Cajas Pizza American Pizza",
+                branches: [
+                    { name: "Eskala", monthly: 2640 }, 
+                    { name: "Pinula", monthly: 4980 }, 
+                    { name: "Santa Elena", monthly: 6300 }
+                ]
+            },
+            {
+                name: "Cajas Pizza VIPIZZA",
+                branches: [
+                    { name: "Poptun", monthly: 4290 }, 
+                    { name: "Zacapa", monthly: 6120 }, 
+                    { name: "Jalapa", monthly: 3720 }
+                ]
+            },
+            {
+                name: "Cajas FINGERS American Pizza",
+                branches: [
+                    { name: "Eskala", monthly: 240 }, 
+                    { name: "Pinula", monthly: 420 }, 
+                    { name: "Santa Elena", monthly: 300 }
+                ]
+            },
+            {
+                name: "Cajas FINGERS VIPIZZA",
+                branches: [
+                    { name: "Poptun", monthly: 330 }, 
+                    { name: "Zacapa", monthly: 660 }, 
+                    { name: "Jalapa", monthly: 390 }
+                ]
+            }
+        ];
+
+        // 1) Sumar totales para "American Pizza"
+        let americanPizza_pizza = 0;    // Cajas Pizza American Pizza
+        let americanPizza_fingers = 0;  // Cajas FINGERS American Pizza
+
+        // 2) Sumar totales para "Vipizza S.A" (Zacapa, Poptun)
+        let vipizza_pizza = 0;         // Cajas Pizza VIPIZZA (Zacapa, Poptun)
+        let vipizza_fingers = 0;       // Cajas FINGERS VIPIZZA (Zacapa, Poptun)
+
+        // 3) Sumar totales para "Corporación de Alimentos SA" (Jalapa)
+        let corporacion_pizza = 0;     // Cajas Pizza VIPIZZA (Jalapa)
+        let corporacion_fingers = 0;   // Cajas FINGERS VIPIZZA (Jalapa)
+
+        // Funciones de ayuda para detectar a qué empresa pertenece la sucursal
+        function esAmericanPizza(sucursal) {
+            return ["Eskala","Pinula","Santa Elena"].includes(sucursal);
+        }
+        function esVipizzaSA(sucursal) {
+            return ["Zacapa","Poptun"].includes(sucursal);
+        }
+        function esCorporacionAlimentos(sucursal) {
+            return ["Jalapa"].includes(sucursal);
+        }
+
+        // Recorremos cada producto
+        productsForPedido.forEach(product => {
+            // Determinamos si es "Pizza" o "FINGERS"
+            const esPizza = product.name.includes("Pizza") && !product.name.includes("FINGERS");
+
+            product.branches.forEach(branch => {
+                // Consumo diario
+                const dailyConsumption = Math.round(branch.monthly / 30);
+                // Cajas a pedir en el rango
+                const cajasPedir = dailyConsumption * daysDiff;
+
+                // Según la sucursal y si es pizza o fingers, sumamos
+                if (esAmericanPizza(branch.name)) {
+                    // American Pizza
+                    if (esPizza) {
+                        americanPizza_pizza += cajasPedir;
+                    } else {
+                        americanPizza_fingers += cajasPedir;
+                    }
+                } else if (esVipizzaSA(branch.name)) {
+                    // Vipizza S.A
+                    if (esPizza) {
+                        vipizza_pizza += cajasPedir;
+                    } else {
+                        vipizza_fingers += cajasPedir;
+                    }
+                } else if (esCorporacionAlimentos(branch.name)) {
+                    // Corporación de Alimentos SA
+                    if (esPizza) {
+                        corporacion_pizza += cajasPedir;
+                    } else {
+                        corporacion_fingers += cajasPedir;
+                    }
+                }
+            });
+        });
+
+        // Construir el bloque para "American Pizza"
+        const americanBlock = document.createElement('table');
+        americanBlock.style.width = "100%";
+        americanBlock.style.borderCollapse = "collapse";
+        americanBlock.style.marginTop = "10px";
+
+        // Fila de título con fondo verde, 2 columnas
+        let trHeader = document.createElement('tr');
+        trHeader.innerHTML = `
+            <th colspan="2" style="background-color:#16a085; color:#fff; text-align:center;">
+                American Pizza
+            </th>
+        `;
+        americanBlock.appendChild(trHeader);
+
+        // Encabezado de "Producto" y "Cajas a Pedir"
+        let trSubHeader = document.createElement('tr');
+        trSubHeader.innerHTML = `
+            <th style="background-color:#f2f2f2;">Producto</th>
+            <th style="background-color:#f2f2f2;">Cajas a Pedir</th>
+        `;
+        americanBlock.appendChild(trSubHeader);
+
+        // Fila: Cajas Pizza American Pizza
+        let trPizzaA = document.createElement('tr');
+        trPizzaA.innerHTML = `
+            <td>Cajas Pizza American Pizza</td>
+            <td>${americanPizza_pizza}</td>
+        `;
+        americanBlock.appendChild(trPizzaA);
+
+        // Fila: Cajas FINGERS American Pizza
+        let trFingersA = document.createElement('tr');
+        trFingersA.innerHTML = `
+            <td>Cajas FINGERS American Pizza</td>
+            <td>${americanPizza_fingers}</td>
+        `;
+        americanBlock.appendChild(trFingersA);
+
+        pedidoRangoResult.appendChild(americanBlock);
+
+        // Construir el bloque para "Vipizza S.A"
+        const vipizzaBlock = document.createElement('table');
+        vipizzaBlock.style.width = "100%";
+        vipizzaBlock.style.borderCollapse = "collapse";
+        vipizzaBlock.style.marginTop = "10px";
+
+        trHeader = document.createElement('tr');
+        trHeader.innerHTML = `
+            <th colspan="2" style="background-color:#16a085; color:#fff; text-align:center;">
+                Vipizza S.A
+            </th>
+        `;
+        vipizzaBlock.appendChild(trHeader);
+
+        trSubHeader = document.createElement('tr');
+        trSubHeader.innerHTML = `
+            <th style="background-color:#f2f2f2;">Producto</th>
+            <th style="background-color:#f2f2f2;">Cajas a Pedir</th>
+        `;
+        vipizzaBlock.appendChild(trSubHeader);
+
+        // Fila: Cajas Pizza VIPIZZA
+        let trPizzaV = document.createElement('tr');
+        trPizzaV.innerHTML = `
+            <td>Cajas Pizza VIPIZZA</td>
+            <td>${vipizza_pizza}</td>
+        `;
+        vipizzaBlock.appendChild(trPizzaV);
+
+        // Fila: Cajas FINGERS VIPIZZA
+        let trFingersV = document.createElement('tr');
+        trFingersV.innerHTML = `
+            <td>Cajas FINGERS VIPIZZA</td>
+            <td>${vipizza_fingers}</td>
+        `;
+        vipizzaBlock.appendChild(trFingersV);
+
+        pedidoRangoResult.appendChild(vipizzaBlock);
+
+        // Construir el bloque para "Corporación de Alimentos SA"
+        const corporacionBlock = document.createElement('table');
+        corporacionBlock.style.width = "100%";
+        corporacionBlock.style.borderCollapse = "collapse";
+        corporacionBlock.style.marginTop = "10px";
+
+        trHeader = document.createElement('tr');
+        trHeader.innerHTML = `
+            <th colspan="2" style="background-color:#16a085; color:#fff; text-align:center;">
+                Corporación de Alimentos SA
+            </th>
+        `;
+        corporacionBlock.appendChild(trHeader);
+
+        trSubHeader = document.createElement('tr');
+        trSubHeader.innerHTML = `
+            <th style="background-color:#f2f2f2;">Producto</th>
+            <th style="background-color:#f2f2f2;">Cajas a Pedir</th>
+        `;
+        corporacionBlock.appendChild(trSubHeader);
+
+        // Fila: Cajas Pizza VIPIZZA
+        let trPizzaC = document.createElement('tr');
+        trPizzaC.innerHTML = `
+            <td>Cajas Pizza VIPIZZA</td>
+            <td>${corporacion_pizza}</td>
+        `;
+        corporacionBlock.appendChild(trPizzaC);
+
+        // Fila: Cajas FINGERS VIPIZZA
+        let trFingersC = document.createElement('tr');
+        trFingersC.innerHTML = `
+            <td>Cajas FINGERS VIPIZZA</td>
+            <td>${corporacion_fingers}</td>
+        `;
+        corporacionBlock.appendChild(trFingersC);
+
+        pedidoRangoResult.appendChild(corporacionBlock);
+
+        // Agregar botón de compartir el reporte
+        const shareButton = document.createElement('button');
+        shareButton.textContent = "Compartir Reporte";
+        shareButton.style.marginTop = "20px";
+        shareButton.onclick = sharePedidoRangoReport;
+        pedidoRangoResult.appendChild(shareButton);
+
+        pedidoRangoResult.style.display = 'block';
+    });
+
+    // -------------------------------
+    // FUNCIONES AUXILIARES
+    // -------------------------------
+    function addMonths(date, months) {
+        const d = new Date(date);
+        const wholeMonths = Math.floor(months);
+        const fractional = months - wholeMonths;
+        d.setMonth(d.getMonth() + wholeMonths);
+        const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        d.setDate(d.getDate() + Math.round(fractional * daysInMonth));
+        return d;
+    }
+
+    function formatDate(date) {
+        if (isNaN(date.getTime())) return "-";
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return date.toLocaleDateString('es-ES', options);
+    }
+
+    function generarReporte() {
+        const fechaInventarioInput = document.getElementById('fechaInventario').value;
+        const fechaInventario = new Date(fechaInventarioInput);
+        const fechaStr = formatDate(fechaInventario);
+        const tituloOriginal = document.title;
+        document.title = "RESULTADOS INVENTARIO DE CAJAS " + (isNaN(fechaInventario) ? "" : fechaStr);
+        window.print();
+        setTimeout(() => {
+            document.title = tituloOriginal;
+        }, 1000);
+    }
+
+    // Función para compartir el reporte del pedido por rango
+    function sharePedidoRangoReport() {
+        const reportContent = document.getElementById('pedidoRangoResult').innerText;
+        if (navigator.share) {
+            navigator.share({
+                title: 'Reporte de Pedido por Rango de Fechas',
+                text: reportContent
+            }).then(() => {
+                console.log('Reporte compartido exitosamente.');
+            }).catch((error) => {
+                console.error('Error al compartir:', error);
+            });
+        } else {
+            // Fallback: copiar al portapapeles
+            copyToClipboard(reportContent);
+            alert('Reporte copiado al portapapeles.');
+        }
+    }
+
+    function copyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+    }
+    </script>
+</body>
+</html>

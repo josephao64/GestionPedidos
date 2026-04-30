@@ -1,0 +1,143 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Negocio</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Referencia al Favicon -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Gestión de Negocio</h1>
+        <nav>
+            <ul>
+                <li><a href="#" id="dashboard-link" class="active">Dashboard</a></li>
+                <li><a href="#" id="compras-link">Compras</a></li>
+                <li><a href="#" id="ventas-link">Ventas</a></li>
+                <li><a href="#" id="proveedores-link">Proveedores</a></li>
+                <li><a href="#" id="productos-link">Productos</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Dashboard -->
+        <section id="dashboard">
+            <h2>Dashboard</h2>
+            <div class="cards">
+                <div class="card" id="total-ventas-mes">Total Ventas del Mes: $0</div>
+                <div class="card" id="total-compras-mes">Total Compras del Mes: $0</div>
+                <div class="card" id="sobrante">Sobrante: $0</div>
+                <div class="card" id="promedio-ventas">Promedio Ventas Diarias: $0</div>
+                <div class="card" id="mejor-dia">Mejor Día de Ventas: N/A</div>
+            </div>
+            <!-- Gráfica de Ventas de los Últimos 5 Meses -->
+            <canvas id="ventas-chart" width="400" height="200"></canvas>
+            <!-- Gráfica de Ventas Diarias del Mes Actual -->
+            <canvas id="ventas-diarias-chart" width="400" height="200"></canvas>
+            <!-- Gráfica de Sobrante Mensual -->
+            <canvas id="sobrante-chart" width="400" height="200"></canvas>
+        </section>
+
+        <!-- Módulo de Compras -->
+        <section id="compras" class="hidden">
+            <h2>Registrar Compra</h2>
+            <form id="form-compra">
+                <input type="text" id="numero-factura" placeholder="Número de Factura" required>
+                <input type="date" id="fecha-compra" required>
+                <select id="tipo-pago" required>
+                    <option value="">Tipo de Pago</option>
+                    <option value="Contado">Contado</option>
+                    <option value="Crédito">Crédito</option>
+                </select>
+                <select id="proveedor" required>
+                    <option value="">Selecciona Proveedor</option>
+                    <!-- Opciones dinámicas -->
+                </select>
+                <div id="productos-compra">
+                    <h3>Productos</h3>
+                    <div class="producto-item">
+                        <select class="producto-select" required>
+                            <option value="">Selecciona Producto</option>
+                            <!-- Opciones dinámicas -->
+                        </select>
+                        <input type="number" class="cantidad" placeholder="Cantidad" required min="1">
+                        <input type="number" class="precio-unitario" placeholder="Precio Unitario" required min="0.01" step="0.01">
+                        <span class="total-parcial">Total: $0.00</span>
+                        <button type="button" class="eliminar-producto">Eliminar</button>
+                    </div>
+                </div>
+                <button type="button" id="agregar-producto">Agregar Producto</button>
+                <button type="submit">Guardar Compra</button>
+            </form>
+            <h3>Lista de Compras</h3>
+            <ul id="lista-compras"></ul>
+        </section>
+
+        <!-- Módulo de Ventas -->
+        <section id="ventas" class="hidden">
+            <h2>Registrar Ventas</h2>
+            <form id="form-venta">
+                <select id="mes-venta" required>
+                    <option value="">Selecciona Mes</option>
+                    <!-- Opciones dinámicas -->
+                </select>
+                <div id="ventas-dias">
+                    <h3>Ventas por Día</h3>
+                    <div class="venta-item">
+                        <input type="date" class="fecha-dia" required>
+                        <input type="text" class="nombre-dia" placeholder="Nombre del Día" required>
+                        <input type="number" class="monto-venta" placeholder="Monto de Venta" required min="0" step="0.01">
+                        <button type="button" class="eliminar-venta">Eliminar</button>
+                    </div>
+                </div>
+                <button type="button" id="agregar-venta">Agregar Día de Venta</button>
+                <button type="submit">Guardar Ventas</button>
+            </form>
+            <h3>Lista de Ventas</h3>
+            <ul id="lista-ventas"></ul>
+        </section>
+
+        <!-- Módulo de Proveedores -->
+        <section id="proveedores" class="hidden">
+            <h2>Proveedores</h2>
+            <form id="form-proveedor">
+                <input type="text" id="nombre-proveedor" placeholder="Nombre del Proveedor" required>
+                <input type="text" id="contacto-proveedor" placeholder="Información de Contacto" required>
+                <button type="submit">Agregar Proveedor</button>
+            </form>
+            <h3>Lista de Proveedores</h3>
+            <ul id="lista-proveedores"></ul>
+        </section>
+
+        <!-- Módulo de Productos -->
+        <section id="productos" class="hidden">
+            <h2>Productos</h2>
+            <form id="form-producto">
+                <input type="text" id="nombre-producto" placeholder="Nombre del Producto" required>
+                <input type="number" id="precio-base" placeholder="Precio Base" required min="0.01" step="0.01">
+                <input type="number" id="stock" placeholder="Stock" required min="0">
+                <button type="submit">Agregar Producto</button>
+            </form>
+            <h3>Lista de Productos</h3>
+            <ul id="lista-productos"></ul>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Tu Negocio. Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

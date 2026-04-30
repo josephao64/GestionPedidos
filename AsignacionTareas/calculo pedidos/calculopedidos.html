@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Cajas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+        }
+        input[type="number"], button {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        h1, h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Calculadora de Cajas</h1>
+    <label for="dias">Días:</label>
+    <input type="number" id="dias" min="1" value="30">
+    <button onclick="calcular()">Calcular</button>
+
+    <h2>Consumo por Sucursal</h2>
+    <table id="tablaSucursales">
+        <thead>
+            <tr>
+                <th>Empresa</th>
+                <th>Sucursal</th>
+                <th>Pizza Mensual</th>
+                <th>Fingers Mensual</th>
+                <th>Total Pizza</th>
+                <th>Total Fingers</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Total por Empresa</h2>
+    <table id="tablaEmpresa">
+        <thead>
+            <tr>
+                <th>Empresa</th>
+                <th>Total Pizza</th>
+                <th>Total Fingers</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Realizar Pedido</h2>
+    <label>Stock actual Pizza (VIPIZZA): </label>
+    <input type="number" id="stockVIPIZZA_Pizza" placeholder="Cajas disponibles">
+    <br>
+    <label>Stock actual Fingers (VIPIZZA): </label>
+    <input type="number" id="stockVIPIZZA_Fingers" placeholder="Cajas disponibles">
+    <br>
+    <label>Stock actual Pizza (AMERICAN PIZZA): </label>
+    <input type="number" id="stockAmericanPizza_Pizza" placeholder="Cajas disponibles">
+    <br>
+    <label>Stock actual Fingers (AMERICAN PIZZA): </label>
+    <input type="number" id="stockAmericanPizza_Fingers" placeholder="Cajas disponibles">
+    <br><br>
+    <button onclick="realizarPedido()">Calcular Pedido</button>
+    <h3>Resultado del Pedido</h3>
+    <table id="tablaPedido">
+        <thead>
+            <tr>
+                <th>Empresa</th>
+                <th>Total Pizza Necesario</th>
+                <th>Total Fingers Necesario</th>
+                <th>Pedido Pizza</th>
+                <th>Pedido Fingers</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const data = [
+            { Empresa: "VIPIZZA", Sucursal: "jalapa", PizzaMensual: 3462, FingersMensual: 356 },
+            { Empresa: "VIPIZZA", Sucursal: "poptun", PizzaMensual: 3992, FingersMensual: 312 },
+            { Empresa: "VIPIZZA", Sucursal: "zacapa", PizzaMensual: 5706, FingersMensual: 611 },
+            { Empresa: "AMERICAN PIZZA", Sucursal: "santa elena", PizzaMensual: 5893, FingersMensual: 287 },
+            { Empresa: "AMERICAN PIZZA", Sucursal: "pinula", PizzaMensual: 4639, FingersMensual: 379 },
+            { Empresa: "AMERICAN PIZZA", Sucursal: "eskala", PizzaMensual: 2460, FingersMensual: 211 },
+        ];
+
+        let totalesEmpresa = {};
+
+        function calcular() {
+            const dias = parseInt(document.getElementById("dias").value);
+            const tablaSucursales = document.getElementById("tablaSucursales").querySelector("tbody");
+            const tablaEmpresa = document.getElementById("tablaEmpresa").querySelector("tbody");
+
+            tablaSucursales.innerHTML = "";
+            tablaEmpresa.innerHTML = "";
+
+            totalesEmpresa = {};
+
+            data.forEach(row => {
+                const pizzaDiario = Math.round(row.PizzaMensual / 30);
+                const fingersDiario = Math.round(row.FingersMensual / 30);
+
+                const totalPizza = pizzaDiario * dias;
+                const totalFingers = fingersDiario * dias;
+
+                // Agregar totales a la tabla de sucursales
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${row.Empresa}</td>
+                    <td>${row.Sucursal}</td>
+                    <td>${row.PizzaMensual}</td>
+                    <td>${row.FingersMensual}</td>
+                    <td>${totalPizza}</td>
+                    <td>${totalFingers}</td>
+                `;
+                tablaSucursales.appendChild(tr);
+
+                // Sumar totales por empresa
+                if (!totalesEmpresa[row.Empresa]) {
+                    totalesEmpresa[row.Empresa] = { TotalPizza: 0, TotalFingers: 0 };
+                }
+                totalesEmpresa[row.Empresa].TotalPizza += totalPizza;
+                totalesEmpresa[row.Empresa].TotalFingers += totalFingers;
+            });
+
+            // Agregar totales a la tabla de empresa
+            for (const empresa in totalesEmpresa) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${empresa}</td>
+                    <td>${totalesEmpresa[empresa].TotalPizza}</td>
+                    <td>${totalesEmpresa[empresa].TotalFingers}</td>
+                `;
+                tablaEmpresa.appendChild(tr);
+            }
+        }
+
+        function realizarPedido() {
+            const stockVIPIZZA_Pizza = parseInt(document.getElementById("stockVIPIZZA_Pizza").value) || 0;
+            const stockVIPIZZA_Fingers = parseInt(document.getElementById("stockVIPIZZA_Fingers").value) || 0;
+            const stockAmericanPizza_Pizza = parseInt(document.getElementById("stockAmericanPizza_Pizza").value) || 0;
+            const stockAmericanPizza_Fingers = parseInt(document.getElementById("stockAmericanPizza_Fingers").value) || 0;
+
+            const tablaPedido = document.getElementById("tablaPedido").querySelector("tbody");
+            tablaPedido.innerHTML = "";
+
+            const pedidoVIPIZZA_Pizza = Math.max(totalesEmpresa["VIPIZZA"]?.TotalPizza - stockVIPIZZA_Pizza, 0);
+            const pedidoVIPIZZA_Fingers = Math.max(totalesEmpresa["VIPIZZA"]?.TotalFingers - stockVIPIZZA_Fingers, 0);
+            const pedidoAmericanPizza_Pizza = Math.max(totalesEmpresa["AMERICAN PIZZA"]?.TotalPizza - stockAmericanPizza_Pizza, 0);
+            const pedidoAmericanPizza_Fingers = Math.max(totalesEmpresa["AMERICAN PIZZA"]?.TotalFingers - stockAmericanPizza_Fingers, 0);
+
+            const pedidos = [
+                { Empresa: "VIPIZZA", TotalPizza: totalesEmpresa["VIPIZZA"]?.TotalPizza || 0, TotalFingers: totalesEmpresa["VIPIZZA"]?.TotalFingers || 0, PedidoPizza: pedidoVIPIZZA_Pizza, PedidoFingers: pedidoVIPIZZA_Fingers },
+                { Empresa: "AMERICAN PIZZA", TotalPizza: totalesEmpresa["AMERICAN PIZZA"]?.TotalPizza || 0, TotalFingers: totalesEmpresa["AMERICAN PIZZA"]?.TotalFingers || 0, PedidoPizza: pedidoAmericanPizza_Pizza, PedidoFingers: pedidoAmericanPizza_Fingers },
+            ];
+
+            pedidos.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${row.Empresa}</td>
+                    <td>${row.TotalPizza}</td>
+                    <td>${row.TotalFingers}</td>
+                    <td>${row.PedidoPizza}</td>
+                    <td>${row.PedidoFingers}</td>
+                `;
+                tablaPedido.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
