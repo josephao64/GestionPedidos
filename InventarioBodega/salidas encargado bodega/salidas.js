@@ -935,6 +935,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnExportImg) btnExportImg.addEventListener('click', exportReportToImage);
   if (btnExportPDF) btnExportPDF.addEventListener('click', exportReportToPDF);
   if (btnExportExcel) btnExportExcel.addEventListener('click', exportReportToExcel);
+
+  // Lógica para Documentos Importantes
+  const docsBtnMobile = document.getElementById('docsBtnMobile');
+  const docsBtnDesktop = document.getElementById('docsBtnDesktop');
+  if (docsBtnMobile) docsBtnMobile.addEventListener('click', handleDocsClick);
+  if (docsBtnDesktop) docsBtnDesktop.addEventListener('click', handleDocsClick);
 });
 
 /* =========================
@@ -951,3 +957,157 @@ window.exportReportToExcel = exportReportToExcel;
 window.deleteMovement = deleteMovement;
 window.incQuantity = incQuantity;
 window.decQuantity = decQuantity;
+
+/* =========================
+   DOCUMENTOS IMPORTANTES
+   ========================= */
+function abrirDocumentosEnlace() {
+  const usuarioLogueado = localStorage.getItem('usuarioLogueado');
+  if (!usuarioLogueado) return;
+  Swal.fire({ title: 'Obteniendo enlace...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  
+  db.collection('usuarios').where('username', '==', usuarioLogueado).limit(1).get()
+    .then(snap => {
+      if (snap.empty) throw new Error("Usuario no encontrado");
+      const sucursalId = snap.docs[0].data().sucursalId;
+      
+      let sucursalNamePromise = Promise.resolve('Central');
+      if (sucursalId) {
+        sucursalNamePromise = db.collection('sucursales').doc(sucursalId).get().then(sDoc => {
+          return (sDoc.exists && sDoc.data().name) ? sDoc.data().name : 'Central';
+        });
+      }
+      
+      return sucursalNamePromise.then(sucursalName => {
+        return db.collection('configuraciones').doc('enlaces').get().then(doc => {
+          Swal.close();
+          const data = doc.exists ? doc.data() : {};
+          const link = data[`docs_${sucursalName}`] || data.documentosImportantes;
+          if (link) {
+            window.open(link, '_blank');
+          } else {
+            Swal.fire('Aviso', `El administrador aún no ha configurado el enlace a los documentos para la sucursal: ${sucursalName}.`, 'info');
+          }
+        });
+      });
+    }).catch((error) => {
+      Swal.close();
+      console.error("Error obteniendo enlace:", error);
+      Swal.fire('Error', 'No se pudo obtener el enlace.', 'error');
+    });
+}
+
+function configurarDocumentosEnlace() {
+  db.collection('sucursales').get().then(snap => {
+    let opciones = {};
+    snap.forEach(doc => { opciones[doc.data().name] = doc.data().name; });
+    
+    Swal.fire({
+      title: 'Seleccionar Sucursal',
+      text: '¿Para qué sucursal deseas configurar el enlace?',
+      input: 'select',
+      inputOptions: opciones,
+      inputPlaceholder: 'Selecciona una sucursal',
+      showCancelButton: true,
+      confirmButtonText: 'Siguiente',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const sucursal = result.value;
+        db.collection('configuraciones').doc('enlaces').get().then(doc => {
+          let currentUrl = '';
+          if (doc.exists && doc.data()[`docs_${sucursal}`]) {
+            currentUrl = doc.data()[`docs_${sucursal}`];
+          }
+          Swal.fire({
+            title: `Carpeta de Drive (${sucursal})`,
+            input: 'url',
+            inputLabel: 'URL de la carpeta',
+            inputValue: currentUrl,
+            showCancelButton: true,
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar'
+          }).then((res) => {
+            if (res.isConfirmed) {
+              db.collection('configuraciones').doc('enlaces').set({
+                [`docs_${sucursal}`]: res.value
+              }, { merge: true }).then(() => {
+                Swal.fire('Guardado', 'El enlace se ha guardado correctamente.', 'success');
+              });
+            }
+          });
+        });
+      }
+    });
+  }).catch(err => {
+    console.error(err);
+    Swal.fire('Error', 'No se pudieron cargar las sucursales.', 'error');
+  });
+}
+
+function handleDocsClick(e) {
+  e.preventDefault();
+  const userRole = localStorage.getItem('role') || 'viewer';
+  if (userRole === 'administrador') {
+    Swal.fire({
+      title: 'Documentos Importantes',
+      text: '¿Qué deseas hacer?',
+      icon: 'question',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: 'Abrir Carpeta',
+      denyButtonText: 'Configurar Enlace',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        abrirDocumentosEnlace();
+      } else if (result.isDenied) {
+        configurarDocumentosEnlace();
+      }
+    });
+  } else {
+    Swal.fire({
+      title: 'Autenticación Requerida',
+      text: 'Por favor ingresa tu contraseña para acceder a los documentos confidenciales.',
+      input: 'password',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocorrect: 'off',
+        autocomplete: 'new-password',
+        readonly: 'readonly'
+      },
+      didOpen: () => {
+        const input = Swal.getInput();
+        if (input) {
+          input.value = '';
+          input.removeAttribute('readonly');
+          input.focus();
+        }
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Acceder',
+      cancelButtonText: 'Cancelar',
+      showLoaderOnConfirm: true,
+      preConfirm: (password) => {
+        const usuarioLogueado = localStorage.getItem('usuarioLogueado');
+        if (!usuarioLogueado) return Swal.showValidationMessage('No hay sesión activa');
+        
+        return db.collection('usuarios').where('username', '==', usuarioLogueado).limit(1).get()
+          .then(snap => {
+            if (snap.empty) throw new Error('Usuario no encontrado');
+            const userData = snap.docs[0].data();
+            const hashedInput = CryptoJS.SHA256(password).toString();
+            if (userData.password !== hashedInput) throw new Error('Contraseña incorrecta');
+            return true;
+          })
+          .catch(error => Swal.showValidationMessage(error.message));
+      },
+      allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+      if (result.isConfirmed) {
+        abrirDocumentosEnlace();
+      }
+    });
+  }
+}
+

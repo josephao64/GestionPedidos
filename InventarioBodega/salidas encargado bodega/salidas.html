@@ -39,6 +39,9 @@
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
+    <!-- CryptoJS for Password Hashing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
     <!-- JS principal -->
     <script src="salidas.js" defer></script>
   </head>
@@ -80,6 +83,11 @@
           <li class="nav-item mb-2">
             <a href="#" class="nav-link js-nav-section" data-section="reports">Reportes de Salidas</a>
           </li>
+          <li class="nav-item mt-4 pt-2 border-top">
+            <a href="#" class="nav-link text-primary fw-bold" id="docsBtnMobile">
+              <i class="fa-solid fa-folder-open"></i> Docs. Importantes
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -108,6 +116,11 @@
             <li class="nav-item mb-2">
               <a href="#" class="nav-link js-nav-section" data-section="reports">
                 <i class="fa-solid fa-chart-line"></i> Reportes de Salidas
+              </a>
+            </li>
+            <li class="nav-item mt-4 pt-3 border-top">
+              <a href="#" class="nav-link text-primary fw-bold" id="docsBtnDesktop">
+                <i class="fa-solid fa-folder-open"></i> Documentos Importantes
               </a>
             </li>
           </ul>
