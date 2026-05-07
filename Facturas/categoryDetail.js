@@ -413,25 +413,34 @@ async function saveInvoice(e) {
     }
   });
 
+  const selectedSuc = allSucursales.find(s => s.id === sucSelect.value);
+  const empresaId = selectedSuc ? selectedSuc.empresaId : '';
+
   const data = {
     proveedorId: provSelect.value,
     proveedorNombre: provSelect.options[provSelect.selectedIndex].text.toUpperCase(),
     sucursalId: sucSelect.value,
     sucursalNombre: sucSelect.options[sucSelect.selectedIndex].text.toUpperCase(),
+    empresaId: empresaId,
     categoryId: currentCategoryId, 
     numeroFactura: document.getElementById('inv-number').value.trim().toUpperCase(),
     total: parseFloat(document.getElementById('inv-total').value),
+    saldoPendiente: parseFloat(document.getElementById('inv-total').value),
+    estado: 'pendiente',
     items: items, 
     fechaEmision: new Date(document.getElementById('inv-date').value + "T12:00:00Z"),
+    fechaVencimiento: new Date(new Date(document.getElementById('inv-date').value + "T12:00:00Z").getTime() + (30 * 24 * 60 * 60 * 1000)), // 30 días
     creadoPor: currentUser,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
-
-
   try {
-    if (id) await db.collection('facturas_pagar').doc(id).update(data);
-    else {
+    if (id) {
+      // Protect existing estado and saldoPendiente during update
+      delete data.estado;
+      delete data.saldoPendiente;
+      await db.collection('facturas_pagar').doc(id).update(data);
+    } else {
       data.fechaCreacion = firebase.firestore.FieldValue.serverTimestamp();
       await db.collection('facturas_pagar').add(data);
     }
@@ -686,21 +695,28 @@ async function processQuickAdd() {
       }
     }
 
+    const selectedSuc = allSucursales.find(s => s.id === sucursalId);
+    const empresaId = selectedSuc ? selectedSuc.empresaId : '';
+
     try {
       await db.collection('facturas_pagar').add({
         proveedorId: provider.id,
         proveedorNombre: provider.name,
         sucursalId: sucursalId,
         sucursalNombre: sucursalName,
+        empresaId: empresaId,
         categoryId: currentCategoryId, 
         numeroFactura: invoiceNum,
         total: total,
+        saldoPendiente: total,
+        estado: 'pendiente',
         items: [{
           description: producto,
           quantity: cantidad,
           unitPrice: precioU
         }],
         fechaEmision: isNaN(d.getTime()) ? new Date() : d,
+        fechaVencimiento: isNaN(d.getTime()) ? new Date(new Date().getTime() + (30 * 24 * 60 * 60 * 1000)) : new Date(d.getTime() + (30 * 24 * 60 * 60 * 1000)),
         creadoPor: currentUser,
         fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
       });

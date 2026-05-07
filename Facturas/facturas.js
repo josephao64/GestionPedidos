@@ -130,11 +130,15 @@ async function saveInvoice() {
   });
 
   try {
+    const selectedSuc = allSucursales.find(s => s.id === sucursalId);
+    const empresaId = selectedSuc ? selectedSuc.empresaId : '';
+
     const invoiceData = {
       proveedorId: providerId,
       proveedorNombre: providerName,
       sucursalId: sucursalId,
       sucursalNombre: sucursalName,
+      empresaId: empresaId,
       fechaEmision: new Date(fecha),
       fechaVencimiento: calculateDueDate(fecha),
       numeroFactura: numero,
