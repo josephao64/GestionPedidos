@@ -468,12 +468,7 @@
 
     // Puente a Finanzas
     function abrirFinanzas() {
-      const role = localStorage.getItem('role') || 'viewer';
-      const email = localStorage.getItem('email') || localStorage.getItem('usuarioLogueado') || 'Usuario';
-      const permisos = localStorage.getItem('permisosFinanzas') || '{}';
-
-      const params = new URLSearchParams({ role, email, permisos });
-      window.open(`http://localhost:3000/bridge?${params.toString()}`, '_blank');
+      window.open("https://sistemi-vvp.netlify.app/", "_blank");
     }
 
     // Init
