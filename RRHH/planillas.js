@@ -340,26 +340,28 @@ async function loadPlanillaTable() {
                 daysWorked = 15; // Standardize 2nd fortnight as 15 days even if 28/31
             }
         }
-        // Fetch Branch Info (for headers) once
-        let mainBranchInfo = { name: "CORPORACION DE ALIMENTOS, S.A.", logo: "../Recibos/logo.png" };
-        if (selectedSucursal !== 'all') {
-            try {
-                const branchDoc = await db.collection('sucursales').doc(selectedSucursal).get();
-                if (branchDoc.exists) {
-                    const bData = branchDoc.data();
-                    if (bData.empresaId) {
-                        const cDoc = await db.collection('empresas').doc(bData.empresaId).get();
-                        if (cDoc.exists) {
-                            mainBranchInfo.name = cDoc.data().name || "CORPORACION DE ALIMENTOS, S.A.";
-                            if (cDoc.data().logo) mainBranchInfo.logo = cDoc.data().logo;
-                        }
-                    } else if (bData.companyName) {
-                        mainBranchInfo.name = bData.companyName.toUpperCase();
-                    }
-                }
-            } catch (e) { console.error(e); }
-        }
+        // 4. Fetch Branch and Company Cache (Efficient)
+        const branchCache = {};
+        const companyCache = {};
+        const branchSnap = await db.collection('sucursales').get();
+        const companySnap = await db.collection('empresas').get();
+        
+        companySnap.forEach(doc => companyCache[doc.id] = doc.data());
+        branchSnap.forEach(doc => {
+            const bData = doc.data();
+            let bName = bData.name || "Sin Sucursal";
+            let bLogo = "../Recibos/logo.png";
 
+            if (bData.empresaId && companyCache[bData.empresaId]) {
+                const cData = companyCache[bData.empresaId];
+                bName = cData.name || bName;
+                if (cData.logo) bLogo = cData.logo;
+            } else if (bData.companyName) {
+                bName = bData.companyName.toUpperCase();
+            }
+            
+            branchCache[doc.id] = { name: bName, logo: bLogo };
+        });
 
         currentPayrollData = [];
 
@@ -580,34 +582,40 @@ async function loadPlanillaTable() {
 
             const isr = 0;
 
-            currentPayrollData.push({
-                id: doc.id,
-                name: emp.fullName,
-                days: daysWorked,
-                monthlyBase: monthlySalary,
-                monthlyBonusBase: monthlyBonus,
-                salary: periodSalary,
-                bonus: periodBonus,
-                totalSalary: totalSalary,
-                igss: igss,
-                overtimeRate: overtimeRateOverride, // Can be 0 if not set
-                globalOvertimeRate: globalOvertimeRate, // New Global Config
-                isr: isr,
-                judicial: 0,
-                discount: loanDeduction,
-                advance: wageAdvance,
-                appliedLoans: appliedLoans,
-                extraHours: 0,
-                extraAmount: 0,
-                otherBonus: 0,
-                otherBonusDesc: "", // Description for Other Income
-                holidayBonus: 0,
-                finalTotal: 0, // Will be calculated
-                isNew: true,
-                subEmpresa: isProbation ? 'EN PRUEBA' : subEmpresaRaw,
-                branchName: mainBranchInfo.name,
-                branchLogo: mainBranchInfo.logo
-            });
+                const bInfo = branchCache[effectiveSucursalId] || { name: "CORPORACION DE ALIMENTOS, S.A.", logo: "../Recibos/logo.png" };
+
+                currentPayrollData.push({
+                    id: doc.id,
+                    name: emp.fullName,
+                    days: daysWorked,
+                    monthlyBase: monthlySalary,
+                    monthlyBonusBase: monthlyBonus,
+                    salary: periodSalary,
+                    bonus: periodBonus,
+                    totalSalary: totalSalary,
+                    igss: igss,
+                    overtimeRate: overtimeRateOverride, // Can be 0 if not set
+                    globalOvertimeRate: globalOvertimeRate, // New Global Config
+                    isr: isr,
+                    judicial: 0,
+                    discount: loanDeduction,
+                    advance: wageAdvance,
+                    appliedLoans: appliedLoans,
+                    extraHours: 0,
+                    extraAmount: 0,
+                    otherBonus: 0,
+                    otherBonusDesc: "", // Description for Other Income
+                    holidayBonus: 0,
+                    finalTotal: 0, // Will be calculated
+                    isNew: true,
+                    subEmpresa: isProbation ? 'EN PRUEBA' : subEmpresaRaw,
+                    branchId: effectiveSucursalId,
+                    branchName: bInfo.name,
+                    branchLogo: bInfo.logo
+                });
+            } catch (err) {
+                console.error(`Error processing employee ${doc.id}:`, err);
+            }
         });
 
         if (currentPayrollData.length === 0) {
@@ -664,16 +672,29 @@ function renderPlanillaRows() {
     const defaultKey = 'Propia';
 
     currentPayrollData.forEach((row, index) => {
-        const key = row.subEmpresa || defaultKey;
+        // Group by Branch and Sub-Company (Probation is a sub-company identity here)
+        const subKey = row.subEmpresa || defaultKey;
+        const key = `${row.branchName} || ${subKey}`;
+
         if (!groups[key]) groups[key] = [];
         // Store original index to bind events correctly
         groups[key].push({ ...row, originalIndex: index });
     });
 
+    // Sort keys: Branch Name first, then Sub-Company (Propia before EN PRUEBA)
     const keys = Object.keys(groups).sort((a, b) => {
-        if (a === defaultKey) return -1;
-        if (b === defaultKey) return 1;
-        return a.localeCompare(b);
+        const [aBranch, aSub] = a.split(' || ');
+        const [bBranch, bSub] = b.split(' || ');
+
+        if (aBranch !== bBranch) return aBranch.localeCompare(bBranch);
+        
+        // Same branch, sort sub-company
+        if (aSub === defaultKey) return -1;
+        if (bSub === defaultKey) return 1;
+        if (aSub === 'EN PRUEBA') return (bSub === defaultKey) ? 1 : -1;
+        if (bSub === 'EN PRUEBA') return (aSub === defaultKey) ? -1 : 1;
+        
+        return aSub.localeCompare(bSub);
     });
 
     keys.forEach((groupKey, groupIdx) => {
@@ -725,14 +746,15 @@ function renderPlanillaRows() {
         }
         dateP.innerText = dateText;
 
-        // Set Company Name
-        if (groupKey.toUpperCase() === 'PEDIDOS FLASH') {
-            titleH3.innerText = "PEDIDOS FLASH";
+        // Set Company Name and Labels
+        const [groupBranchName, groupSubName] = groupKey.split(' || ');
+
+        if (groupSubName.toUpperCase() === 'PEDIDOS FLASH') {
+            titleH3.innerText = "PEDIDOS FLASH - " + groupBranchName;
             logoImg.src = "../resources/images/PEDIDOS FLASH.png";
         } else {
-            // Use the one from the first row (common branch info)
-            titleH3.innerText = groupRows[0].branchName || "CORPORACION DE ALIMENTOS, S.A.";
-            if (groupKey === 'EN PRUEBA') {
+            titleH3.innerText = groupBranchName;
+            if (groupSubName === 'EN PRUEBA') {
                 titleH3.innerText += " (EN PERIODO DE PRUEBA)";
             }
             if (groupRows[0].branchLogo) logoImg.src = groupRows[0].branchLogo;
