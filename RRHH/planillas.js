@@ -581,7 +581,7 @@ async function loadPlanillaTable() {
             }
 
             const isr = 0;
-
+            try {
                 const bInfo = branchCache[effectiveSucursalId] || { name: "CORPORACION DE ALIMENTOS, S.A.", logo: "../Recibos/logo.png" };
 
                 currentPayrollData.push({
