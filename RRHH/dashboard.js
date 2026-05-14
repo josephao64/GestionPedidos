@@ -68,9 +68,7 @@ function updateDashboardUI(employees, sucursales, positions, sucursalesSnap, pos
             effective = tempId;
         }
 
-        if (e.fullName.includes('Carlos')) {
-            console.log(`[Dashboard Debug] ${e.fullName}: Temp=${isTemp}, TempID=${tempId}, Effective=${effective}`);
-        }
+
 
         return {
             ...e,
