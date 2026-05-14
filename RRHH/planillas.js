@@ -594,8 +594,8 @@ async function loadPlanillaTable() {
                     bonus: periodBonus,
                     totalSalary: totalSalary,
                     igss: igss,
-                    overtimeRate: overtimeRateOverride, // Can be 0 if not set
-                    globalOvertimeRate: globalOvertimeRate, // New Global Config
+                    overtimeRate: overtimeRateOverride,
+                    globalOvertimeRate: globalOvertimeRate,
                     isr: isr,
                     judicial: 0,
                     discount: loanDeduction,
@@ -604,9 +604,9 @@ async function loadPlanillaTable() {
                     extraHours: 0,
                     extraAmount: 0,
                     otherBonus: 0,
-                    otherBonusDesc: "", // Description for Other Income
+                    otherBonusDesc: "",
                     holidayBonus: 0,
-                    finalTotal: 0, // Will be calculated
+                    finalTotal: 0,
                     isNew: true,
                     subEmpresa: isProbation ? 'EN PRUEBA' : subEmpresaRaw,
                     branchId: effectiveSucursalId,
