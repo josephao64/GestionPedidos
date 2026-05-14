@@ -151,13 +151,14 @@ async function loadEmployees() {
             if (emp.status === 'inactive') return false;
 
             // Determine dynamic status
-            // Calculate Probation per Employee Branch
             let isProbation = false;
-            if (emp.startDate) {
-                const settings = window.rrhhConfig.getBranchSettings(emp.sucursalId);
-                const probationMs = settings.probationDays * 24 * 60 * 60 * 1000;
+            const effectiveStartDate = emp.startDate || emp.hiringDate || emp.fechaIngreso;
+            if (effectiveStartDate) {
+                const bSettings = window.rrhhConfig.getBranchSettings(emp.sucursalId);
+                const pDays = bSettings.probationDays || 60;
+                const probationMs = pDays * 24 * 60 * 60 * 1000;
 
-                const start = new Date(emp.startDate).getTime();
+                const start = new Date(effectiveStartDate).getTime();
                 if (now - start < probationMs) isProbation = true;
             }
 
@@ -196,12 +197,14 @@ async function loadEmployees() {
                 // Check probation
                 let isProbation = false;
                 let probationEndDateStr = '';
+                const effectiveStartDate = data.startDate || data.hiringDate || data.fechaIngreso;
 
-                if (data.startDate) {
-                    const settings = window.rrhhConfig.getBranchSettings(data.sucursalId);
-                    const probationMs = settings.probationDays * 24 * 60 * 60 * 1000;
+                if (effectiveStartDate) {
+                    const bSettings = window.rrhhConfig.getBranchSettings(data.sucursalId);
+                    const pDays = bSettings.probationDays || 60;
+                    const probationMs = pDays * 24 * 60 * 60 * 1000;
 
-                    const start = new Date(data.startDate).getTime();
+                    const start = new Date(effectiveStartDate).getTime();
                     if (now - start < probationMs) {
                         isProbation = true;
                         const endDate = new Date(start + probationMs);

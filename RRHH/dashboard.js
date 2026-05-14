@@ -110,14 +110,22 @@ function updateDashboardUI(employees, sucursales, positions, sucursalesSnap, pos
     // KPI: Total Active
     document.getElementById('kpi-total-active').textContent = activeEmployees.length;
 
-    // KPI: Probation (< 60 days)
-    const sixtyDaysAgo = new Date();
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-
+    // KPI: Probation (Dynamic based on settings)
+    const globalSettings = window.rrhhConfig ? window.rrhhConfig.get() : { probationDays: 60 };
+    
     const probationCount = activeEmployees.filter(e => {
-        if (!e.startDate) return false;
-        const start = new Date(e.startDate);
-        return start > sixtyDaysAgo;
+        const effectiveStartDate = e.startDate || e.hiringDate || e.fechaIngreso;
+        if (!effectiveStartDate) return false;
+
+        const branchSettings = window.rrhhConfig ? window.rrhhConfig.getBranchSettings(e.sucursalId) : globalSettings;
+        const pDays = branchSettings.probationDays || globalSettings.probationDays || 60;
+        
+        const start = new Date(effectiveStartDate);
+        const now = new Date();
+        const diffTime = now.getTime() - start.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return diffDays >= 0 && diffDays <= pDays;
     }).length;
     document.getElementById('kpi-probation').textContent = probationCount;
 

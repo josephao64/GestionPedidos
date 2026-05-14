@@ -138,12 +138,33 @@ function renderOrgGrid() {
     const container = document.getElementById('sucursales-grid');
     container.innerHTML = '';
 
-    // Count employees per branch
     const counts = {};
-    orgData.branches.forEach(b => counts[b.id] = 0);
+    const probationCounts = {};
+    const now = new Date().getTime();
+    const globalSettings = window.rrhhConfig ? window.rrhhConfig.get() : { probationDays: 60 };
+
+    orgData.branches.forEach(b => {
+        counts[b.id] = 0;
+        probationCounts[b.id] = 0;
+    });
+
     orgData.employees.forEach(e => {
         const effectiveBranchId = (e.isTempTransfer && e.tempSucursalId) ? e.tempSucursalId : e.sucursalId;
-        if (effectiveBranchId) counts[effectiveBranchId] = (counts[effectiveBranchId] || 0) + 1;
+        if (effectiveBranchId) {
+            counts[effectiveBranchId] = (counts[effectiveBranchId] || 0) + 1;
+
+            // Probation Check
+            const effectiveStartDate = e.startDate || e.hiringDate || e.fechaIngreso;
+            if (effectiveStartDate) {
+                const bSettings = window.rrhhConfig ? window.rrhhConfig.getBranchSettings(e.sucursalId) : globalSettings;
+                const pDays = bSettings.probationDays || globalSettings.probationDays || 60;
+                const probationMs = pDays * 24 * 60 * 60 * 1000;
+                const start = new Date(effectiveStartDate).getTime();
+                if (now - start < probationMs) {
+                    probationCounts[effectiveBranchId] = (probationCounts[effectiveBranchId] || 0) + 1;
+                }
+            }
+        }
     });
 
     orgData.branches.forEach(b => {
@@ -182,14 +203,18 @@ function renderOrgGrid() {
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px;">
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px; text-align: center;">
-                    <span style="display: block; font-size: 1.2rem; font-weight: bold;">${empCount}</span>
-                    <small style="color: var(--text-muted);">Empleados</small>
+                    <span style="display: block; font-size: 1.1rem; font-weight: bold;">${empCount}</span>
+                    <small style="color: var(--text-muted);">Total</small>
+                </div>
+                <div style="background: #fffbeb; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #fef3c7;">
+                    <span style="display: block; font-size: 1.1rem; font-weight: bold; color: #d97706;">${probationCounts[b.id] || 0}</span>
+                    <small style="color: #92400e;">En Prueba</small>
                 </div>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px; text-align: center;">
-                    <span style="display: block; font-size: 1.2rem; font-weight: bold;">${totalQuotas}</span>
-                    <small style="color: var(--text-muted);">Plazas Meta</small>
+                    <span style="display: block; font-size: 1.1rem; font-weight: bold;">${totalQuotas}</span>
+                    <small style="color: var(--text-muted);">Meta</small>
                 </div>
             </div>
 
@@ -217,9 +242,26 @@ async function loadSucursales() {
 
     // Emp counts for table
     const counts = {};
+    const probationCounts = {};
+    const now = new Date().getTime();
+    const globalSettings = window.rrhhConfig ? window.rrhhConfig.get() : { probationDays: 60 };
+
     orgData.employees.forEach(e => {
         const effectiveBranchId = (e.isTempTransfer && e.tempSucursalId) ? e.tempSucursalId : e.sucursalId;
-        if (effectiveBranchId) counts[effectiveBranchId] = (counts[effectiveBranchId] || 0) + 1;
+        if (effectiveBranchId) {
+            counts[effectiveBranchId] = (counts[effectiveBranchId] || 0) + 1;
+
+            const effectiveStartDate = e.startDate || e.hiringDate || e.fechaIngreso;
+            if (effectiveStartDate) {
+                const bSettings = window.rrhhConfig ? window.rrhhConfig.getBranchSettings(e.sucursalId) : globalSettings;
+                const pDays = bSettings.probationDays || globalSettings.probationDays || 60;
+                const probationMs = pDays * 24 * 60 * 60 * 1000;
+                const start = new Date(effectiveStartDate).getTime();
+                if (now - start < probationMs) {
+                    probationCounts[effectiveBranchId] = (probationCounts[effectiveBranchId] || 0) + 1;
+                }
+            }
+        }
     });
 
     orgData.branches.forEach(s => {
@@ -241,6 +283,9 @@ async function loadSucursales() {
                 </span>
             </td>
             <td style="padding: 12px; text-align: center;">${activeCount}</td>
+            <td style="padding: 12px; text-align: center;">
+                <span style="color: #d97706; font-weight: 600;">${probationCounts[s.id] || 0}</span>
+            </td>
              <td style="padding: 12px; text-align: center;">${statusHtml}</td>
             <td style="padding: 12px; text-align: center;">
                 <button class="btn btn-secondary btn-sm" onclick="openQuotaModal('${s.id}', '${s.name.replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 0.85rem;">
