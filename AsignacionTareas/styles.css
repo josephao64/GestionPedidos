@@ -193,48 +193,195 @@ h1, h2, h3, h4 {
 /* ==========================================================================
    CONTROLS & FILTERS
    ========================================================================== */
-.table-controls {
+.table-controls-grid {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
   gap: 20px;
-  background: var(--bg-color);
+  margin-bottom: 24px;
+}
+
+.filters-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--surface);
   padding: 20px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
 }
 
-.filters {
+.filters-row-top {
   display: flex;
+  gap: 16px;
   flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
 }
 
-.filters input, .filters select {
-  padding: 12px 16px;
+.search-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-wrapper input {
+  width: 100%;
+  padding: 10px 16px 10px 40px !important;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
   outline: none;
   font-family: 'Outfit', sans-serif;
   font-size: 14px;
   color: var(--text-main);
-  background-color: var(--surface);
+  background-color: var(--bg-color);
   transition: var(--transition);
-  min-width: 160px;
 }
 
-.filters input:focus, .filters select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
 }
 
-.actions-buttons {
+.filters-row-top select {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  outline: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+}
+
+.filters-row-bottom {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.group-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.date-inputs {
   display: flex;
   gap: 12px;
+}
+
+.date-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.date-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.date-col input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  outline: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  background-color: var(--bg-color);
+}
+
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-btn {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  cursor: pointer;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  padding: 8px 0;
+}
+
+.custom-dropdown.active .dropdown-content {
+  display: block;
+}
+
+.dropdown-content label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: var(--transition);
+}
+
+.dropdown-content label:hover {
+  background-color: var(--bg-color);
+}
+
+.dropdown-content input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+}
+
+.actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--bg-color);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  min-width: 250px;
+  justify-content: center;
+}
+
+.actions-grid {
+  display: flex;
+  gap: 12px;
+}
+
+.actions-grid button {
+  flex: 1;
 }
 
 button {
@@ -255,6 +402,7 @@ button {
 }
 
 .add-task-btn {
+  width: 100%;
   background-color: var(--primary);
   color: white;
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
@@ -284,7 +432,7 @@ button {
   background-color: var(--danger-hover);
 }
 
-.actions-buttons button[disabled] {
+.actions-section button[disabled] {
   background-color: #cbd5e1;
   color: #94a3b8;
   cursor: not-allowed;
@@ -293,12 +441,17 @@ button {
 }
 
 #editarBtn, #eliminarBtn {
-  padding: 10px 20px;
+  padding: 10px;
   border-radius: var(--radius-pill);
   border: none;
   font-weight: 600;
   cursor: pointer;
   color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
 }
 
 #editarBtn { background-color: var(--secondary); }
@@ -307,61 +460,7 @@ button {
 #eliminarBtn { background-color: var(--danger); }
 #eliminarBtn:hover:not(:disabled) { background-color: var(--danger-hover); }
 
-/* ==========================================================================
-   STATUS FILTERS (CHIPS)
-   ========================================================================== */
-#filterEstadoCheckboxes {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  width: 100%;
-}
-
-#filterEstadoCheckboxes strong {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin-right: 8px;
-}
-
-#filterEstadoCheckboxes label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-pill);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: var(--transition);
-  user-select: none;
-}
-
-#filterEstadoCheckboxes label:hover {
-  background: var(--primary-light);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-#filterEstadoCheckboxes input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
-
-#filterEstadoCheckboxes label:has(input:checked) {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
-}
+/* Filter Checkboxes logic removed as we use dropdown now */
 
 /* ==========================================================================
    TABS
@@ -635,18 +734,16 @@ td[class^="estado-"] {
    RESPONSIVE DESIGN
    ========================================================================== */
 @media (max-width: 900px) {
-  .table-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .filters {
+  .table-controls-grid {
     flex-direction: column;
   }
   
-  .actions-buttons {
-    flex-wrap: wrap;
-    justify-content: flex-start;
+  .filters-row-top, .filters-row-bottom {
+    flex-direction: column;
+  }
+  
+  .actions-section {
+    min-width: 100%;
   }
   
   .container {

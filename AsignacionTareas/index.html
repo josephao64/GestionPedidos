@@ -8,6 +8,8 @@
   <!-- Google Fonts: Outfit -->
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
   <!-- SweetAlert2 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
 
@@ -58,49 +60,73 @@
   <div class="container" id="mainApp">
     <h1>Asignación de Tareas</h1>
 
-    <div class="table-controls">
-      <div class="filters">
-        <input type="text" id="searchInput" placeholder="Buscar tareas...">
-        <select id="filterTipo">
-          <option value="">Todos los Tipos</option>
-        </select>
-        <select id="filterResponsable">
-          <option value="">Todos los Responsables</option>
-          <option value="JOSE">JOSE</option>
-          <option value="DIEGO">DIEGO</option>
-          <option value="JOSEPH">JOSEPH</option>
-          <option value="LAURA">LAURA</option>
-          <option value="KEVIN">KEVIN</option>
-        </select>
-
-        <!-- NUEVO: Filtro por Estado con "Todos" -->
-        <div id="filterEstadoCheckboxes" class="estado-filters"
-          style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <strong>Estado:</strong>
-          <label><input type="checkbox" id="estadoAll" checked> Todos</label>
-          <label><input type="checkbox" value="No Iniciado" checked> No Iniciado</label>
-          <label><input type="checkbox" value="En Progreso" checked> En Progreso</label>
-          <label><input type="checkbox" value="Revisión" checked> Revisión</label>
-          <label><input type="checkbox" value="Completado" checked> Completado</label>
+    <div class="table-controls-grid">
+      <!-- Sección Izquierda: Filtros -->
+      <div class="filters-section">
+        <!-- Fila Superior -->
+        <div class="filters-row-top">
+          <div class="search-wrapper">
+            <input type="text" id="searchInput" placeholder="Buscar tareas...">
+            <i class="fas fa-search search-icon"></i>
+          </div>
+          <select id="filterTipo">
+            <option value="">Todos los Tipos</option>
+          </select>
+          <select id="filterResponsable">
+            <option value="">Todos los Responsables</option>
+            <option value="JOSE">JOSE</option>
+            <option value="DIEGO">DIEGO</option>
+            <option value="JOSEPH">JOSEPH</option>
+            <option value="LAURA">LAURA</option>
+            <option value="KEVIN">KEVIN</option>
+          </select>
         </div>
 
-        <input type="date" id="filterFechaDesde" placeholder="Fecha Desde">
-        <input type="date" id="filterFechaHasta" placeholder="Fecha Hasta">
-        <select id="sortOrder">
-          <option value="estadoOrden" selected>Ordenar por Estado</option>
-          <option value="fechaEstimadaAsc">Culminación Más Reciente</option>
-          <option value="fechaEstimadaDesc">Culminación Más Antigua</option>
-          <option value="fechaCreacionDesc">Tarea Agregada Más Reciente</option>
-          <option value="fechaCreacionAsc">Tarea Agregada Más Antigua</option>
-        </select>
-        <button id="resetFilters" class="reset-filters-btn">Resetear Filtros</button>
+        <!-- Fila Inferior -->
+        <div class="filters-row-bottom">
+          <div class="filter-group">
+            <span class="group-label">Período de Creación:</span>
+            <div class="date-inputs">
+              <div class="date-col">
+                <span class="date-label">Desde:</span>
+                <input type="date" id="filterFechaDesde">
+              </div>
+              <div class="date-col">
+                <span class="date-label">Hasta:</span>
+                <input type="date" id="filterFechaHasta">
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <span class="group-label">Estado:</span>
+            <div class="custom-dropdown" id="estadoDropdown">
+              <button class="dropdown-btn" id="estadoDropdownBtn">
+                Multi-selección <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="dropdown-content" id="estadoDropdownContent">
+                <label><input type="checkbox" id="estadoAll" checked> Todos</label>
+                <label><input type="checkbox" class="estado-filter" value="No Iniciado" checked> No Iniciado</label>
+                <label><input type="checkbox" class="estado-filter" value="En Progreso" checked> En Progreso</label>
+                <label><input type="checkbox" class="estado-filter" value="Revisión" checked> Revisión</label>
+                <label><input type="checkbox" class="estado-filter" value="Completado" checked> Completado</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-group" style="justify-content: flex-end;">
+            <button id="resetFilters" class="reset-filters-btn">Resetear Filtros</button>
+          </div>
+        </div>
       </div>
 
-      <div class="actions-buttons">
-        <button id="editarBtn" disabled>Editar</button>
-        <button id="eliminarBtn" disabled>Eliminar</button>
-        <button class="add-task-btn" onclick="abrirModal()">Agregar Tarea</button>
-        <!-- NUEVO: botón global opcional (si lo agregas en HTML ponle id="borrarTodoBtn") -->
+      <!-- Sección Derecha: Acciones -->
+      <div class="actions-section">
+        <div class="actions-grid">
+          <button id="editarBtn" disabled><i class="fas fa-pen"></i> Editar</button>
+          <button id="eliminarBtn" disabled><i class="fas fa-trash"></i> Eliminar</button>
+        </div>
+        <button class="add-task-btn" onclick="abrirModal()">+ Agregar Tarea</button>
       </div>
     </div>
 

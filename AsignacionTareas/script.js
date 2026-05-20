@@ -70,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterResponsable = document.getElementById('filterResponsable');
   const filterFechaDesde  = document.getElementById('filterFechaDesde');
   const filterFechaHasta  = document.getElementById('filterFechaHasta');
-  const sortOrder     = document.getElementById('sortOrder');
   const resetFiltersBtn = document.getElementById('resetFilters');
   const editarBtn     = document.getElementById('editarBtn');
   const eliminarBtn   = document.getElementById('eliminarBtn');
@@ -80,10 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const addTipoBtn    = document.getElementById('addTipoBtn');
 
   // NUEVO: Filtro por Estado con "Todos"
-  const estadoContainer = document.getElementById('filterEstadoCheckboxes');
+  const estadoDropdownBtn = document.getElementById('estadoDropdownBtn');
+  const estadoDropdownContent = document.getElementById('estadoDropdownContent');
+  const estadoDropdown = document.getElementById('estadoDropdown');
   const estadoAll       = document.getElementById('estadoAll');
   // Solo estados reales (los que tienen value)
-  const estadoCheckboxes = Array.from(document.querySelectorAll('#filterEstadoCheckboxes input[type="checkbox"][value]'));
+  const estadoCheckboxes = Array.from(document.querySelectorAll('#estadoDropdownContent input[type="checkbox"][value]'));
 
   const responsableCheckboxesContainer = document.getElementById('responsableCheckboxes');
 
@@ -268,8 +269,20 @@ document.addEventListener('DOMContentLoaded', () => {
      LISTENERS
   ======================= */
   function attachEventListeners() {
-    [searchInput, filterTipo, filterResponsable, filterFechaDesde, filterFechaHasta, sortOrder]
+    [searchInput, filterTipo, filterResponsable, filterFechaDesde, filterFechaHasta]
       .forEach(el => el?.addEventListener('input', actualizarTabla));
+
+    // Estados Dropdown Toggle
+    estadoDropdownBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      estadoDropdown.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!estadoDropdown.contains(e.target)) {
+        estadoDropdown.classList.remove('active');
+      }
+    });
 
     // Estados: master e individuales
     estadoAll?.addEventListener('change', () => setAllEstados(estadoAll.checked));
@@ -433,19 +446,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Historial: sólo completadas
     let listaHistorial = filtradas.filter(t => t.estado === 'Completado');
 
-    // Ordenado para ACTIVAS
-    switch (sortOrder.value) {
-      case 'fechaEstimadaAsc':
-        listaActivas.sort((a,b) => parseYMD(a.fechaEstimada) - parseYMD(b.fechaEstimada)); break;
-      case 'fechaEstimadaDesc':
-        listaActivas.sort((a,b) => parseYMD(b.fechaEstimada) - parseYMD(a.fechaEstimada)); break;
-      case 'fechaCreacionAsc':
-        listaActivas.sort((a,b) => new Date(a.fechaCreacion||0) - new Date(b.fechaCreacion||0)); break;
-      case 'fechaCreacionDesc':
-        listaActivas.sort((a,b) => new Date(b.fechaCreacion||0) - new Date(a.fechaCreacion||0)); break;
-      default:
-        listaActivas.sort((a,b) => prioridadEstado[a.estado] - prioridadEstado[b.estado]);
-    }
+    // Ordenado para ACTIVAS - Default por prioridad de estado
+    listaActivas.sort((a,b) => prioridadEstado[a.estado] - prioridadEstado[b.estado]);
 
     // Historial: recientes primero por fecha de culminación; si no hay, por fecha estimada
     listaHistorial.sort((a,b) => {
