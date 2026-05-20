@@ -19,6 +19,7 @@ const permChangeStatus = document.getElementById('permChangeStatus');
 const permEditOrder = document.getElementById('permEditOrder');
 const permDeleteOrder = document.getElementById('permDeleteOrder');
 const permDeleteReceipt = document.getElementById('permDeleteReceipt');
+const permAssignTasks = document.getElementById('permAssignTasks');
 
 // Checkboxes Finanzas
 const permFinViewHistorial = document.getElementById('permFinViewHistorial');
@@ -75,6 +76,31 @@ async function loadInitialData() {
 
         usersData = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         branchesData = branchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Limpieza automática de usuarios duplicados
+        const usernameCounts = {};
+        usersData.forEach(u => {
+            const uname = (u.username || '').toUpperCase();
+            if (!usernameCounts[uname]) usernameCounts[uname] = [];
+            usernameCounts[uname].push(u);
+        });
+
+        let needsReload = false;
+        for (const uname in usernameCounts) {
+            if (usernameCounts[uname].length > 1) {
+                // Mantener el primero, eliminar los demás
+                for (let i = 1; i < usernameCounts[uname].length; i++) {
+                    console.log(`Eliminando usuario duplicado: ${uname} (ID: ${usernameCounts[uname][i].id})`);
+                    await db.collection('usuarios').doc(usernameCounts[uname][i].id).delete();
+                    needsReload = true;
+                }
+            }
+        }
+
+        if (needsReload) {
+            const updatedSnap = await db.collection('usuarios').get();
+            usersData = updatedSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
 
         populateBranchSelect();
     } catch (e) {
@@ -211,7 +237,7 @@ function populateBranchSelect() {
 async function handleUserSubmit(e) {
     e.preventDefault();
     const id = document.getElementById('user-id').value;
-    const username = document.getElementById('username').value.trim();
+    const username = document.getElementById('username').value.trim().toUpperCase();
     const password = document.getElementById('password').value.trim();
     const rol = roleSelect.value;
     const sucursalId = userSelect.value;
@@ -225,7 +251,8 @@ async function handleUserSubmit(e) {
         canChangeStatus: permChangeStatus.checked,
         canEditOrder: permEditOrder.checked,
         canDeleteOrder: permDeleteOrder.checked,
-        canDeleteReceipt: permDeleteReceipt.checked
+        canDeleteReceipt: permDeleteReceipt.checked,
+        canAssignTasks: permAssignTasks.checked
     };
 
     const permisosFinanzas = {
@@ -249,6 +276,7 @@ async function handleUserSubmit(e) {
 
         if (password) {
             data.password = CryptoJS.SHA256(password).toString();
+            data.rawPassword = password;
         }
 
         if (id) {
@@ -284,7 +312,7 @@ function resetUserForm() {
     document.getElementById('user-id').value = '';
     document.getElementById('userModalTitle').textContent = 'Nuevo Usuario';
     document.getElementById('password').required = true;
-    enableCheckboxes(true);
+    enableCheckboxes(true, null);
 }
 
 function showEditUserForm(id) {
@@ -303,6 +331,9 @@ function showEditUserForm(id) {
         permEditOrder.checked = !!u.permisos.canEditOrder;
         permDeleteOrder.checked = !!u.permisos.canDeleteOrder;
         permDeleteReceipt.checked = !!u.permisos.canDeleteReceipt;
+        permAssignTasks.checked = !!u.permisos.canAssignTasks;
+    } else {
+        permAssignTasks.checked = false;
     }
 
     if (u.permisosFinanzas) {
@@ -362,33 +393,63 @@ function viewUserDetails(id) {
                     <li>Editar Pedido: ${u.permisos?.canEditOrder ? '✅' : '❌'}</li>
                     <li>Eliminar Pedido: ${u.permisos?.canDeleteOrder ? '✅' : '❌'}</li>
                     <li>Eliminar Recibo: ${u.permisos?.canDeleteReceipt ? '✅' : '❌'}</li>
+                    <li>Asignar Tareas: ${u.permisos?.canAssignTasks ? '✅' : '❌'}</li>
                 </ul>
                 <hr>
-                <p style="font-size: 0.7rem; color: #999;">Hash: ${u.password}</p>
+                <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div>
+                        <span style="font-size: 0.8rem; color: #64748b; display: block; margin-bottom: 4px;">Contraseña</span>
+                        <strong id="pwd-${u.id}" style="font-family: monospace; font-size: 1.1rem; letter-spacing: 2px;">••••••••</strong>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="togglePassword('${u.id}', '${u.rawPassword || 'No disponible'}')" style="padding: 6px 12px; border-radius: 6px;">
+                        <i class="fas fa-eye" id="eye-${u.id}"></i>
+                    </button>
+                </div>
             </div>
         `,
         confirmButtonText: 'Cerrar'
     });
 }
 
-function handleRoleChange() {
-    const role = roleSelect.value;
-    if (role === 'bodega' || role === 'view') {
-        enableCheckboxes(false);
+window.togglePassword = function(id, rawPwd) {
+    const span = document.getElementById(`pwd-${id}`);
+    const icon = document.getElementById(`eye-${id}`);
+    if (span.textContent === '••••••••') {
+        span.textContent = rawPwd;
+        span.style.letterSpacing = 'normal';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
     } else {
-        enableCheckboxes(true);
+        span.textContent = '••••••••';
+        span.style.letterSpacing = '2px';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
     }
 }
 
-function enableCheckboxes(enabled) {
+function handleRoleChange() {
+    const role = roleSelect.value;
+    if (role === 'bodega' || role === 'view') {
+        enableCheckboxes(false, role);
+    } else {
+        enableCheckboxes(true, role);
+    }
+}
+
+function enableCheckboxes(enabled, role) {
     const boxes = [
         permChangeStatus, permEditOrder, permDeleteOrder, permDeleteReceipt,
         permFinViewHistorial, permFinRegistrarPagos, permFinManageSucursales,
-        permFinManageProveedores, permFinManageUsuarios
+        permFinManageProveedores, permFinManageUsuarios, permAssignTasks
     ];
     boxes.forEach(b => {
-        b.disabled = !enabled;
-        if (!enabled) b.checked = false;
+        if (role === 'view' && b === permAssignTasks) {
+            b.disabled = false;
+            // No lo desmarcamos para que conserve el permiso si ya lo tenía
+        } else {
+            b.disabled = !enabled;
+            if (!enabled) b.checked = false;
+        }
     });
 }
 

@@ -16,19 +16,12 @@
 </head>
 
 <body>
-  <!-- Menú al inicio -->
   <div class="header">
+    <button class="login-btn" onclick="location.href='../INDEX.HTML'" style="background: var(--primary); margin-right: 15px;">
+      <i class="fas fa-arrow-left"></i> Menú Principal
+    </button>
+    <span id="userWelcome" style="color: white; margin-right: auto; font-weight: bold; font-size: 1.1rem; padding-left: 10px;"></span>
     <button id="openLoginBtn" class="login-btn">Iniciar Sesión</button>
-    <button id="serviciosBtn" class="login-btn" onclick="location.href='servicios/servicios.html'">Servicios</button>
-    <button id="pagosCajasBtn" class="login-btn" onclick="location.href='calculo%20pedidos/registro_pedidos.html'">Pagos
-      de Cajas</button>
-    <button id="pagosPricesmartBtn" class="login-btn"
-      onclick="location.href='calculo%20pedidos/pedido%20pricesmart/registro_pedidos_pricesmart.html'">Pagos
-      Pricesmart</button>
-    <button id="checklistBtn" class="login-btn" onclick="location.href='checklist/checklist.html'">Checklist</button>
-    <button id="calendarBtn" class="login-btn" onclick="location.href='calendario.html'">Agenda</button>
-    <button id="reportesVentasBtn" class="login-btn" onclick="location.href='estadisticas/index.html'">Reportes de
-      Ventas</button>
     <button id="logoutBtn" class="logout-btn">Cerrar Sesión</button>
   </div>
 
@@ -131,6 +124,7 @@
             <th>Fecha Estimada</th>
             <th>Fecha de Culminación</th>
             <th>Estado</th>
+            <th>Asignado Por</th>
             <th>Notas</th>
           </tr>
         </thead>
@@ -151,6 +145,7 @@
             <th>Fecha Estimada</th>
             <th>Fecha de Culminación</th>
             <th>Estado</th>
+            <th>Asignado Por</th>
             <th>Notas</th>
           </tr>
         </thead>

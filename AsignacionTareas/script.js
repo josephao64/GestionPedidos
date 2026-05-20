@@ -1,9 +1,21 @@
 // script.js
 import { db } from './firebase-config.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
 import {
-  collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, getDocs, writeBatch
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  onSnapshot, getDocs, writeBatch, query, where, limit
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+
+const authConfig = {
+  apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
+  authDomain: "logisticdb-2e63c.firebaseapp.com",
+  projectId: "logisticdb-2e63c",
+  storageBucket: "logisticdb-2e63c.appspot.com",
+  messagingSenderId: "917523682093",
+  appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
+};
+const authApp = initializeApp(authConfig, 'AuthApp');
+const authDb = getFirestore(authApp);
 
 document.addEventListener('DOMContentLoaded', () => {
   /* =======================
@@ -135,19 +147,54 @@ document.addEventListener('DOMContentLoaded', () => {
   /* =======================
      LOGIN
   ======================= */
-  function initLogin() {
-    usuarios.forEach(u => usernameSelect.add(new Option(u.username.toUpperCase(), u.username)));
-    if (usuarioActual) {
-      Swal.fire({ icon:'success', title:'Bienvenido', text:usuarioActual.username.toUpperCase(), timer:1500, showConfirmButton:false });
+  async function initLogin() {
+    const globalUser = localStorage.getItem('usuarioLogueado');
+    if (globalUser) {
+        try {
+            // Buscar al usuario en la base de datos principal (authDb)
+            const snap = await getDocs(collection(authDb, 'usuarios'));
+            const uDoc = snap.docs.find(d => {
+                const dbUser = d.data().username || '';
+                return dbUser.toLowerCase() === globalUser.toLowerCase();
+            });
+
+            if (uDoc) {
+                const u = uDoc.data();
+                const isAdmin = (u.rol === 'administrador') || (u.permisos && u.permisos.canAssignTasks === true);
+                usuarioActual = { username: u.username, isAdmin: !!isAdmin };
+            }
+        } catch(e) {
+            console.error('Error syncing global user', e);
+        }
     }
+
+    usuarios.forEach(u => usernameSelect.add(new Option(u.username.toUpperCase(), u.username)));
     // Marcar todos los estados activos al iniciar
     if (estadoAll) setAllEstados(true);
     toggleLoginUI();
   }
   function toggleLoginUI() {
-    openLoginBtn.style.display = usuarioActual ? 'none' : 'inline-block';
-    logoutBtn.style.display    = usuarioActual ? 'inline-block' : 'none';
+    const globalUser = localStorage.getItem('usuarioLogueado');
+    const userWelcome = document.getElementById('userWelcome');
+    
+    if (userWelcome) {
+        if (usuarioActual) {
+            userWelcome.textContent = `Hola, ${usuarioActual.username.toUpperCase()}`;
+        } else if (globalUser) {
+            userWelcome.textContent = `Hola, ${globalUser.toUpperCase()}`;
+        } else {
+            userWelcome.textContent = '';
+        }
+    }
+
+    openLoginBtn.style.display = usuarioActual || globalUser ? 'none' : 'inline-block';
+    logoutBtn.style.display    = usuarioActual && !globalUser ? 'inline-block' : 'none';
     if (borrarTodoBtn) borrarTodoBtn.disabled = !usuarioActual?.isAdmin;
+    
+    const addTaskBtn = document.querySelector('.add-task-btn');
+    if (addTaskBtn) {
+        addTaskBtn.style.display = usuarioActual?.isAdmin ? 'inline-block' : 'none';
+    }
   }
   loginForm?.addEventListener('submit', e => {
     e.preventDefault();
@@ -246,6 +293,9 @@ document.addEventListener('DOMContentLoaded', () => {
      MODAL TAREA
   ======================= */
   window.abrirModal = id => {
+    if (!usuarioActual?.isAdmin) {
+      return Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'No tienes permiso para crear o asignar tareas.' });
+    }
     selectedTaskId = id || null;
     taskForm.reset();
     responsableCheckboxesContainer.querySelectorAll('input').forEach(c => c.checked = false);
@@ -289,7 +339,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return Swal.fire({ icon:'error', text:'Completa todos los campos' });
     }
 
-    const data = { tipo, descripcion, responsable: responsables, fechaEstimada, notas };
+    const data = { 
+      tipo, 
+      descripcion, 
+      responsable: responsables, 
+      fechaEstimada, 
+      notas, 
+      asignadoPor: usuarioActual?.username?.toUpperCase() || 'SISTEMA' 
+    };
 
     try {
       if (selectedTaskId) {
@@ -424,6 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <option value="Completado"${t.estado==='Completado'? ' selected' : ''}>Completado</option>
         </select>
       </td>
+      <td><small style="color: var(--secondary); font-weight: 600;">${t.asignadoPor || 'N/D'}</small></td>
       <td>${t.notas || ''}</td>
     `
 
@@ -444,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     select.addEventListener('change', e => cambiarEstado(t.id, e.target.value));
 
-    const notasTd = tr.children[7];
+    const notasTd = tr.children[8];
     notasTd.addEventListener('dblclick', () => editarNotas(notasTd, t.id));
 
     tr.addEventListener('click', () => seleccionarFila(tr, t.id));

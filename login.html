@@ -191,9 +191,7 @@
             <button type="submit" class="btn-login">Ingresar</button>
         </form>
 
-        <button id="btn-create-admin" class="btn-login" style="margin-top: 16px; background-color: #10b981; font-size: 0.95rem;">
-            <i class="fas fa-user-shield"></i> Crear Admin por Defecto
-        </button>
+
 
         <div class="footer-text">
             &copy; 2026 Sistema Integral Administrativo
@@ -234,7 +232,7 @@
                         const user = doc.data();
                         const option = document.createElement('option');
                         option.value = user.username;
-                        option.textContent = user.username;
+                        option.textContent = user.username.toUpperCase();
                         userSelect.appendChild(option);
                     });
                 })
@@ -255,32 +253,6 @@
 
         document.addEventListener('DOMContentLoaded', loadUsers);
 
-        // Crear Admin Automáticamente
-        const btnCreateAdmin = document.getElementById('btn-create-admin');
-        if(btnCreateAdmin) {
-            btnCreateAdmin.addEventListener('click', function() {
-                const adminData = {
-                    username: 'admin',
-                    password: CryptoJS.SHA256('admin123').toString(),
-                    rol: 'administrador'
-                };
-
-                const currentDb = getSafeDb();
-                if (!currentDb) return Swal.fire('Error', 'DB no inicializado', 'error');
-
-                currentDb.collection('usuarios').doc('admin').set(adminData)
-                    .then(() => {
-                        return Swal.fire('¡Éxito!', 'Usuario creado correctamente.<br><br><b>Usuario:</b> admin<br><b>Contraseña:</b> admin123', 'success');
-                    })
-                    .then(() => {
-                        window.location.reload();
-                    })
-                    .catch((error) => {
-                        console.error('Error creando admin:', error);
-                        Swal.fire('Error', 'No se pudo crear el usuario (Asegúrate de haber configurado las reglas de Firestore)', 'error');
-                    });
-            });
-        }
 
         // Manejar Login
         loginForm.addEventListener('submit', function (e) {
