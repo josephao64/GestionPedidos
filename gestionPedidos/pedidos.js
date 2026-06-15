@@ -407,8 +407,6 @@ function attachInProcessListener() {
   const statuses = [
     "pending",
     "pedidoTomado",
-    "pedidoEnBodega",
-    "bodegaEnvioPedido",
     "caminoATienda",
   ];
   watchOrders(cont, statuses);
@@ -448,9 +446,8 @@ function renderOrderCard(orderDocId, order) {
     actions.push(`<button class="btn btn-danger btn-sm" style="padding: 10px;" data-action="delete" data-id="${orderDocId}"><i class="fas fa-trash"></i></button>`);
   }
 
-  const toConfirm = (order.destination === "Bodega" && order.status === "bodegaEnvioPedido") ||
-    (order.destination === "Tienda" && order.status === "caminoATienda") ||
-    (userRole === "administrador" && (order.status === "bodegaEnvioPedido" || order.status === "caminoATienda"));
+  const toConfirm = (order.destination === "Tienda" && order.status === "caminoATienda") ||
+    (userRole === "administrador" && order.status === "caminoATienda");
 
   let receiveBtn = "";
   if (toConfirm && userRole !== "view") {
@@ -521,8 +518,6 @@ function getStatusConfig(status) {
   const map = {
     pending: { label: "Pendiente", color: "#6366f1", percent: 10 },
     pedidoTomado: { label: "Tomado", color: "#f59e0b", percent: 30 },
-    pedidoEnBodega: { label: "En Bodega", color: "#8b5cf6", percent: 50 },
-    bodegaEnvioPedido: { label: "Enviado", color: "#ec4899", percent: 70 },
     caminoATienda: { label: "En Camino", color: "#0ea5e9", percent: 80 },
     sucursalRecibioPedido: { label: "Completado", color: "#10b981", percent: 100 }
   };
@@ -608,32 +603,7 @@ function forceCompleteOrder(orderDocId) {
           mismatchedQuantities: false,
         });
 
-        // Crear facturas en Cuentas por Pagar si existen
-        if (orderData.invoices && Array.isArray(orderData.invoices)) {
-          orderData.invoices.forEach((inv) => {
-            const facturaRef = db.collection('facturas_pagar').doc();
-            const fechaEmision = new Date(inv.invoiceDate);
-            const fechaVencimiento = new Date(fechaEmision);
-            fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
 
-            batch.set(facturaRef, {
-              numeroFactura: inv.invoiceNumber,
-              pedidoId: orderDocId,
-              orderId: orderData.orderId,
-              proveedorId: orderData.providerName,
-              proveedorNombre: orderData.providerName,
-              fechaEmision: inv.invoiceDate,
-              fechaVencimiento: fechaVencimiento.toISOString().split('T')[0],
-              total: inv.total,
-              saldoPendiente: inv.total,
-              estado: 'pendiente',
-              empresaId: orderData.sucursalId,
-              sucursalId: orderData.sucursalId,
-              fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
-              notasRevision: `Excepción: ${result.value}`
-            });
-          });
-        }
 
         await batch.commit();
         Swal.fire({ icon: "success", title: "Pedido completado con excepción" });
@@ -646,7 +616,7 @@ function forceCompleteOrder(orderDocId) {
 function openChangeStatusModal(orderDocId) {
   currentOrderForStatusChange = orderDocId;
   const container = $("#changeStatusButtons");
-  const flow = FLOWS.Bodega; // Default to full flow for admin
+  const flow = FLOWS.Tienda; // Default to full flow for admin
 
   container.innerHTML = flow.map(st => `
         <button class="btn btn-secondary" data-action="changeManualStatus" data-status="${st.key}">
@@ -669,7 +639,7 @@ function initDashboardStats() {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const pending = orders.filter(o => o.status === "pending").length;
-    const transit = orders.filter(o => ["pedidoTomado", "pedidoEnBodega", "bodegaEnvioPedido", "caminoATienda"].includes(o.status)).length;
+    const transit = orders.filter(o => ["pedidoTomado", "caminoATienda"].includes(o.status)).length;
 
     const completedToday = orders.filter(o => {
       if (o.status !== "sucursalRecibioPedido") return false;
@@ -763,17 +733,10 @@ const FLOWS = {
     { key: "pedidoTomado", label: "Pedido Tomado" },
     { key: "caminoATienda", label: "En Camino a Tienda" },
     { key: "sucursalRecibioPedido", label: "Sucursal Recibió Pedido" },
-  ],
-  Bodega: [
-    { key: "pending", label: "Pendiente" },
-    { key: "pedidoTomado", label: "Pedido Tomado" },
-    { key: "pedidoEnBodega", label: "Pedido en Bodega" },
-    { key: "bodegaEnvioPedido", label: "Bodega Envío Pedido" },
-    { key: "sucursalRecibioPedido", label: "Sucursal Recibió Pedido" },
-  ],
+  ]
 };
 function generateProgressBar(order) {
-  const dest = order.destination === "Tienda" ? "Tienda" : "Bodega";
+  const dest = "Tienda";
   return createProgressBarHTML(FLOWS[dest], order.status);
 }
 function createProgressBarHTML(flowArray, currentStatus) {
@@ -993,7 +956,7 @@ function editOrder(orderDocId) {
 
       idInput.value = orderDocId;
       idDisplay.textContent = order.orderId;
-      destSel.value = order.destination || "Bodega";
+      destSel.value = "Tienda";
 
       // Actualizar botón para llamar al modal en lugar de agregar fila vacía
       if (btnAdd) {
@@ -1714,38 +1677,7 @@ async function saveConfirmedOrder() {
       status: "sucursalRecibioPedido",
     });
 
-    // Crear entradas en Cuentas por Pagar
-    try {
-      const batch = db.batch();
-      invoicesList.forEach((inv) => {
-        const facturaRef = db.collection('facturas_pagar').doc();
-        const fechaEmision = new Date(inv.invoiceDate);
-        const fechaVencimiento = new Date(fechaEmision);
-        fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
 
-        batch.set(facturaRef, {
-          numeroFactura: inv.invoiceNumber,
-          pedidoId: orderId,
-          orderId: orderData.orderId,
-          proveedorId: orderData.providerName,
-          proveedorNombre: orderData.providerName,
-          fechaEmision: inv.invoiceDate,
-          fechaVencimiento: fechaVencimiento.toISOString().split('T')[0],
-          total: inv.total,
-          saldoPendiente: inv.total,
-          estado: 'pendiente',
-          empresaId: orderData.sucursalId,
-          sucursalId: orderData.sucursalId,
-          fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      });
-      await batch.commit();
-      console.log("Facturas creadas en Cuentas por Pagar");
-    } catch (err) {
-      console.error("Error al crear facturas en Cuentas por Pagar:", err);
-      // No bloqueamos el flujo principal si esto falla, pero avisamos
-      Swal.fire({ icon: "warning", title: "Advertencia", text: "Pedido guardado, pero hubo un error al generar las cuentas por pagar." });
-    }
 
     Swal.fire({
       icon: "success",

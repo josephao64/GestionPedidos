@@ -218,15 +218,6 @@
     }
 
     /* Accent Classes */
-    .btn-bodega:hover {
-      border-color: #ea580c;
-      box-shadow: 0 30px 60px -12px rgba(234, 88, 12, 0.15);
-    }
-
-    .btn-bodega:hover .icon-circle::before {
-      background: linear-gradient(135deg, #ea580c, #fbbf24);
-    }
-
     .btn-rrhh:hover {
       border-color: #7c3aed;
       box-shadow: 0 30px 60px -12px rgba(124, 58, 237, 0.15);
@@ -333,14 +324,6 @@
         <p class="card-description">Gestión corporativa y sucursales.</p>
       </div>
 
-      <!-- Bodega -->
-      <div class="menu-card admin-only btn-bodega" id="bodega-button"
-        onclick="window.location.href='InventarioBodega/inventory.html'">
-        <div class="icon-circle"><i class="fas fa-warehouse"></i></div>
-        <h3 class="card-title">Bodega</h3>
-        <p class="card-description">Control de inventario de bodega.</p>
-      </div>
-
       <!-- Reportes -->
       <div class="menu-card admin-only" id="reportes-button" onclick="window.location.href='reportes/reportes.html'">
         <div class="icon-circle"><i class="fas fa-chart-bar"></i></div>
@@ -348,21 +331,6 @@
         <p class="card-description">Estadísticas y análisis de datos.</p>
       </div>
 
-      <!-- Cuentas por Pagar -->
-      <div class="menu-card admin-only" id="cuentas-pagar-button"
-        onclick="window.location.href='CuentasPorPagar/cuentasPorPagar.html'">
-        <div class="icon-circle"><i class="fas fa-file-invoice-dollar"></i></div>
-        <h3 class="card-title">Cuentas por Pagar</h3>
-        <p class="card-description">Gestión de pagos y proveedores.</p>
-      </div>
-
-      <!-- Facturas -->
-      <div class="menu-card admin-only" id="facturas-button" onclick="window.location.href='Facturas/index.html'">
-
-        <div class="icon-circle"><i class="fas fa-file-invoice"></i></div>
-        <h3 class="card-title">Facturas</h3>
-        <p class="card-description">Carga de facturas por proveedor y sucursal.</p>
-      </div>
 
       <!-- Contactos -->
       <div class="menu-card admin-only" id="contactos-button"
@@ -378,6 +346,8 @@
         <h3 class="card-title">Recursos Humanos</h3>
         <p class="card-description">Personal, planilla y vacaciones.</p>
       </div>
+
+
 
       <!-- Sistema de Finanzas -->
       <div class="menu-card btn-finanzas" id="finanzas-button" onclick="abrirFinanzas()">
@@ -420,17 +390,6 @@
       } else if (rol === 'view') {
         const realizarBtn = document.querySelector('.realizar-pedido');
         if (realizarBtn) realizarBtn.style.display = 'none';
-      } else if (rol === 'bodega') {
-        // Ocultar standard links
-        document.querySelectorAll('.dashboard-grid > a').forEach(link => link.style.display = 'none');
-
-        // Mostrar Boton Bodega
-        const bodegaBtn = document.getElementById('bodega-button');
-        if (bodegaBtn) {
-          bodegaBtn.classList.remove('admin-only');
-          bodegaBtn.style.display = 'flex';
-          bodegaBtn.onclick = function () { window.location.href = 'InventarioBodega/salidas encargado bodega/salidas.html'; };
-        }
       }
     }
 

@@ -48,7 +48,7 @@ async function verificarAdmin() {
         }
 
         const userData = snap.docs[0].data();
-        if (userData.rol !== 'administrador' && userData.rol !== 'bodega' && userData.rol !== 'view') {
+        if (userData.rol !== 'administrador' && userData.rol !== 'view') {
             Swal.fire('Acceso Denegado', 'No tienes permisos para esta sección', 'error').then(() => {
                 window.location.href = "../../empresa/empresaMenu.html";
             });
@@ -124,7 +124,7 @@ function switchTab(tab) {
 function renderDashboard() {
     document.getElementById('count-total-users').textContent = usersData.length;
 
-    const rolesCount = { administrador: 0, usuario: 0, bodega: 0, view: 0 };
+    const rolesCount = { administrador: 0, usuario: 0, view: 0 };
     usersData.forEach(u => {
         if (rolesCount[u.rol] !== undefined) rolesCount[u.rol]++;
     });
@@ -142,10 +142,10 @@ function renderRoleChart(counts) {
     window.rolesChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Admin', 'Usuario', 'Bodega', 'Solo Ver'],
+            labels: ['Admin', 'Usuario', 'Solo Ver'],
             datasets: [{
-                data: [counts.administrador, counts.usuario, counts.bodega, counts.view],
-                backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#64748b'],
+                data: [counts.administrador, counts.usuario, counts.view],
+                backgroundColor: ['#4f46e5', '#10b981', '#64748b'],
                 borderWidth: 0
             }]
         },
@@ -209,12 +209,12 @@ function renderUsers() {
 }
 
 function getRoleLabel(role) {
-    const roles = { administrador: 'Admin', usuario: 'Usuario', bodega: 'Bodega', view: 'Solo Ver' };
+    const roles = { administrador: 'Admin', usuario: 'Usuario', view: 'Solo Ver' };
     return roles[role] || role;
 }
 
 function getRoleColor(role) {
-    const colors = { administrador: '#4f46e5', usuario: '#10b981', bodega: '#f59e0b', view: '#64748b' };
+    const colors = { administrador: '#4f46e5', usuario: '#10b981', view: '#64748b' };
     return colors[role] || '#4f46e5';
 }
 
@@ -429,7 +429,7 @@ window.togglePassword = function(id, rawPwd) {
 
 function handleRoleChange() {
     const role = roleSelect.value;
-    if (role === 'bodega' || role === 'view') {
+    if (role === 'view') {
         enableCheckboxes(false, role);
     } else {
         enableCheckboxes(true, role);

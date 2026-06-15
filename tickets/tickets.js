@@ -113,9 +113,9 @@ function buildTicketId(sucursalId){
 
 function autoAssignGroup(area, sub, priority){
   if(area==='Sistemas / TI') return 'Soporte TI';
-  if(area==='Cocina' && sub==='Refrigerador') return 'Mantto. Refrigeración';
+  if(area==='Cocina' && sub==='Refrigerador') return 'Soporte Refrigeración';
   if(priority==='urgent') return 'Guardia 24h';
-  return 'Mantenimiento General';
+  return 'Soporte General';
 }
 
 function slaForPriority(priority){

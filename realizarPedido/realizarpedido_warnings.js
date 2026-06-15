@@ -1,4 +1,4 @@
-﻿// Archivo: realizarpedido.js
+// Archivo: realizarpedido.js
 
 // Importar jsPDF desde el objeto global
 const { jsPDF } = window.jspdf;
@@ -548,23 +548,11 @@ async function saveNewOrder() {
       // Si falla la validaciÃ³n de promedio, permitimos continuar
     }
 
-    // Paso 2: Seleccionar destino (Bodega o Tienda)
-    Swal.fire({
-      title: 'Destino del Pedido',
-      text: 'Seleccione el destino',
-      icon: 'question',
-      showCloseButton: true,
-      showCancelButton: false,
-      confirmButtonText: 'Bodega',
-      denyButtonText: 'Tienda',
-      showDenyButton: true
-    }).then(async destResult => {
-      if (!destResult.isConfirmed && !destResult.isDenied) { isSaving = false; return; }
+    // Paso 2: Seleccionar destino por defecto
+    const destination = 'Tienda';
+    details.destination = destination;
 
-      const destination = destResult.isConfirmed ? 'Bodega' : 'Tienda';
-      details.destination = destination;
-
-      try {
+    try {
         await db.collection('orders').add({
           providerId,
           providerName,
@@ -587,7 +575,6 @@ async function saveNewOrder() {
       } finally {
         isSaving = false;
       }
-    });
   });
 }
 
@@ -1188,23 +1175,7 @@ async function saveBulkOrder() {
   // Instead we confirm ONCE (above) and then just warn/save.
 
   // Destination Selection (ONCE for all? Or per order? Logic usually implies destination is for the session/batch)
-  // Let's ask destination once.
-  const destResult = await Swal.fire({
-    title: 'Destino de los Pedidos',
-    text: 'Seleccione el destino para TODOS los pedidos',
-    icon: 'question',
-    showCloseButton: true,
-    showCancelButton: false,
-    confirmButtonText: 'Bodega',
-    denyButtonText: 'Tienda',
-    showDenyButton: true
-  });
-
-  if (!destResult.isConfirmed && !destResult.isDenied) {
-    isSaving = false;
-    return;
-  }
-  const destination = destResult.isConfirmed ? 'Bodega' : 'Tienda';
+  const destination = 'Tienda';
   const now = new Date();
   const savedDate = formatDateTime(now);
 
