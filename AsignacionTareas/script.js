@@ -7,12 +7,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
 
 const authConfig = {
-  apiKey: "AIzaSyBJ6vgHCboEyeFh_YMohMhLk1fK4Wn8ZeY",
-  authDomain: "sistema-vipizza.firebaseapp.com",
-  projectId: "sistema-vipizza",
-  storageBucket: "sistema-vipizza.firebasestorage.app",
-  messagingSenderId: "923759550793",
-  appId: "1:923759550793:web:39d49aeef741d8a74d7a98"
+  apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
+  authDomain: "logisticdb-2e63c.firebaseapp.com",
+  projectId: "logisticdb-2e63c",
+  storageBucket: "logisticdb-2e63c.appspot.com",
+  messagingSenderId: "917523682093",
+  appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
 };
 const authApp = initializeApp(authConfig, 'AuthApp');
 const authDb = getFirestore(authApp);
