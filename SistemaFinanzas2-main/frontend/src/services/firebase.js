@@ -6,12 +6,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAwPl1XkcdhuZTXpbJmqALrHhbhc6ANExg",
-  authDomain: "finanzas-vp.firebaseapp.com",
-  projectId: "finanzas-vp",
-  storageBucket: "finanzas-vp.firebasestorage.app",
-  messagingSenderId: "569633377367",
-  appId: "1:569633377367:web:4a5ec7f9ed6d64196be712",
+  apiKey: "AIzaSyBJ6vgHCboEyeFh_YMohMhLk1fK4Wn8ZeY",
+  authDomain: "sistema-vipizza.firebaseapp.com",
+  projectId: "sistema-vipizza",
+  storageBucket: "sistema-vipizza.firebasestorage.app",
+  messagingSenderId: "923759550793",
+  appId: "1:923759550793:web:39d49aeef741d8a74d7a98",
   measurementId: "G-V05VVF2XNL"
 };
 

@@ -1,12 +1,12 @@
 // Archivo: database/connection.js
 // El objeto window.FIREBASE_CONFIG se carga desde database/firebase_config.js (generado desde .env)
 const firebaseConfig = {
-  apiKey: "AIzaSyBNalkMiZuqQ-APbvRQC2MmF_hACQR0F3M",
-  authDomain: "logisticdb-2e63c.firebaseapp.com",
-  projectId: "logisticdb-2e63c",
-  storageBucket: "logisticdb-2e63c.appspot.com", // Asegúrate que sea .appspot.com
-  messagingSenderId: "917523682093",
-  appId: "1:917523682093:web:6b03fcce4dd509ecbe79a4"
+  apiKey: "AIzaSyBJ6vgHCboEyeFh_YMohMhLk1fK4Wn8ZeY",
+  authDomain: "sistema-vipizza.firebaseapp.com",
+  projectId: "sistema-vipizza",
+  storageBucket: "sistema-vipizza.firebasestorage.app", // Asegúrate que sea .appspot.com
+  messagingSenderId: "923759550793",
+  appId: "1:923759550793:web:39d49aeef741d8a74d7a98"
 };
 
 // Inicializar Firebase solo si no está inicializado
