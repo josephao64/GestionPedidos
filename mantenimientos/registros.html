@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mantenimientos Activos</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: transparent; color: #1e293b; margin: 0; padding: 0; }
+        .container { padding: 20px; }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: #f59e0b; color: white; }
+        .btn-primary:hover { background: #d97706; }
+        
+        .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-select { padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        th, td { padding: 16px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        th { background: #f8fafc; font-weight: 600; color: #64748b; }
+        .badge { padding: 4px 12px; border-radius: 100px; font-size: 0.85rem; font-weight: 600; }
+        
+        /* Estados */
+        .estado-solicitado { background: #f1f5f9; color: #64748b; }
+        .estado-programado { background: #e0f2fe; color: #0284c7; }
+        .estado-proceso { background: #fef3c7; color: #d97706; }
+        .estado-finalizado { background: #dcfce3; color: #16a34a; }
+        .estado-validado { background: #cffafe; color: #0891b2; }
+        .estado-pagado { background: #d1fae5; color: #059669; }
+        .estado-cancelado { background: #fee2e2; color: #ef4444; }
+
+        .prioridad-baja { color: #10b981; font-weight: bold; }
+        .prioridad-media { color: #f59e0b; font-weight: bold; }
+        .prioridad-alta { color: #ef4444; font-weight: bold; }
+        .prioridad-urgente { color: #991b1b; font-weight: bold; text-transform: uppercase; }
+
+        .action-btn { background: none; border: none; color: #64748b; cursor: pointer; margin-right: 8px; font-size: 1.1rem; }
+        .action-btn:hover { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-actions">
+            <h2>Mantenimientos Registrados</h2>
+            <button class="btn btn-primary" onclick="abrirModalRegistro()"><i class="fas fa-plus"></i> Nueva Solicitud</button>
+        </div>
+        
+        <div class="filters">
+            <select id="filter-estado" class="filter-select" onchange="cargarMantenimientos()">
+                <option value="">Todos los Estados</option>
+                <option value="Solicitado">Solicitado</option>
+                <option value="Programado">Programado</option>
+                <option value="En proceso">En proceso</option>
+                <option value="Finalizado">Finalizado</option>
+                <option value="Validado">Validado</option>
+                <option value="Pagado">Pagado</option>
+                <option value="Cancelado">Cancelado</option>
+            </select>
+            <select id="filter-sucursal" class="filter-select" onchange="cargarMantenimientos()">
+                <option value="">Todas las sucursales</option>
+            </select>
+            <select id="filter-tipo" class="filter-select" onchange="cargarMantenimientos()">
+                <option value="">Todos (Prev/Corr)</option>
+                <option value="Preventivo">Preventivo</option>
+                <option value="Correctivo">Correctivo</option>
+            </select>
+        </div>
+        
+        <table id="tabla-registros">
+            <thead>
+                <tr>
+                    <th>No. Orden</th>
+                    <th>Fecha Solicitud</th>
+                    <th>Equipo / Sucursal</th>
+                    <th>Servicio Solicitado</th>
+                    <th>Técnico/Proveedor</th>
+                    <th>Prioridad</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="lista-registros">
+                <!-- Data cargada por JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="../database/connection.js"></script>
+    <script src="registros.js"></script>
+</body>
+</html>

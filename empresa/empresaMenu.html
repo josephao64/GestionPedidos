@@ -9,6 +9,13 @@
   <!-- Dependencies -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Firebase and DB Connection -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+  <script src="../database/connection.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <style>
     :root {
@@ -266,8 +273,31 @@
     </div>
   </div>
 
-  <div class="footer-action">
-    <p style="color: var(--text-muted); font-size: 0.9rem;">&copy; 2026 Gestión Corporativa</p>
+  <div class="footer-action" style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+    <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+      <!-- Export & Import Proveedores y Productos -->
+      <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
+        <button class="btn-back" onclick="exportProvidersAndProducts()" style="background: var(--surface); color: var(--primary); border-color: var(--primary); cursor: pointer;">
+          <i class="fas fa-file-export"></i> Exportar Proveedores y Productos (TXT)
+        </button>
+        <button class="btn-back" onclick="document.getElementById('importProvProdInput').click()" style="background: var(--surface); color: #10b981; border-color: #10b981; cursor: pointer;">
+          <i class="fas fa-file-import"></i> Importar Proveedores y Productos
+        </button>
+        <input type="file" id="importProvProdInput" accept=".txt,.json" style="display:none" onchange="importProvidersAndProducts(event)">
+      </div>
+
+      <!-- Export & Import Empresas y Sucursales -->
+      <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
+        <button class="btn-back" onclick="exportCompaniesAndBranches()" style="background: var(--surface); color: var(--primary); border-color: var(--primary); cursor: pointer;">
+          <i class="fas fa-file-export"></i> Exportar Empresas y Sucursales (TXT)
+        </button>
+        <button class="btn-back" onclick="document.getElementById('importEmpSucInput').click()" style="background: var(--surface); color: #10b981; border-color: #10b981; cursor: pointer;">
+          <i class="fas fa-file-import"></i> Importar Empresas y Sucursales
+        </button>
+        <input type="file" id="importEmpSucInput" accept=".txt,.json" style="display:none" onchange="importCompaniesAndBranches(event)">
+      </div>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 20px;">&copy; 2026 Gestión Corporativa</p>
   </div>
 
   <script>
@@ -281,6 +311,171 @@
         card.style.transform = 'translateY(0)';
       }, index * 100);
     });
+
+    // Export & Import Logic
+    function downloadTxt(filename, text) {
+      const element = document.createElement('a');
+      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('download', filename);
+      element.style.display = 'none';
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    }
+
+    async function executeBatches(operations) {
+      const BATCH_SIZE = 450;
+      for (let i = 0; i < operations.length; i += BATCH_SIZE) {
+        const chunk = operations.slice(i, i + BATCH_SIZE);
+        const batch = db.batch();
+        chunk.forEach(op => batch.set(op.ref, op.data));
+        await batch.commit();
+      }
+    }
+
+    async function exportProvidersAndProducts() {
+      try {
+        Swal.fire({ title: 'Generando archivo...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const [provSnap, prodSnap] = await Promise.all([
+          db.collection('providers').get(),
+          db.collection('products').get()
+        ]);
+
+        const dataToExport = {
+          type: "PROVIDERS_AND_PRODUCTS",
+          providers: provSnap.docs.map(doc => ({ originalId: doc.id, ...doc.data() })),
+          products: prodSnap.docs.map(doc => ({ originalId: doc.id, ...doc.data() }))
+        };
+
+        const jsonString = JSON.stringify(dataToExport);
+        Swal.close();
+        downloadTxt('proveedores_y_productos.txt', jsonString);
+      } catch (error) {
+        console.error("Error al exportar:", error);
+        Swal.fire('Error', 'Hubo un problema al exportar los datos.', 'error');
+      }
+    }
+
+    async function importProvidersAndProducts(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const text = e.target.result;
+          const data = JSON.parse(text);
+          if (data.type !== "PROVIDERS_AND_PRODUCTS") {
+             Swal.fire('Error', 'El archivo no es de Proveedores y Productos válido.', 'error');
+             return;
+          }
+
+          Swal.fire({ title: 'Importando datos...', text: 'Puede tardar un momento...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+          const operations = [];
+          const newProviderIds = {};
+
+          for (const prov of data.providers) {
+             const docRef = db.collection('providers').doc();
+             newProviderIds[prov.originalId] = docRef.id;
+             const provData = { ...prov };
+             delete provData.originalId;
+             operations.push({ ref: docRef, data: provData });
+          }
+
+          for (const prod of data.products) {
+             const docRef = db.collection('products').doc();
+             const prodData = { ...prod };
+             delete prodData.originalId;
+             if (prodData.providerId && newProviderIds[prodData.providerId]) {
+                prodData.providerId = newProviderIds[prodData.providerId];
+             }
+             operations.push({ ref: docRef, data: prodData });
+          }
+
+          await executeBatches(operations);
+          Swal.fire('¡Éxito!', 'Los proveedores y productos se importaron correctamente.', 'success');
+          
+        } catch(error) {
+           console.error(error);
+           Swal.fire('Error', 'El archivo está corrupto o hubo un problema al importar.', 'error');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    async function exportCompaniesAndBranches() {
+      try {
+        Swal.fire({ title: 'Generando archivo...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const [empSnap, sucSnap] = await Promise.all([
+          db.collection('empresas').get(),
+          db.collection('sucursales').get()
+        ]);
+
+        const dataToExport = {
+          type: "COMPANIES_AND_BRANCHES",
+          empresas: empSnap.docs.map(doc => ({ originalId: doc.id, ...doc.data() })),
+          sucursales: sucSnap.docs.map(doc => ({ originalId: doc.id, ...doc.data() }))
+        };
+
+        const jsonString = JSON.stringify(dataToExport);
+        Swal.close();
+        downloadTxt('empresas_y_sucursales.txt', jsonString);
+      } catch (error) {
+        console.error("Error al exportar:", error);
+        Swal.fire('Error', 'Hubo un problema al exportar los datos.', 'error');
+      }
+    }
+
+    async function importCompaniesAndBranches(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const text = e.target.result;
+          const data = JSON.parse(text);
+          if (data.type !== "COMPANIES_AND_BRANCHES") {
+             Swal.fire('Error', 'El archivo no es de Empresas y Sucursales válido.', 'error');
+             return;
+          }
+
+          Swal.fire({ title: 'Importando datos...', text: 'Puede tardar un momento...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+          const operations = [];
+          const newEmpresaIds = {};
+
+          for (const emp of data.empresas) {
+             const docRef = db.collection('empresas').doc();
+             newEmpresaIds[emp.originalId] = docRef.id;
+             const empData = { ...emp };
+             delete empData.originalId;
+             operations.push({ ref: docRef, data: empData });
+          }
+
+          for (const suc of data.sucursales) {
+             const docRef = db.collection('sucursales').doc();
+             const sucData = { ...suc };
+             delete sucData.originalId;
+             if (sucData.empresaId && newEmpresaIds[sucData.empresaId]) {
+                sucData.empresaId = newEmpresaIds[sucData.empresaId];
+             }
+             operations.push({ ref: docRef, data: sucData });
+          }
+
+          await executeBatches(operations);
+          Swal.fire('¡Éxito!', 'Las empresas y sucursales se importaron correctamente.', 'success');
+          
+        } catch(error) {
+           console.error(error);
+           Swal.fire('Error', 'El archivo está corrupto o hubo un problema al importar.', 'error');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
   </script>
 </body>
 

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programación de Mantenimientos</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: transparent; color: #1e293b; margin: 0; padding: 0; }
+        .container { padding: 20px; }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: #f59e0b; color: white; }
+        .btn-primary:hover { background: #d97706; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        th, td { padding: 16px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        th { background: #f8fafc; font-weight: 600; color: #64748b; }
+        
+        .badge { padding: 4px 12px; border-radius: 100px; font-size: 0.85rem; font-weight: 600; }
+        .badge-activa { background: #dcfce3; color: #16a34a; }
+        .badge-pausada { background: #fef3c7; color: #d97706; }
+        .badge-cancelada { background: #fee2e2; color: #ef4444; }
+
+        .proxima-vencida { color: #ef4444; font-weight: bold; }
+        .proxima-alerta { color: #f59e0b; font-weight: bold; }
+        .proxima-ok { color: #10b981; }
+
+        .action-btn { background: none; border: none; color: #64748b; cursor: pointer; margin-right: 8px; font-size: 1.1rem; }
+        .action-btn:hover { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-actions">
+            <h2>Programaciones Automáticas</h2>
+            <div>
+                <button class="btn btn-success" onclick="generarOrdenesPendientes()" style="margin-right: 10px;"><i class="fas fa-bolt"></i> Generar Órdenes Pendientes</button>
+                <button class="btn btn-primary" onclick="abrirModalProgramacion()"><i class="fas fa-calendar-plus"></i> Nueva Programación</button>
+            </div>
+        </div>
+        
+        <table id="tabla-programaciones">
+            <thead>
+                <tr>
+                    <th>Equipo / Sucursal</th>
+                    <th>Frecuencia</th>
+                    <th>Próxima Fecha</th>
+                    <th>Técnico Sugerido</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="lista-programaciones">
+                <!-- Data cargada por JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="../database/connection.js"></script>
+    <script src="programacion.js"></script>
+</body>
+</html>

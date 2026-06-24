@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD Tipos de Mantenimiento</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: transparent; color: #1e293b; margin: 0; padding: 0; }
+        .container { padding: 20px; }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: #f59e0b; color: white; }
+        .btn-primary:hover { background: #d97706; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        th, td { padding: 16px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        th { background: #f8fafc; font-weight: 600; color: #64748b; }
+        .badge { padding: 4px 12px; border-radius: 100px; font-size: 0.85rem; font-weight: 600; }
+        .badge-active { background: #dcfce3; color: #16a34a; }
+        .badge-inactive { background: #fee2e2; color: #ef4444; }
+        .action-btn { background: none; border: none; color: #64748b; cursor: pointer; margin-right: 8px; font-size: 1.1rem; }
+        .action-btn:hover { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-actions">
+            <h2>Tipos de Mantenimiento</h2>
+            <button class="btn btn-primary" onclick="abrirModalTipo()"><i class="fas fa-plus"></i> Nuevo Tipo</button>
+        </div>
+        
+        <table id="tabla-tipos">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Frecuencia Sugerida</th>
+                    <th>Técnico Externo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="lista-tipos">
+                <!-- Data cargada por JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="../database/connection.js"></script>
+    <script src="tipos.js"></script>
+</body>
+</html>

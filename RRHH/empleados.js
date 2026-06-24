@@ -153,7 +153,7 @@ async function loadEmployees() {
             // Determine dynamic status
             let isProbation = false;
             const effectiveStartDate = emp.startDate || emp.hiringDate || emp.fechaIngreso;
-            if (effectiveStartDate) {
+            if (effectiveStartDate && !emp.skipProbation) {
                 const bSettings = window.rrhhConfig.getBranchSettings(emp.sucursalId);
                 const pDays = bSettings.probationDays || 60;
                 const probationMs = pDays * 24 * 60 * 60 * 1000;
@@ -199,7 +199,7 @@ async function loadEmployees() {
                 let probationEndDateStr = '';
                 const effectiveStartDate = data.startDate || data.hiringDate || data.fechaIngreso;
 
-                if (effectiveStartDate) {
+                if (effectiveStartDate && !data.skipProbation) {
                     const bSettings = window.rrhhConfig.getBranchSettings(data.sucursalId);
                     const pDays = bSettings.probationDays || 60;
                     const probationMs = pDays * 24 * 60 * 60 * 1000;
@@ -481,6 +481,7 @@ async function openEmpleadoModal(id = null) {
     form.nationality.value = 'guatemalteca';
     form.civilStatus.value = '';
     form.workShift.value = '';
+    if (form.skipProbation) form.skipProbation.checked = false;
 
     // Hide Termination Section by default
     document.getElementById('terminationSection').style.display = 'none';
@@ -530,6 +531,7 @@ async function openEmpleadoModal(id = null) {
             if (form.workShift) form.workShift.value = data.workShift || '';
             if (form.contractDuration) form.contractDuration.value = data.contractDuration || '';
             if (form.sexo) form.sexo.value = data.sexo || '';
+            if (form.skipProbation) form.skipProbation.checked = data.skipProbation || false;
 
             // Sub Empresa
             if (form.subEmpresa) {
@@ -662,6 +664,7 @@ document.getElementById('empleadoForm').addEventListener('submit', async (e) => 
         nationality: form.nationality ? form.nationality.value : 'guatemalteca',
         workShift: form.workShift ? form.workShift.value : '',
         contractDuration: form.contractDuration ? form.contractDuration.value : '',
+        skipProbation: form.skipProbation ? form.skipProbation.checked : false,
 
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };

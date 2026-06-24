@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Mantenimientos</title>
+
+    <!-- Dependencies -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #f59e0b; /* Amber/Orange for tools/maintenance */
+            --primary-dark: #d97706;
+            --secondary: #94a3b8;
+            --background: #fdfdff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --radius: 16px;
+            --transition-fast: all 0.2s ease;
+            --transition-base: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            --sidebar-width: 280px;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--background);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(245, 158, 11, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(20, 184, 166, 0.05) 0px, transparent 50%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-right: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .sidebar-header i {
+            font-size: 1.8rem;
+            color: var(--primary);
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: var(--transition-base);
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+        }
+
+        .back-link {
+            margin-top: auto;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            padding-top: 16px;
+            color: #ef4444;
+        }
+
+        .back-link:hover {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        /* Dashboard specific */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .icon-blue { background: #e0f2fe; color: #0284c7; }
+        .icon-orange { background: #ffedd5; color: #ea580c; }
+        .icon-green { background: #dcfce3; color: #16a34a; }
+        .icon-purple { background: #f3e8ff; color: #9333ea; }
+
+        .stat-info h3 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .stat-info p {
+            margin: 4px 0 0 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* Placeholder for iframe content */
+        #content-frame {
+            width: 100%;
+            height: calc(100vh - 120px);
+            border: none;
+            border-radius: var(--radius);
+            background: transparent;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+            #mobile-menu-btn {
+                display: block;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-tools"></i>
+            <h2>Mantenimientos</h2>
+        </div>
+        
+        <div class="nav-links">
+            <a onclick="loadPage('dashboard.html', this)" class="nav-link active" id="link-dashboard">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a onclick="loadPage('registros.html', this)" class="nav-link" id="link-registros">
+                <i class="fas fa-clipboard-list"></i> Mantenimientos
+            </a>
+            <a onclick="loadPage('programacion.html', this)" class="nav-link" id="link-programacion">
+                <i class="fas fa-calendar-alt"></i> Programación
+            </a>
+            <a onclick="loadPage('equipos.html', this)" class="nav-link" id="link-equipos">
+                <i class="fas fa-server"></i> Equipos / Activos
+            </a>
+            <a onclick="loadPage('areas.html', this)" class="nav-link" id="link-areas">
+                <i class="fas fa-vector-square"></i> Áreas
+            </a>
+            <a onclick="loadPage('tipos.html', this)" class="nav-link" id="link-tipos">
+                <i class="fas fa-tags"></i> Tipos de Mantenimiento
+            </a>
+            <a onclick="loadPage('proveedores.html', this)" class="nav-link" id="link-proveedores">
+                <i class="fas fa-users-cog"></i> Técnicos / Prov.
+            </a>
+            
+            <a href="../INDEX.HTML" class="nav-link back-link">
+                <i class="fas fa-arrow-left"></i> Volver al Menú
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content wrapper -->
+    <div class="main-content">
+        <!-- Contenido dinámico mediante iframe para modularidad, o contenedor div -->
+        <iframe id="content-frame" src="dashboard.html" title="Contenido"></iframe>
+    </div>
+
+    <!-- Scripts Base -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="../database/connection.js"></script>
+    
+    <script>
+        // Verificación de autenticación (Básica)
+        window.onload = () => {
+            const usuarioLogueado = localStorage.getItem('usuarioLogueado');
+            if (!usuarioLogueado) {
+                window.location.href = '../login.html';
+                return;
+            }
+            
+            // Verificar rol (Si es necesario restringir más)
+            db.collection('usuarios').where('username', '==', usuarioLogueado).limit(1).get()
+            .then(querySnapshot => {
+                if(querySnapshot.empty) {
+                    window.location.href = '../login.html';
+                } else {
+                    const userData = querySnapshot.docs[0].data();
+                    if(userData.rol !== 'administrador') { // Ajustar si hay otros roles permitidos
+                        Swal.fire('Acceso Denegado', 'No tienes permisos para ver esta sección', 'error')
+                        .then(() => { window.location.href = '../INDEX.HTML'; });
+                    }
+                }
+            });
+        };
+
+        // Lógica de navegación del iframe
+        function loadPage(page, element) {
+            document.getElementById('content-frame').src = page;
+            
+            // Actualizar clase activa
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            element.classList.add('active');
+        }
+    </script>
+</body>
+
+</html>
