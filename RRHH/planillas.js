@@ -457,7 +457,7 @@ async function loadPlanillaTable() {
                     }
 
                     // If in probation during the period OR currently in probation
-                    if ((diffDaysP >= 0 && diffDaysP <= pDays) || (diffDaysT >= 0 && diffDaysT <= pDays)) {
+                    if (!emp.skipProbation && ((diffDaysP >= 0 && diffDaysP <= pDays) || (diffDaysT >= 0 && diffDaysT <= pDays))) {
                         isProbation = true;
 
                         // Overrides
