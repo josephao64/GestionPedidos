@@ -414,6 +414,31 @@ button {
   box-shadow: 0 6px 16px rgba(15, 118, 110, 0.35);
 }
 
+#manageResponsablesBtn {
+  width: 100%;
+  background-color: #4a6fa5;
+  color: white;
+  box-shadow: 0 4px 12px rgba(74, 111, 165, 0.3);
+  margin-top: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+#manageResponsablesBtn:hover {
+  background-color: #3b5a89;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(74, 111, 165, 0.45);
+}
+
 .reset-filters-btn {
   background-color: var(--text-muted);
   color: white;

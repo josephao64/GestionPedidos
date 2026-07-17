@@ -87,8 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const estadoCheckboxes = Array.from(document.querySelectorAll('#estadoDropdownContent input[type="checkbox"][value]'));
 
   const responsableCheckboxesContainer = document.getElementById('responsableCheckboxes');
-
-  // Opcional: botón "borrar todo" si existe en el HTML
+  const colaboradorCheckboxesContainer = document.getElementById('colaboradorCheckboxes');
+  const manageResponsablesBtn = document.getElementById('manageResponsablesBtn');
+  const responsablesModal = document.getElementById('responsablesModal');
   const borrarTodoBtn = document.getElementById('borrarTodoBtn');
 
   const userStatsEls = {
@@ -113,6 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let filaSeleccionada = null;
 
   const prioridadEstado = { "Completado":1, "Revisión":2, "En Progreso":3, "No Iniciado":4 };
+  let systemUsers = [];      // Lista de usuarios del sistema (cargada desde Firebase)
+  let responsablesList = []; // Lista de responsables activos (cargada desde Firebase)
 
   /* =======================
      UTILIDADES FECHAS
@@ -143,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initLogin();
   cargarTipos();
   cargarTareas();
+  cargarResponsables(); // Carga responsables en tiempo real desde Firebase
   attachEventListeners();
 
   /* =======================
@@ -150,30 +154,92 @@ document.addEventListener('DOMContentLoaded', () => {
   ======================= */
   async function initLogin() {
     const globalUser = localStorage.getItem('usuarioLogueado');
-    if (globalUser) {
-        try {
-            // Buscar al usuario en la base de datos principal (authDb)
-            const snap = await getDocs(collection(authDb, 'usuarios'));
-            const uDoc = snap.docs.find(d => {
-                const dbUser = d.data().username || '';
-                return dbUser.toLowerCase() === globalUser.toLowerCase();
-            });
 
-            if (uDoc) {
-                const u = uDoc.data();
-                const isAdmin = (u.rol === 'administrador') || (u.permisos && u.permisos.canAssignTasks === true);
-                usuarioActual = { username: u.username, isAdmin: !!isAdmin };
-            }
-        } catch(e) {
-            console.error('Error syncing global user', e);
+    // Siempre cargar todos los usuarios del sistema (para los checkboxes y login)
+    try {
+      const snap = await getDocs(collection(authDb, 'usuarios'));
+      systemUsers = snap.docs.map(d => ({ username: d.data().username || '', ...d.data() }));
+
+      if (globalUser) {
+        const uDoc = snap.docs.find(d => {
+          const dbUser = d.data().username || '';
+          return dbUser.toLowerCase() === globalUser.toLowerCase();
+        });
+        if (uDoc) {
+          const u = uDoc.data();
+          const isAdmin = (u.rol === 'administrador') || (u.permisos && u.permisos.canAssignTasks === true);
+          usuarioActual = { username: u.username, isAdmin: !!isAdmin, permisos: u.permisos || {} };
         }
+      }
+    } catch(e) {
+      console.error('Error cargando usuarios del sistema', e);
     }
 
-    usuarios.forEach(u => usernameSelect.add(new Option(u.username.toUpperCase(), u.username)));
+    // Cargar responsables activos desde Firebase antes de construir la UI
+    try {
+      const rSnap = await getDocs(collection(db, 'responsables'));
+      responsablesList = rSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {
+      console.warn('No se cargaron responsables:', e);
+      responsablesList = [];
+    }
+
+    buildDynamicUserUI();
     // Marcar todos los estados activos al iniciar
     if (estadoAll) setAllEstados(true);
     toggleLoginUI();
   }
+
+  function buildDynamicUserUI() {
+    usernameSelect.length = 1;
+    systemUsers.forEach(u => usernameSelect.add(new Option((u.username || '').toUpperCase(), u.username)));
+
+    if (filterResponsable) {
+      filterResponsable.innerHTML = '<option value="">Todos</option>';
+    }
+    const statsList = document.getElementById('statsList');
+    if (statsList) statsList.innerHTML = '';
+    
+    if (responsableCheckboxesContainer) {
+      responsableCheckboxesContainer.innerHTML = '';
+    }
+    if (colaboradorCheckboxesContainer) {
+      colaboradorCheckboxesContainer.innerHTML = '';
+    }
+
+    const source = responsablesList.length > 0 ? responsablesList : systemUsers.map(u => ({ nombre: (u.username || '').toUpperCase(), usuarioVinculado: (u.username || '').toUpperCase() }));
+
+    source.forEach(r => {
+      const uname = (r.nombre || '').toUpperCase();
+      
+      if (filterResponsable) {
+        filterResponsable.add(new Option(uname, uname));
+      }
+      
+      if (responsableCheckboxesContainer) {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.name = 'responsable';
+        cb.value = uname;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' ' + uname));
+        responsableCheckboxesContainer.appendChild(label);
+      }
+      
+      if (colaboradorCheckboxesContainer) {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.name = 'colaborador';
+        cb.value = uname;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' ' + uname));
+        colaboradorCheckboxesContainer.appendChild(label);
+      }
+    });
+  }
+
   function toggleLoginUI() {
     const globalUser = localStorage.getItem('usuarioLogueado');
     const userWelcome = document.getElementById('userWelcome');
@@ -194,7 +260,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const addTaskBtn = document.querySelector('.add-task-btn');
     if (addTaskBtn) {
-        addTaskBtn.style.display = usuarioActual?.isAdmin ? 'inline-block' : 'none';
+        addTaskBtn.style.display = (usuarioActual?.isAdmin || usuarioActual?.permisos?.canTaskCreate) ? 'inline-block' : 'none';
+    }
+    if (manageResponsablesBtn) {
+        manageResponsablesBtn.style.display = (usuarioActual?.isAdmin || usuarioActual?.permisos?.canManageResponsables) ? 'inline-block' : 'none';
     }
   }
   loginForm?.addEventListener('submit', e => {
@@ -306,12 +375,34 @@ document.addEventListener('DOMContentLoaded', () => {
      MODAL TAREA
   ======================= */
   window.abrirModal = id => {
-    if (!usuarioActual?.isAdmin) {
-      return Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'No tienes permiso para crear o asignar tareas.' });
+    let hasFullEdit = false;
+
+    if (id) {
+      hasFullEdit = usuarioActual?.isAdmin || usuarioActual?.permisos?.canTaskEdit;
+    } else {
+      hasFullEdit = usuarioActual?.isAdmin || usuarioActual?.permisos?.canTaskCreate;
     }
+
+    if (!hasFullEdit && !id) {
+      return Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'No tienes permiso para crear tareas.' });
+    }
+
+    taskModal.dataset.fullEdit = hasFullEdit;
+
+    tipoSelect.disabled = !hasFullEdit;
+    document.getElementById('descripcion').disabled = !hasFullEdit;
+    document.getElementById('fechaEstimada').disabled = !hasFullEdit;
+    responsableCheckboxesContainer.querySelectorAll('input').forEach(c => c.disabled = !hasFullEdit);
+    colaboradorCheckboxesContainer?.querySelectorAll('input').forEach(c => c.disabled = !hasFullEdit);
+    document.getElementById('notas').disabled = false;
     selectedTaskId = id || null;
     taskForm.reset();
+
+    responsableCheckboxesContainer.querySelectorAll('.orphaned-responsible').forEach(el => el.remove());
     responsableCheckboxesContainer.querySelectorAll('input').forEach(c => c.checked = false);
+    colaboradorCheckboxesContainer?.querySelectorAll('.orphaned-colaborador').forEach(el => el.remove());
+    colaboradorCheckboxesContainer?.querySelectorAll('input').forEach(c => c.checked = false);
+    
     document.getElementById('modalTitle').textContent = id ? 'Editar Tarea' : 'Agregar Tarea';
 
     if (id) {
@@ -321,9 +412,64 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('descripcion').value = t.descripcion;
         document.getElementById('fechaEstimada').value = t.fechaEstimada;
         document.getElementById('notas').value = t.notas || '';
-        responsableCheckboxesContainer.querySelectorAll('input').forEach(c => {
-          if (t.responsable.includes(c.value)) c.checked = true;
+        
+        t.responsable.forEach(rName => {
+          let found = false;
+          responsableCheckboxesContainer.querySelectorAll('input').forEach(c => {
+            if (c.value === rName) {
+              c.checked = true;
+              found = true;
+            }
+          });
+          if (!found) {
+            const label = document.createElement('label');
+            label.className = 'orphaned-responsible';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.name = 'responsable';
+            cb.value = rName;
+            cb.checked = true;
+            cb.disabled = !hasFullEdit;
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(' ' + rName + ' (Eliminado)'));
+            label.style.color = '#e74c3c';
+            responsableCheckboxesContainer.appendChild(label);
+          }
         });
+
+        if (t.colaboradores) {
+          t.colaboradores.forEach(cName => {
+            let found = false;
+            colaboradorCheckboxesContainer?.querySelectorAll('input').forEach(c => {
+              if (c.value === cName) {
+                c.checked = true;
+                found = true;
+              }
+            });
+            if (!found && colaboradorCheckboxesContainer) {
+              const label = document.createElement('label');
+              label.className = 'orphaned-colaborador';
+              const cb = document.createElement('input');
+              cb.type = 'checkbox';
+              cb.name = 'colaborador';
+              cb.value = cName;
+              cb.checked = true;
+              cb.disabled = !hasFullEdit;
+              label.appendChild(cb);
+              label.appendChild(document.createTextNode(' ' + cName + ' (Eliminado)'));
+              label.style.color = '#e74c3c';
+              colaboradorCheckboxesContainer.appendChild(label);
+            }
+          });
+        }
+      }
+    } else {
+      if (!usuarioActual?.isAdmin && !usuarioActual?.permisos?.canAssignTasks) {
+          responsableCheckboxesContainer.querySelectorAll('input').forEach(c => {
+             if (c.value === usuarioActual.username.toUpperCase()) {
+                 c.checked = true;
+             }
+          });
       }
     }
     taskModal.style.display = 'block';
@@ -346,16 +492,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const descripcion = document.getElementById('descripcion').value.trim();
     const fechaEstimada = document.getElementById('fechaEstimada').value;
     const responsables = Array.from(responsableCheckboxesContainer.querySelectorAll('input:checked')).map(i => i.value);
+    const colaboradores = Array.from(colaboradorCheckboxesContainer?.querySelectorAll('input:checked') || []).map(i => i.value);
     const notas = document.getElementById('notas').value.trim();
 
-    if (!tipo || !descripcion || !fechaEstimada || !responsables.length) {
-      return Swal.fire({ icon:'error', text:'Completa todos los campos' });
+    const isFullEdit = taskModal.dataset.fullEdit === 'true';
+
+    if (isFullEdit) {
+      if (!tipo || !descripcion || !fechaEstimada || !responsables.length) {
+        return Swal.fire({ icon:'error', text:'Completa todos los campos (Colaboradores opcional)' });
+      }
     }
 
     const data = { 
       tipo, 
       descripcion, 
       responsable: responsables, 
+      colaboradores: colaboradores,
       fechaEstimada, 
       notas, 
       asignadoPor: usuarioActual?.username?.toUpperCase() || 'SISTEMA' 
@@ -363,7 +515,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       if (selectedTaskId) {
-        await updateDoc(doc(db,'tareas',selectedTaskId), data);
+        if (isFullEdit) {
+           await updateDoc(doc(db,'tareas',selectedTaskId), data);
+        } else {
+           await updateDoc(doc(db,'tareas',selectedTaskId), { notas: notas });
+        }
       } else {
         await addDoc(collection(db,'tareas'), {
           ...data,
@@ -408,17 +564,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const semanaInicio = new Date(hoy); semanaInicio.setDate(hoy.getDate() - diffLunes); semanaInicio.setHours(0,0,0,0);
     const semanaFin = new Date(semanaInicio); semanaFin.setDate(semanaInicio.getDate() + 6); semanaFin.setHours(23,59,59,999);
 
-    Object.keys(userStatsEls).forEach(user => {
+    const sourceForStats = responsablesList.length > 0 
+      ? responsablesList 
+      : systemUsers.map(u => ({ nombre: (u.username || '').toUpperCase() }));
+
+    sourceForStats.forEach(r => {
+      const uname = (r.nombre || '').toUpperCase();
       const count = tareas.filter(t => {
         const fecha = parseYMD(t.fechaEstimada);
-        return t.responsable?.includes(user)
+        return t.responsable?.includes(uname)
           && (t.estado === 'No Iniciado' || t.estado === 'En Progreso')
           && fecha >= semanaInicio && fecha <= semanaFin;
       }).length;
-      userStatsEls[user].textContent = count;
+      const statEl = document.getElementById(`pending-${uname}`);
+      if (statEl) statEl.textContent = count;
     });
 
     const pasaFiltrosComunes = (t) => {
+      if (!usuarioActual?.isAdmin && !usuarioActual?.permisos?.canAssignTasks) {
+          const uname = usuarioActual?.username?.toUpperCase();
+          const misResponsables = responsablesList
+            .filter(r => r.usuarioVinculado?.toUpperCase() === uname)
+            .map(r => r.nombre.toUpperCase());
+          if (uname) misResponsables.push(uname);
+          const tieneTarea = t.responsable?.some(resp => misResponsables.includes(resp.toUpperCase()));
+          if (!tieneTarea) return false;
+      }
       if (filterTipo.value && t.tipo !== filterTipo.value) return false;
       if (filterResponsable.value && !t.responsable?.includes(filterResponsable.value)) return false;
       if (filterFechaDesde.value && t.fechaEstimada < filterFechaDesde.value) return false;
@@ -468,10 +639,15 @@ document.addEventListener('DOMContentLoaded', () => {
     tr.dataset.id = t.id;
     if (filaSeleccionada?.dataset.id === t.id) tr.classList.add('selected');
 
+    let responsableDisplay = (t.responsable || []).join(', ');
+    if (t.colaboradores && t.colaboradores.length > 0) {
+      responsableDisplay += `<br><small style="color: #64748b;">Colab: ${t.colaboradores.join(', ')}</small>`;
+    }
+
     tr.innerHTML = `
       <td>${t.tipo || ''}</td>
       <td>${t.descripcion || ''}</td>
-      <td>${(t.responsable||[]).join(', ')}</td>
+      <td>${responsableDisplay}</td>
       <td>${t.fechaCreacion?.split('T')[0] || ''}</td>
       <td>${t.fechaEstimada || ''}</td>
       <td>${t.fechaCulminacion || '-'}</td>
@@ -516,8 +692,10 @@ document.addEventListener('DOMContentLoaded', () => {
     tr.classList.add('selected');
     filaSeleccionada = tr;
     selectedTaskId = id;
+    // Everyone can edit (at least notes)
     editarBtn.disabled = false;
-    eliminarBtn.disabled = false;
+    // Only those with delete permission can delete
+    eliminarBtn.disabled = !(usuarioActual?.isAdmin || usuarioActual?.permisos?.canTaskDelete);
   }
 
   async function cambiarEstado(id, estado) {
@@ -559,6 +737,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function eliminarTarea() {
     if (!selectedTaskId) return;
+    if (!usuarioActual?.isAdmin && !usuarioActual?.permisos?.canTaskDelete) {
+       return Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'No tienes permiso para eliminar tareas.' });
+    }
     const res = await Swal.fire({ title:'¿Eliminar?', icon:'warning', showCancelButton:true, confirmButtonText:'Sí, eliminar' });
     if (res.isConfirmed) {
       await deleteDoc(doc(db,'tareas',selectedTaskId));
@@ -647,5 +828,98 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Ejecutamos la migración automáticamente
   migrarNombresAntiguos();
+
+  /* =============================================
+     GESTIÓN DE RESPONSABLES
+  ============================================= */
+
+  // 1. Carga en tiempo real los responsables desde Firebase (solo los activos)
+  function cargarResponsables() {
+    onSnapshot(collection(db, 'responsables'), (snap) => {
+      responsablesList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      buildDynamicUserUI(); // Reconstruir UI con los responsables actualizados
+    }, (err) => {
+      console.error('Error cargando responsables:', err);
+    });
+  }
+
+  // 2. Abrir el modal: genera una fila por cada usuario del sistema
+  window.abrirModalResponsables = () => {
+    if (!usuarioActual?.isAdmin && !usuarioActual?.permisos?.canManageResponsables) {
+      return Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'No tienes permiso para gestionar responsables.' });
+    }
+    const tbody = document.getElementById('responsablesTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    systemUsers.forEach(u => {
+      const uname = (u.username || '').toUpperCase();
+      // Check if this user is already an active responsable
+      const existing = responsablesList.find(r => r.usuarioVinculado?.toUpperCase() === uname || r.nombre?.toUpperCase() === uname);
+      const isActive = !!existing;
+      const sobrenombre = existing?.nombre || '';
+
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #e2e8f0';
+      tr.innerHTML = `
+        <td style="padding:10px 8px; font-weight:600; color:#0f172a;">${uname}</td>
+        <td style="padding:10px 8px;">
+          <input type="text" data-user="${uname}" class="resp-sobrenombre"
+            value="${sobrenombre}"
+            placeholder="${uname}"
+            style="width:100%; padding:6px 8px; border:1px solid #cbd5e1; border-radius:5px; font-size:0.88rem;">
+        </td>
+        <td style="padding:10px 8px; text-align:center;">
+          <input type="checkbox" data-user="${uname}" class="resp-activo"
+            ${isActive ? 'checked' : ''}
+            style="width:18px; height:18px; accent-color: var(--primary); cursor:pointer;">
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    if (responsablesModal) responsablesModal.style.display = 'block';
+  };
+
+  window.cerrarModalResponsables = () => {
+    if (responsablesModal) responsablesModal.style.display = 'none';
+  };
+
+  // 3. Guardar los cambios: para cada usuario, si checkbox activo -> upsert en Firebase; si no -> eliminar si existía
+  window.guardarResponsables = async () => {
+    const filas = document.querySelectorAll('#responsablesTableBody tr');
+    try {
+      for (const fila of filas) {
+        const cb = fila.querySelector('.resp-activo');
+        const input = fila.querySelector('.resp-sobrenombre');
+        if (!cb || !input) continue;
+        const uname = cb.dataset.user;
+        const sobrenombre = input.value.trim().toUpperCase() || uname;
+        const isActive = cb.checked;
+
+        const existing = responsablesList.find(
+          r => r.usuarioVinculado?.toUpperCase() === uname || r.nombre?.toUpperCase() === uname
+        );
+
+        if (isActive) {
+          if (existing) {
+            if (existing.nombre !== sobrenombre) {
+              await updateDoc(doc(db, 'responsables', existing.id), { nombre: sobrenombre, usuarioVinculado: uname });
+            }
+          } else {
+            await addDoc(collection(db, 'responsables'), { nombre: sobrenombre, usuarioVinculado: uname });
+          }
+        } else if (existing) {
+          await deleteDoc(doc(db, 'responsables', existing.id));
+        }
+      }
+      cerrarModalResponsables();
+      Swal.fire({ icon: 'success', title: 'Responsables guardados', timer: 1500, showConfirmButton: false });
+    } catch (err) {
+      console.error('Error guardando responsables:', err);
+      Swal.fire({ icon: 'error', text: 'Error al guardar los cambios.' });
+    }
+  };
+
+  function initResponsablesForm() {}
 
 });

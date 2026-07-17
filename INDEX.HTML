@@ -335,7 +335,7 @@
 
 
       <!-- RRHH -->
-      <div class="menu-card admin-only btn-rrhh" id="rrhh-button" onclick="window.location.href='RRHH/rrhh.html'">
+      <div class="menu-card btn-rrhh rrhh-card" id="rrhh-button" onclick="window.location.href='RRHH/rrhh.html'" style="display:none">
         <div class="icon-circle"><i class="fas fa-user-tie"></i></div>
         <h3 class="card-title">Recursos Humanos</h3>
         <p class="card-description">Personal, planilla y vacaciones.</p>
@@ -380,17 +380,26 @@
     const welcomeMessage = document.getElementById('welcome-message');
     const logoutButton = document.getElementById('logout-button');
 
-    // Función para ajustar el menú según el rol del usuario
-    function ajustarMenuSegunRol(rol) {
+    // Función para ajustar el menú según el rol del usuario y sus permisos
+    function ajustarMenuSegunRol(rol, permisos, permisosRrhh) {
+      const rrhhCard = document.getElementById('rrhh-button');
+
       if (rol === 'administrador') {
         // Mostrar elementos admin
         document.querySelectorAll('.admin-only').forEach(el => {
           el.style.display = 'flex'; // Flex for cards
         });
+        // Admin siempre ve RRHH
+        if (rrhhCard) rrhhCard.style.display = 'flex';
         try { iniciarNotificacionesTicketsAdmin(); } catch (e) { console.warn(e); }
       } else if (rol === 'view') {
         const realizarBtn = document.querySelector('.realizar-pedido');
         if (realizarBtn) realizarBtn.style.display = 'none';
+      }
+
+      // Mostrar RRHH si tiene permiso canAccess en permisosRrhh
+      if (permisosRrhh && permisosRrhh.canAccess) {
+        if (rrhhCard) rrhhCard.style.display = 'flex';
       }
     }
 
@@ -403,7 +412,9 @@
             if (!querySnapshot.empty) {
               const userData = querySnapshot.docs[0].data();
               window.userRole = userData.rol;
-              ajustarMenuSegunRol(userData.rol);
+              window.userPermisos = userData.permisos || {};
+              window.userPermisosRrhh = userData.permisosRrhh || {};
+              ajustarMenuSegunRol(userData.rol, userData.permisos || {}, userData.permisosRrhh || {});
               welcomeMessage.textContent = `Hola, ${userData.username}`;
             } else {
               window.location.href = 'login.html';

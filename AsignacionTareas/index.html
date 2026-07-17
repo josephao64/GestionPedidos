@@ -31,11 +31,7 @@
   <div id="userStats" class="container">
     <h2>Resumen de tareas pendientes esta semana</h2>
     <ul id="userStatsList">
-      <li>JOSE: <span id="pending-JOSE">0</span> tareas</li>
-      <li>DIEGO: <span id="pending-DIEGO">0</span> tareas</li>
-      <li>JOSEPH: <span id="pending-JOSEPH">0</span> tareas</li>
-      <li>LAURA: <span id="pending-LAURA">0</span> tareas</li>
-      <li>KEVIN: <span id="pending-KEVIN">0</span> tareas</li>
+      <!-- Datos generados dinámicamente -->
     </ul>
   </div>
 
@@ -74,11 +70,6 @@
           </select>
           <select id="filterResponsable">
             <option value="">Todos los Responsables</option>
-            <option value="JOSE">JOSE</option>
-            <option value="DIEGO">DIEGO</option>
-            <option value="JOSEPH">JOSEPH</option>
-            <option value="LAURA">LAURA</option>
-            <option value="KEVIN">KEVIN</option>
           </select>
         </div>
 
@@ -127,6 +118,7 @@
           <button id="eliminarBtn" disabled><i class="fas fa-trash"></i> Eliminar</button>
         </div>
         <button class="add-task-btn" onclick="abrirModal()">+ Agregar Tarea</button>
+        <button id="manageResponsablesBtn" onclick="abrirModalResponsables()" style="display:none;"><i class="fas fa-users-cog"></i> Gestionar Responsables</button>
       </div>
     </div>
 
@@ -199,11 +191,12 @@
 
         <label>Responsable:</label>
         <div id="responsableCheckboxes">
-          <label><input type="checkbox" name="responsable" value="JOSE"> JOSE</label>
-          <label><input type="checkbox" name="responsable" value="DIEGO"> DIEGO</label>
-          <label><input type="checkbox" name="responsable" value="JOSEPH"> JOSEPH</label>
-          <label><input type="checkbox" name="responsable" value="LAURA"> LAURA</label>
-          <label><input type="checkbox" name="responsable" value="KEVIN"> KEVIN</label>
+          <!-- Datos generados dinámicamente -->
+        </div>
+
+        <label>Colaboradores:</label>
+        <div id="colaboradorCheckboxes" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; border: 1px solid #ccc; padding: 10px; border-radius: 6px;">
+          <!-- Datos generados dinámicamente -->
         </div>
 
         <label for="fechaEstimada">Fecha Estimada de Culminación:</label>
@@ -225,6 +218,27 @@
 
   <!-- Lógica -->
   <script type="module" src="script.js"></script>
+  <!-- Modal Gestión de Responsables -->
+  <div id="responsablesModal" class="modal" style="z-index: 1100;">
+    <div class="modal-content" style="max-width: 620px;">
+      <span class="close" onclick="cerrarModalResponsables()">&times;</span>
+      <h2><i class="fas fa-users-cog"></i> Gestión de Responsables</h2>
+      <p style="color:#64748b; margin-bottom:16px; font-size:0.9rem;">Activa el checkbox de los usuarios que aparecerán como responsables en las tareas. Puedes asignarles un sobrenombre.</p>
+      <table id="responsablesTable" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+        <thead>
+          <tr style="background:#f4f6f9; border-bottom:2px solid #e2e8f0;">
+            <th style="padding:10px 8px; text-align:left;">Usuario</th>
+            <th style="padding:10px 8px; text-align:left;">Sobrenombre</th>
+            <th style="padding:10px 8px; text-align:center;">Activo</th>
+          </tr>
+        </thead>
+        <tbody id="responsablesTableBody"></tbody>
+      </table>
+      <div style="margin-top:18px; display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="cerrarModalResponsables()" style="padding:9px 20px; background:#94a3b8; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600;">Cancelar</button>
+        <button onclick="guardarResponsables()" style="padding:9px 20px; background:var(--primary); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600;">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
 </body>
-
 </html>

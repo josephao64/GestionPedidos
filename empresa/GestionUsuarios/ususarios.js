@@ -14,12 +14,16 @@ const userSelect = document.getElementById('sucursal');
 const roleSelect = document.getElementById('rol');
 const cancelEditBtn = document.getElementById('cancel-edit');
 
-// Checkboxes
 const permChangeStatus = document.getElementById('permChangeStatus');
 const permEditOrder = document.getElementById('permEditOrder');
 const permDeleteOrder = document.getElementById('permDeleteOrder');
 const permDeleteReceipt = document.getElementById('permDeleteReceipt');
+
+const permTaskCreate = document.getElementById('permTaskCreate');
+const permTaskEdit = document.getElementById('permTaskEdit');
+const permTaskDelete = document.getElementById('permTaskDelete');
 const permAssignTasks = document.getElementById('permAssignTasks');
+const permManageResponsables = document.getElementById('permManageResponsables');
 
 // Checkboxes Finanzas
 const permFinViewHistorial = document.getElementById('permFinViewHistorial');
@@ -27,6 +31,9 @@ const permFinRegistrarPagos = document.getElementById('permFinRegistrarPagos');
 const permFinManageSucursales = document.getElementById('permFinManageSucursales');
 const permFinManageProveedores = document.getElementById('permFinManageProveedores');
 const permFinManageUsuarios = document.getElementById('permFinManageUsuarios');
+
+// Checkboxes RRHH
+const permRrhhAccess = document.getElementById('permRrhhAccess');
 
 // -- Initialization --
 document.addEventListener('DOMContentLoaded', () => {
@@ -252,7 +259,11 @@ async function handleUserSubmit(e) {
         canEditOrder: permEditOrder.checked,
         canDeleteOrder: permDeleteOrder.checked,
         canDeleteReceipt: permDeleteReceipt.checked,
-        canAssignTasks: permAssignTasks.checked
+        canTaskCreate: permTaskCreate.checked,
+        canTaskEdit: permTaskEdit.checked,
+        canTaskDelete: permTaskDelete.checked,
+        canAssignTasks: permAssignTasks.checked,
+        canManageResponsables: permManageResponsables.checked
     };
 
     const permisosFinanzas = {
@@ -263,6 +274,10 @@ async function handleUserSubmit(e) {
         canManageUsuarios: permFinManageUsuarios.checked
     };
 
+    const permisosRrhh = {
+        canAccess: permRrhhAccess.checked
+    };
+
     try {
         Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -270,8 +285,9 @@ async function handleUserSubmit(e) {
             username,
             rol,
             sucursalId,
-            permisos,
-            permisosFinanzas
+            permisos: permisos,
+            permisosFinanzas: permisosFinanzas,
+            permisosRrhh: permisosRrhh
         };
 
         if (password) {
@@ -331,9 +347,17 @@ function showEditUserForm(id) {
         permEditOrder.checked = !!u.permisos.canEditOrder;
         permDeleteOrder.checked = !!u.permisos.canDeleteOrder;
         permDeleteReceipt.checked = !!u.permisos.canDeleteReceipt;
+        permTaskCreate.checked = !!u.permisos.canTaskCreate;
+        permTaskEdit.checked = !!u.permisos.canTaskEdit;
+        permTaskDelete.checked = !!u.permisos.canTaskDelete;
         permAssignTasks.checked = !!u.permisos.canAssignTasks;
+        permManageResponsables.checked = !!u.permisos.canManageResponsables;
     } else {
+        permTaskCreate.checked = false;
+        permTaskEdit.checked = false;
+        permTaskDelete.checked = false;
         permAssignTasks.checked = false;
+        permManageResponsables.checked = false;
     }
 
     if (u.permisosFinanzas) {
@@ -349,6 +373,12 @@ function showEditUserForm(id) {
         permFinManageSucursales.checked = false;
         permFinManageProveedores.checked = false;
         permFinManageUsuarios.checked = false;
+    }
+
+    if (u.permisosRrhh) {
+        permRrhhAccess.checked = !!u.permisosRrhh.canAccess;
+    } else {
+        permRrhhAccess.checked = false;
     }
 
     document.getElementById('userModalTitle').textContent = 'Editar Usuario';
@@ -389,11 +419,24 @@ function viewUserDetails(id) {
                 <hr>
                 <p><b>Permisos:</b></p>
                 <ul>
-                    <li>Cambiar Estado: ${u.permisos?.canChangeStatus ? '✅' : '❌'}</li>
+                    <li>Cambiar Estado (Pedido): ${u.permisos?.canChangeStatus ? '✅' : '❌'}</li>
                     <li>Editar Pedido: ${u.permisos?.canEditOrder ? '✅' : '❌'}</li>
                     <li>Eliminar Pedido: ${u.permisos?.canDeleteOrder ? '✅' : '❌'}</li>
                     <li>Eliminar Recibo: ${u.permisos?.canDeleteReceipt ? '✅' : '❌'}</li>
-                    <li>Asignar Tareas: ${u.permisos?.canAssignTasks ? '✅' : '❌'}</li>
+                    <li>Crear Tarea: ${u.permisos?.canTaskCreate ? '✅' : '❌'}</li>
+                    <li>Editar Tarea: ${u.permisos?.canTaskEdit ? '✅' : '❌'}</li>
+                    <li>Eliminar Tarea: ${u.permisos?.canTaskDelete ? '✅' : '❌'}</li>
+                    <li>Asignar Tareas al Personal: ${u.permisos?.canAssignTasks ? '✅' : '❌'}</li>
+                    <li>Gestión de Responsables: ${u.permisos?.canManageResponsables ? '✅' : '❌'}</li>
+                    <li>Gestionar Proveedores: ${u.permisosFinanzas?.canManageProveedores ? '✅' : '❌'}</li>
+                    <li>Gestor Interno Usuarios: ${u.permisosFinanzas?.canManageUsuarios ? '✅' : '❌'}</li>
+                </ul>
+                <hr>
+                <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px;">
+                    <strong style="color: #334155; font-size: 15px;">Permisos de Recursos Humanos (RRHH)</strong>
+                </div>
+                <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 16px; color: #475569;">
+                    <li>Acceso General a RRHH: ${u.permisosRrhh?.canAccess ? '✅' : '❌'}</li>
                 </ul>
                 <hr>
                 <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -440,10 +483,12 @@ function enableCheckboxes(enabled, role) {
     const boxes = [
         permChangeStatus, permEditOrder, permDeleteOrder, permDeleteReceipt,
         permFinViewHistorial, permFinRegistrarPagos, permFinManageSucursales,
-        permFinManageProveedores, permFinManageUsuarios, permAssignTasks
+        permFinManageProveedores, permFinManageUsuarios,
+        permTaskCreate, permTaskEdit, permTaskDelete, permAssignTasks, permManageResponsables,
+        permRrhhAccess
     ];
     boxes.forEach(b => {
-        if (role === 'view' && b === permAssignTasks) {
+        if (role === 'view' && (b === permAssignTasks || b === permTaskCreate || b === permTaskEdit || b === permTaskDelete || b === permManageResponsables)) {
             b.disabled = false;
             // No lo desmarcamos para que conserve el permiso si ya lo tenía
         } else {

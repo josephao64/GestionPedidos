@@ -554,7 +554,7 @@
         </div>
 
         <fieldset class="permisos-fieldset">
-          <legend>Permisos de Gestión de Pedidos y Tareas</legend>
+          <legend>Permisos de Gestión de Pedidos</legend>
           <div class="checkbox-group">
             <label class="checkbox-item">
               <input type="checkbox" id="permChangeStatus"> Cambiar Estado de Pedido
@@ -568,8 +568,26 @@
             <label class="checkbox-item">
               <input type="checkbox" id="permDeleteReceipt"> Eliminar Recibo de Caja
             </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="permisos-fieldset" style="margin-top: 16px;">
+          <legend>Permisos de Asignación de Tareas</legend>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="permTaskCreate"> Crear Tarea
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="permTaskEdit"> Editar Tarea
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="permTaskDelete"> Eliminar Tarea
+            </label>
             <label class="checkbox-item">
               <input type="checkbox" id="permAssignTasks"> Asignar Tareas al Personal
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="permManageResponsables"> Gestión de Responsables
             </label>
           </div>
         </fieldset>
@@ -582,6 +600,15 @@
             <label class="checkbox-item"><input type="checkbox" id="permFinManageSucursales"> Gestionar Sucursales</label>
             <label class="checkbox-item"><input type="checkbox" id="permFinManageProveedores"> Gestionar Proveedores</label>
             <label class="checkbox-item"><input type="checkbox" id="permFinManageUsuarios"> Gestor Interno Usuarios</label>
+          </div>
+        </fieldset>
+
+        <fieldset class="permisos-fieldset" style="margin-top: 16px;">
+          <legend>Permisos de Recursos Humanos (RRHH)</legend>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="permRrhhAccess"> Acceso General a RRHH
+            </label>
           </div>
         </fieldset>
 
