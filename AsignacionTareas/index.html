@@ -13,6 +13,9 @@
   <!-- SweetAlert2 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
 
+  <!-- html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <!-- Tu hoja de estilos opcional -->
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -118,6 +121,7 @@
           <button id="eliminarBtn" disabled><i class="fas fa-trash"></i> Eliminar</button>
         </div>
         <button class="add-task-btn" onclick="abrirModal()">+ Agregar Tarea</button>
+        <button id="exportImageBtn" class="export-btn" style="background-color: #10b981; color: white; padding: 0.75rem 1.25rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: background 0.3s ease;"><i class="fas fa-file-image"></i> Exportar a Imagen</button>
         <button id="manageResponsablesBtn" onclick="abrirModalResponsables()" style="display:none;"><i class="fas fa-users-cog"></i> Gestionar Responsables</button>
       </div>
     </div>

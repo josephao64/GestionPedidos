@@ -197,8 +197,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filterResponsable) {
       filterResponsable.innerHTML = '<option value="">Todos</option>';
     }
-    const statsList = document.getElementById('statsList');
-    if (statsList) statsList.innerHTML = '';
+    const statsList = document.getElementById('userStatsList');
+    if (statsList) {
+      statsList.innerHTML = '';
+    }
     
     if (responsableCheckboxesContainer) {
       responsableCheckboxesContainer.innerHTML = '';
@@ -214,6 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (filterResponsable) {
         filterResponsable.add(new Option(uname, uname));
+      }
+
+      if (statsList) {
+        const li = document.createElement('li');
+        li.innerHTML = `${uname} <span id="pending-${uname}">0</span>`;
+        statsList.appendChild(li);
       }
       
       if (responsableCheckboxesContainer) {
@@ -921,5 +929,43 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function initResponsablesForm() {}
+
+  /* =============================================
+     EXPORTAR A IMAGEN
+  ============================================= */
+  const exportImageBtn = document.getElementById('exportImageBtn');
+  if (exportImageBtn) {
+    exportImageBtn.addEventListener('click', () => {
+      const activeTab = document.querySelector('.tab-content.active');
+      if (!activeTab) {
+        Swal.fire({ icon: 'warning', text: 'No hay contenido activo para exportar.' });
+        return;
+      }
+
+      Swal.fire({
+        title: 'Generando imagen...',
+        text: 'Por favor espera un momento',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      html2canvas(activeTab, {
+        scale: 2, 
+        backgroundColor: '#ffffff',
+        useCORS: true
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'Asignacion_Tareas.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        Swal.close();
+      }).catch(err => {
+        console.error('Error al exportar a imagen:', err);
+        Swal.fire({ icon: 'error', text: 'Ocurrió un error al generar la imagen.' });
+      });
+    });
+  }
 
 });
