@@ -951,17 +951,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
+      // Añadimos la clase para forzar estilos sin variables CSS
+      activeTab.classList.add('export-mode');
+
       html2canvas(activeTab, {
         scale: 2, 
         backgroundColor: '#ffffff',
         useCORS: true
       }).then(canvas => {
+        activeTab.classList.remove('export-mode');
         const link = document.createElement('a');
         link.download = 'Asignacion_Tareas.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
         Swal.close();
       }).catch(err => {
+        activeTab.classList.remove('export-mode');
         console.error('Error al exportar a imagen:', err);
         Swal.fire({ icon: 'error', text: 'Ocurrió un error al generar la imagen.' });
       });

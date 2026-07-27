@@ -795,3 +795,13 @@ td[class^="estado-"] {
     white-space: nowrap;
   }
 }
+
+/* ESTILOS FORZADOS PARA HTML2CANVAS */
+.export-mode th { background-color: #0f766e !important; color: #ffffff !important; }
+.export-mode td { color: #0f172a !important; background-color: #ffffff !important; }
+.export-mode td * { color: inherit; }
+.export-mode tr { background-color: #ffffff !important; }
+.export-mode .estado-no-iniciado { background-color: #fee2e2 !important; color: #991b1b !important; }
+.export-mode .estado-en-progreso { background-color: #fef08a !important; color: #854d0e !important; }
+.export-mode .estado-revision { background-color: #bae6fd !important; color: #075985 !important; }
+.export-mode .estado-completado { background-color: #bbf7d0 !important; color: #166534 !important; }
