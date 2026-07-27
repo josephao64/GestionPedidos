@@ -805,3 +805,5 @@ td[class^="estado-"] {
 .export-mode .estado-en-progreso { background-color: #fef08a !important; color: #854d0e !important; }
 .export-mode .estado-revision { background-color: #bae6fd !important; color: #075985 !important; }
 .export-mode .estado-completado { background-color: #bbf7d0 !important; color: #166534 !important; }
+
+.export-mode, .export-mode * { animation: none !important; transition: none !important; opacity: 1 !important; visibility: visible !important; }
