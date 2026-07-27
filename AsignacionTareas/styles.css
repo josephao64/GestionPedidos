@@ -547,6 +547,8 @@ th, td {
   text-align: left;
   border-bottom: 1px solid var(--border-color);
   font-size: 15px;
+  color: #0f172a; /* Fallback explícito para la exportación de imagen */
+  color: var(--text-main);
 }
 
 th {
@@ -564,6 +566,7 @@ tr:last-child td {
 }
 
 tr {
+  background-color: #ffffff; /* Fallback */
   background-color: var(--surface);
   transition: var(--transition);
 }
